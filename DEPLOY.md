@@ -165,24 +165,42 @@ systemctl status dades
 
 ## 7. Nginx и HTTPS
 
-```bash
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/dades
-```
-
-**Сначала поднимаем только 80-й порт** — блоки с `listen 443` временно
-закомментировать. Иначе nginx не стартует: сертификата ещё нет.
+Ставим в два захода. Боевой конфиг ссылается на файлы сертификата,
+которых ещё нет, и nginx с ним не стартует — поэтому сначала временный,
+только на 80-й порт.
 
 ```bash
 sudo mkdir -p /var/www/certbot
+sudo cp deploy/nginx-http.conf /etc/nginx/sites-available/dades
 sudo ln -s /etc/nginx/sites-available/dades /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
-
-sudo certbot --nginx -d da-des.ru -d www.da-des.ru
 ```
 
-После сертификата раскомментировать блоки 443 и ещё раз
-`sudo nginx -t && sudo systemctl reload nginx`.
+Здесь сайт уже должен открываться по `http://da-des.ru` — это проверка
+связки nginx + gunicorn до всякого TLS.
+
+Теперь сертификат. `certonly --webroot` не трогает конфиги nginx:
+он кладёт файл-подтверждение в каталог, который мы только что открыли.
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot -d da-des.ru -d www.da-des.ru
+```
+
+И боевой конфиг — с TLS, редиректами и раздачей статики:
+
+```bash
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/dades
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Последнее: включить принудительный HTTPS в приложении. До сертификата
+он был выключен, иначе сайт отвечал бы редиректом в никуда.
+
+```bash
+sed -i 's|^SECURE_SSL_REDIRECT=.*|SECURE_SSL_REDIRECT=1|' /srv/dades/.env
+sudo systemctl restart dades
+```
 
 Права на статику:
 
