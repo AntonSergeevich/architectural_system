@@ -29,6 +29,15 @@ class PublicPagesTests(TestCase):
             with self.subTest(page=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code, 200)
 
+    def test_login_link_is_visible_to_guests(self):
+        """Доступ в кабинет получает каждый заказчик — дверь должна быть видна.
+
+        Пока ссылка показывалась только вошедшим, адрес страницы входа
+        приходилось диктовать голосом.
+        """
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn(reverse("accounts:login"), body)
+
     def test_legal_documents_published(self):
         for kind in ["privacy", "consent", "cookies", "offer"]:
             with self.subTest(kind=kind):

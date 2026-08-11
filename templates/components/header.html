@@ -10,8 +10,16 @@
       <a href="{% url 'public:how' %}">Как я работаю</a>
       <a href="{% url 'public:objections' %}">Вопросы</a>
       <a class="nav__cta" href="{% url 'public:constructor' %}">Собрать проект</a>
+      {% comment %}
+        Вход виден всегда, а не только вошедшим. Доступ в кабинет получает
+        каждый заказчик — и если двери нет, приходится диктовать ему адрес
+        страницы входа голосом. Это ровно тот разговор, от которого
+        система избавляет.
+      {% endcomment %}
       {% if user.is_authenticated %}
         <a class="nav__minor" href="{% url 'cabinet:home' %}">Кабинет</a>
+      {% else %}
+        <a class="nav__minor" href="{% url 'accounts:login' %}">Войти</a>
       {% endif %}
     </nav>
 
