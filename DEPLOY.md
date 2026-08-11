@@ -51,14 +51,36 @@ ALTER ROLE dades SET client_encoding TO 'utf8';
 ALTER ROLE dades SET default_transaction_isolation TO 'read committed';
 ALTER ROLE dades SET timezone TO 'Asia/Krasnoyarsk';
 GRANT ALL PRIVILEGES ON DATABASE dades TO dades;
-\c dades
-GRANT ALL ON SCHEMA public TO dades;
 \q
 ```
 
-Последняя строка обязательна на PostgreSQL 15 и новее: там прав на схему
-`public` по умолчанию больше не выдают, и без неё миграции падают
-на ровном месте.
+Дальше — права на схему, уже из обычной командной строки:
+
+```bash
+sudo -u postgres psql -d dades -c "GRANT ALL ON SCHEMA public TO dades;"
+sudo -u postgres psql -d dades -c "ALTER DATABASE dades OWNER TO dades;"
+```
+
+Права на схему обязательны на PostgreSQL 15 и новее: там их по умолчанию
+больше не выдают, и без них миграции падают на ровном месте.
+
+Почему отдельными командами, а не `\c dades` внутри psql: `\c` — это
+не SQL, а метакоманда, и она читает **всю строку** как свои аргументы.
+При вставке блока целиком она склеивается со следующей строкой,
+превращается в `\c dades GRANT ALL ON …` и падает с загадочным
+«invalid integer value "ON" for connection option "port"». База при этом
+выглядит созданной, а прав на схеме нет.
+
+Проверить, что получилось, — двумя командами. Первая про пароль,
+вторая про права:
+
+```bash
+psql -h localhost -U dades -d dades -c "SELECT version();"
+psql -h localhost -U dades -d dades -c "CREATE TABLE probe(id int); DROP TABLE probe;"
+```
+
+Вторая важнее первой: подключиться можно и без прав на создание таблиц,
+и тогда всё выглядит хорошо ровно до шага с миграциями.
 
 ---
 
