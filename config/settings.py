@@ -32,7 +32,13 @@ if _env_file.exists():
         if not _line or _line.startswith("#") or "=" not in _line:
             continue
         _key, _value = _line.split("=", 1)
-        os.environ.setdefault(_key.strip(), _value.strip())
+        _value = _value.strip()
+        # Значение может быть записано в кавычках — так его пишут, когда
+        # внутри есть пробелы или угловые скобки. Кавычки при этом
+        # относятся к записи, а не к значению.
+        if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in "\"'":
+            _value = _value[1:-1]
+        os.environ.setdefault(_key.strip(), _value)
 
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", "django-insecure-dev-only-change-me")

@@ -11,8 +11,28 @@ STAMP="$(date +%Y-%m-%d_%H-%M)"
 
 mkdir -p "$DEST"
 
-# shellcheck disable=SC1091
-set -a; source "$ROOT/.env"; set +a
+# Из .env берём ровно нужные строки, а не выполняем файл целиком.
+#
+# `source .env` спотыкается о совершенно законное значение: в строке
+# «DEFAULT_FROM_EMAIL=Дарья <dark-ost@ya.ru>» угловые скобки для bash —
+# это перенаправление ввода-вывода, и файл падает с синтаксической
+# ошибкой. Django читает .env своим разбором и проблемы не видит,
+# так что ломается только бэкап — то есть ровно то, о чём узнают
+# в самый неподходящий момент.
+env_value() {
+    local line
+    line="$(grep -m1 "^$1=" "$ROOT/.env" || true)"
+    line="${line#*=}"
+    # Снимаем обрамляющие кавычки, если значение записано в них.
+    line="${line%\"}"; line="${line#\"}"
+    line="${line%\'}"; line="${line#\'}"
+    printf '%s' "$line"
+}
+
+POSTGRES_DB="$(env_value POSTGRES_DB)"
+POSTGRES_USER="$(env_value POSTGRES_USER)"
+POSTGRES_PASSWORD="$(env_value POSTGRES_PASSWORD)"
+POSTGRES_HOST="$(env_value POSTGRES_HOST)"
 
 if [ -n "${POSTGRES_DB:-}" ]; then
     PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
