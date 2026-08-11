@@ -64,14 +64,42 @@ def _catalog_context():
 # --- Страницы ---------------------------------------------------------------
 
 
+def _hero_pricing():
+    """Числа для мини-расчёта на первом экране.
+
+    Первый экран должен отвечать на вопрос, ради которого сюда пришли:
+    сколько это стоит для МОЕЙ квартиры. Не «от стольки-то за квадрат»,
+    а число. Считается тем же каталогом, что и всё остальное, поэтому
+    разойтись с конструктором не может.
+    """
+    pricing = PricingSettings.get()
+    preset = default_preset()
+    modules = list(preset.modules.filter(is_active=True)) if preset else []
+
+    per_sqm = sum(
+        (m.price for m in modules if m.unit == "sqm"), Decimal("0")
+    )
+    fixed = sum((m.price for m in modules if m.unit == "fixed"), Decimal("0"))
+    return {
+        "per_sqm": int(per_sqm),
+        "fixed": int(fixed),
+        "small_enabled": pricing.small_area_enabled,
+        "small_threshold": float(pricing.small_area_threshold),
+        "small_price": int(pricing.small_area_price),
+    }
+
+
 def home(request):
+    published = PortfolioProject.objects.filter(is_published=True)
     return render(
         request,
         "public/home.html",
         {
-            "featured": PortfolioProject.objects.filter(is_published=True, is_featured=True)[:4],
+            "featured": published.filter(is_featured=True)[:4],
             "presets": Preset.objects.filter(is_active=True).prefetch_related("modules"),
             "objections": Objection.objects.filter(is_published=True)[:3],
+            "hero_pricing": _hero_pricing(),
+            "stage_count": StageNorm.objects.count(),
         },
     )
 
@@ -157,6 +185,17 @@ def constructor(request):
     area = Decimal("60")
     rooms = 2
     months = None
+
+    # Площадь может прийти ссылкой с главной: там человек её уже ввёл,
+    # и заставлять вводить второй раз — потерять половину пришедших.
+    raw_area = request.GET.get("area")
+    if raw_area:
+        try:
+            candidate = Decimal(raw_area.replace(",", "."))
+            if Decimal("1") <= candidate <= Decimal("10000"):
+                area = candidate
+        except (ArithmeticError, ValueError):
+            pass
 
     if request.method == "POST":
         # Путь без JavaScript: те же поля обычным POST, считает тот же код.

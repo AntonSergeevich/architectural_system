@@ -9,6 +9,7 @@ from django.urls import reverse
 from apps.catalog.models import ServiceModule
 from apps.crm.models import Lead
 
+from . import views
 from .models import CookieConsent, LegalDocument, PersonalDataConsent
 
 
@@ -68,6 +69,49 @@ class PublicPagesTests(TestCase):
         self.assertEqual(response.status_code, 200)
         url = response.json()["url"]
         self.assertEqual(self.client.get(url).status_code, 200)
+
+
+class HeroCalculatorTests(TestCase):
+    """Мини-расчёт на главной обязан совпадать с конструктором.
+
+    Два разных числа для одной квартиры — это ровно тот разговор,
+    от которого система должна избавлять, только теперь ещё и внутри сайта.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+
+    def test_hero_numbers_match_the_constructor(self):
+        from decimal import Decimal
+
+        from apps.catalog.pricing import calculate, default_preset
+
+        hero = views._hero_pricing()
+        area = Decimal("84")
+        expected = Decimal(hero["per_sqm"]) * area + Decimal(hero["fixed"])
+
+        preset = default_preset()
+        calc = calculate(area=area, modules=list(preset.modules.filter(is_active=True)))
+        self.assertEqual(calc.design_total, expected)
+
+    def test_small_area_rule_is_exposed_to_the_hero(self):
+        hero = views._hero_pricing()
+        self.assertTrue(hero["small_enabled"])
+        self.assertEqual(hero["small_price"], 80000)
+        self.assertEqual(hero["small_threshold"], 20.0)
+
+    def test_area_from_link_prefills_the_constructor(self):
+        """С главной площадь уезжает ссылкой — вводить второй раз незачем."""
+        response = self.client.get(reverse("public:constructor"), {"area": "15"})
+        self.assertEqual(response.context["area"], Decimal("15"))
+        self.assertIsNotNone(response.context["calc"].fixed_design_price)
+
+    def test_broken_area_in_link_does_not_break_the_page(self):
+        for value in ["abc", "-5", "99999999", ""]:
+            with self.subTest(value=value):
+                response = self.client.get(reverse("public:constructor"), {"area": value})
+                self.assertEqual(response.status_code, 200)
 
 
 class LeadTests(TestCase):

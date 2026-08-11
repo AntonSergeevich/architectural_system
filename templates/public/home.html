@@ -1,23 +1,99 @@
 {% extends "base.html" %}
-{% load richtext %}
+{% load static richtext %}
 
 {% block content %}
+{# --- Первый экран -------------------------------------------------------
+   Раньше здесь было имя и кнопка — зацепиться не за что. Теперь экран
+   отвечает на вопрос, ради которого сюда и приходят: сколько это стоит
+   для МОЕЙ квартиры. Число появляется сразу, до всякой заявки и созвона.
+   Такого нет ни у кого на рынке: у конкурентов PDF с четырьмя тарифами,
+   которые надо самому умножить на свою площадь.
+#}
 <section class="hero">
   <div class="wrap">
-    <h1 class="hero__title">{{ site.owner_name }}</h1>
-    <p class="hero__sub">
-      Дизайн интерьера, который отражает вас, а не каталог.
-      Проектирование, авторский надзор и комплектация — от обмера
-      до «вах, как мне хорошо».
-    </p>
-    <div class="hero__actions">
-      <a class="btn btn--big" href="{% url 'public:constructor' %}">Собрать своё предложение</a>
-      <a class="btn btn--ghost btn--big" href="{% url 'public:portfolio' %}">Посмотреть работы</a>
+    <p class="eyebrow">{{ site.city }} · дизайн интерьера, надзор, комплектация</p>
+
+    <h1 class="hero__title">
+      <span class="hero__line">Дом,</span>
+      <span class="hero__line hero__line--accent">который</span>
+      <span class="hero__line">про вас</span>
+    </h1>
+
+    <div class="hero__grid">
+      <p class="hero__sub">
+        Не «как на референсе» и не «как у всех». Интерьер, в который
+        вы заходите, садитесь на диван и говорите: вах, как мне хорошо.
+      </p>
+
+      {# Мини-расчёт. Считает по тем же числам, что и конструктор:
+         разойтись они не могут — оба берут цены из каталога. #}
+      <div class="quick" data-quick
+           data-per-sqm="{{ hero_pricing.per_sqm }}"
+           data-fixed="{{ hero_pricing.fixed }}"
+           data-small-enabled="{{ hero_pricing.small_enabled|yesno:'1,0' }}"
+           data-small-threshold="{{ hero_pricing.small_threshold }}"
+           data-small-price="{{ hero_pricing.small_price }}">
+        <label class="quick__label" for="quick-area">У меня квартира</label>
+        <div class="quick__row">
+          <input class="quick__input" id="quick-area" type="number"
+                 min="1" max="10000" step="1" value="84" inputmode="numeric">
+          <span class="quick__unit">м²</span>
+        </div>
+
+        <p class="quick__result">
+          Полный проект —
+          <strong class="quick__price" data-quick-price>≈ 412 000 ₽</strong>
+        </p>
+        <p class="quick__note">
+          Ориентировочно, по полному пакету. Дальше можно убрать всё,
+          без чего вы готовы обойтись, — и увидеть, чем за это платите.
+        </p>
+
+        <a class="btn btn--big btn--block" href="{% url 'public:constructor' %}" data-quick-link>
+          Собрать свой проект
+        </a>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section section--alt">
+{# Бегущая строка: короткий манифест, который читается за секунду
+   и сразу отсекает тех, кому нужно «спокойно и как у всех». #}
+<div class="marquee" aria-hidden="true">
+  <div class="marquee__track">
+    {% for i in "12" %}
+      <span class="marquee__item">яркие</span><span class="marquee__dot">◆</span>
+      <span class="marquee__item">цветные</span><span class="marquee__dot">◆</span>
+      <span class="marquee__item">наполненные</span><span class="marquee__dot">◆</span>
+      <span class="marquee__item">не как у всех</span><span class="marquee__dot">◆</span>
+      <span class="marquee__item">про вас</span><span class="marquee__dot">◆</span>
+    {% endfor %}
+  </div>
+</div>
+<p class="visually-hidden">Яркие, цветные, наполненные интерьеры — не как у всех, а про вас.</p>
+
+<section class="section" data-reveal>
+  <div class="wrap facts">
+    <div class="fact">
+      <span class="fact__num">15</span>
+      <span class="fact__label">лет практики</span>
+    </div>
+    <div class="fact">
+      <span class="fact__num">17</span>
+      <span class="fact__label">листов чертежей в полном комплекте</span>
+    </div>
+    <div class="fact">
+      <span class="fact__num">{{ stage_count }}</span>
+      <span class="fact__label">этапов от обмера до альбома</span>
+    </div>
+    <div class="fact">
+      <span class="fact__num">1</span>
+      <span class="fact__label">планировочное решение — лучшее, а не пять неудачных</span>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" data-reveal>
   <div class="wrap split">
     <div>
       <p class="eyebrow">Для кого</p>
@@ -37,7 +113,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-reveal>
   <div class="wrap">
     <p class="eyebrow">Что я делаю</p>
     <h2>Это не три услуги, а один результат в трёх договорах</h2>
@@ -70,7 +146,7 @@
 </section>
 
 {% if featured %}
-<section class="section section--alt">
+<section class="section section--alt" data-reveal>
   <div class="wrap">
     <p class="eyebrow">Работы</p>
     <h2>Объекты</h2>
@@ -89,26 +165,39 @@
 </section>
 {% endif %}
 
-<section class="section">
-  <div class="wrap">
-    <p class="eyebrow">Сколько это стоит</p>
-    <h2>Соберите свой проект и увидите цену</h2>
-    <p class="lead">
-      Не «от стольки-то за квадрат», а расчёт под вашу квартиру. Раскройте
-      каждый блок и посмотрите, что внутри: обычно после этого вопрос
-      «почему так дорого» отпадает сам.
-    </p>
-    <div class="hero__actions">
-      <a class="btn btn--big" href="{% url 'public:constructor' %}">Открыть конструктор</a>
+{# Приглашение в конструктор отдельным экраном — с объяснением, почему
+   он вообще существует. Это главный ответ на «а почему так дорого». #}
+<section class="section section--ink" data-reveal>
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow" style="color: rgba(255,255,255,.75)">Конструктор</p>
+      <h2>Соберите проект как дом из кубиков</h2>
+    </div>
+    <div>
+      <p class="lead" style="color: rgba(255,255,255,.9)">
+        Каждый блок — часть работы. Уберите чертежи — дом останется
+        без стен. Уберите надзор — без крыши. Это не запугивание,
+        это ровно то, что произойдёт на стройке.
+      </p>
+      <p class="lead" style="color: rgba(255,255,255,.9)">
+        Когда видно, из чего собирается проект, вопрос «почему так дорого»
+        отпадает сам. Мне не нужно ничего доказывать, а вам — верить на слово.
+      </p>
+      <div class="hero__actions">
+        <a class="btn btn--ghost btn--big btn--on-ink" href="{% url 'public:constructor' %}">
+          Открыть конструктор
+        </a>
+      </div>
     </div>
   </div>
 </section>
 
 {% if objections %}
-<section class="section section--alt">
+<section class="section" data-reveal>
   <div class="wrap wrap--narrow">
-    <p class="eyebrow">Частые вопросы</p>
-    <div class="accordion">
+    <p class="eyebrow">Честно</p>
+    <h2>Вопросы, которые задают чаще всего</h2>
+    <div class="accordion" style="margin-top: var(--gap-6)">
       {% for item in objections %}
         <div class="accordion__item">
           <button class="accordion__head" type="button">{{ item.question }}</button>
@@ -123,7 +212,7 @@
 </section>
 {% endif %}
 
-<section class="section">
+<section class="section section--alt" data-reveal>
   <div class="wrap split">
     <div class="portrait">
       {% if site.owner_photo %}<img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">{% endif %}
@@ -137,8 +226,15 @@
         нельзя собрать по шаблону.
       </p>
       {% if site.owner_about %}<div class="lead">{{ site.owner_about|richtext }}</div>{% endif %}
-      <p style="margin-top: var(--gap-5)"><a href="{% url 'public:about' %}">Подробнее обо мне →</a></p>
+      <div class="hero__actions">
+        <a class="btn" href="{% url 'public:contacts' %}">Написать мне</a>
+        <a class="btn btn--ghost" href="{% url 'public:about' %}">Подробнее обо мне</a>
+      </div>
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/quick.js' %}" defer></script>
 {% endblock %}

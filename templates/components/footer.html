@@ -1,8 +1,7 @@
 <footer class="footer">
   <div class="wrap footer__inner">
     <div class="footer__col">
-      <p class="footer__name">{{ site.owner_name }}</p>
-      <p class="footer__muted">{{ site.owner_title }}</p>
+      {% include "components/logo.html" %}
       <p><a href="tel:{{ site.phone }}">{{ site.phone }}</a></p>
       {% if site.email %}<p><a href="mailto:{{ site.email }}">{{ site.email }}</a></p>{% endif %}
     </div>

@@ -13,9 +13,43 @@
   gap: var(--gap-4); min-height: 68px;
 }
 
-.logo { display: grid; text-decoration: none; color: var(--ink); line-height: 1.1; }
-.logo__name { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; font-size: var(--step-1); }
+/* Логотип: знак «ДА» плюс подпись. Знак наследует currentColor, поэтому
+   работает в шапке, в подвале и в обеих темах без второго файла. */
+.logo {
+  display: inline-flex; align-items: center; gap: var(--gap-3);
+  text-decoration: none; color: var(--ink); line-height: 1.1;
+}
+.logo__mark { color: var(--brand-500); flex: none; transition: transform .25s var(--ease); }
+.logo:hover .logo__mark { transform: translateY(-1px); }
+.logo__text { display: grid; }
+.logo__name {
+  font-family: var(--font-display); font-weight: 800;
+  letter-spacing: -0.04em; font-size: var(--step-1);
+}
 .logo__title { font-size: var(--step--2); color: var(--muted); letter-spacing: .02em; }
+
+.footer .logo { margin-bottom: var(--gap-3); }
+
+/* --- Переключатель темы --------------------------------------------------
+   Кнопка появляется только при работающем JS: без него она бесполезна. */
+.header__tools { display: flex; align-items: center; gap: var(--gap-2); }
+
+.theme {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 44px; height: 44px; flex: none;
+  background: none; border: 1px solid var(--line); border-radius: var(--radius-pill);
+  color: var(--ink-2); cursor: pointer;
+  transition: border-color .18s var(--ease), color .18s var(--ease);
+}
+.js .theme { display: inline-flex; }
+.theme:hover { border-color: var(--brand-400); color: var(--brand-500); }
+.theme__sun, .theme__moon { position: absolute; transition: opacity .2s var(--ease), transform .3s var(--ease); }
+.theme { position: relative; }
+.theme[data-state="light"] .theme__moon { opacity: 0; transform: rotate(-40deg) scale(.6); }
+.theme[data-state="light"] .theme__sun { opacity: 1; transform: none; }
+.theme[data-state="dark"] .theme__sun { opacity: 0; transform: rotate(40deg) scale(.6); }
+.theme[data-state="dark"] .theme__moon { opacity: 1; transform: none; }
 
 .nav { display: flex; align-items: center; gap: var(--gap-5); }
 .nav a { color: var(--ink-2); text-decoration: none; font-size: var(--step--1); }
@@ -64,17 +98,118 @@
 
 .lead { font-size: var(--step-1); color: var(--ink-2); max-width: 62ch; }
 
-/* Плакатный заголовок — главный элемент первого экрана. */
+/* --- Первый экран --------------------------------------------------------
+   Плакатный заголовок и рядом — работающий мини-расчёт. Число появляется
+   до всякой заявки: это то, ради чего сюда пришли. */
 .hero { padding: var(--gap-8) 0 var(--gap-7); }
 .hero__title {
   font-size: var(--step-5);
   letter-spacing: -0.055em;
-  line-height: .92;
-  color: var(--brand-500);
-  margin-bottom: var(--gap-5);
+  line-height: .88;
+  color: var(--ink);
+  margin-bottom: var(--gap-6);
+  text-transform: lowercase;
 }
+.hero__line { display: block; }
+.hero__line--accent { color: var(--brand-500); }
+
+.js .hero__line {
+  animation: rise .7s var(--ease) backwards;
+}
+.js .hero__line:nth-child(2) { animation-delay: .08s; }
+.js .hero__line:nth-child(3) { animation-delay: .16s; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(0.35em); }
+  to   { opacity: 1; transform: none; }
+}
+
+.hero__grid { display: grid; gap: var(--gap-6); align-items: start; }
+@media (min-width: 900px) {
+  .hero__grid { grid-template-columns: 1fr minmax(300px, 380px); gap: var(--gap-7); }
+}
+
 .hero__sub { font-size: var(--step-1); max-width: 46ch; color: var(--ink-2); }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); margin-top: var(--gap-6); }
+
+/* Мини-расчёт */
+.quick {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-3); padding: var(--gap-5);
+  box-shadow: var(--shadow-1);
+}
+.quick__label { font-size: var(--step--1); color: var(--muted); font-weight: 600; margin-bottom: var(--gap-2); }
+.quick__row { display: flex; align-items: baseline; gap: var(--gap-2); }
+.quick__input {
+  width: 5.5ch; min-height: 0; padding: 0;
+  font-family: var(--font-display);
+  font-size: var(--step-4); font-weight: 800; letter-spacing: -.04em;
+  color: var(--brand-500);
+  background: none; border: 0; border-bottom: 3px solid var(--brand-200);
+  border-radius: 0;
+}
+.quick__input:focus { box-shadow: none; border-bottom-color: var(--brand-500); }
+/* Стрелки у числового поля крадут место и мешают крупной цифре. */
+.quick__input::-webkit-outer-spin-button,
+.quick__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.quick__input { -moz-appearance: textfield; appearance: textfield; }
+.quick__unit { font-size: var(--step-1); color: var(--muted); }
+
+.quick__result { margin: var(--gap-4) 0 var(--gap-2); font-size: var(--step-0); color: var(--ink-2); }
+.quick__price { display: block; font-family: var(--font-display); font-size: var(--step-2); letter-spacing: -.03em; color: var(--ink); }
+.quick__note { font-size: var(--step--2); color: var(--muted); margin-bottom: var(--gap-4); }
+
+/* --- Бегущая строка ------------------------------------------------------
+   Короткий манифест, который читается за секунду. Дублируется текстом
+   для скринридера, сама лента от него скрыта. */
+.marquee {
+  overflow: hidden; white-space: nowrap;
+  border-block: 1px solid var(--line);
+  background: var(--paper-alt);
+  padding: var(--gap-4) 0;
+  user-select: none;
+}
+.marquee__track {
+  display: inline-flex; align-items: center; gap: var(--gap-5);
+  padding-right: var(--gap-5);
+  animation: slide 28s linear infinite;
+}
+.marquee__item {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: var(--step-2); letter-spacing: -.03em;
+  text-transform: lowercase; color: var(--ink);
+}
+.marquee__dot { color: var(--brand-500); font-size: var(--step-0); }
+
+@keyframes slide {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; }
+}
+
+/* --- Цифры ---------------------------------------------------------------- */
+
+.facts { display: grid; gap: var(--gap-6); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.fact { display: grid; gap: var(--gap-2); }
+.fact__num {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: var(--step-4); line-height: 1; letter-spacing: -.05em;
+  color: var(--brand-500);
+}
+.fact__label { color: var(--muted); font-size: var(--step--1); max-width: 26ch; }
+
+/* --- Появление при прокрутке --------------------------------------------- */
+
+.will-reveal { opacity: 0; transform: translateY(18px); }
+.will-reveal.is-visible {
+  opacity: 1; transform: none;
+  transition: opacity .6s var(--ease), transform .6s var(--ease);
+}
+
+.btn--on-ink { color: #fff; border-color: rgba(255, 255, 255, .5); }
+.btn--on-ink:hover { background: rgba(255, 255, 255, .12); color: #fff; border-color: #fff; }
 
 .grid { display: grid; gap: var(--gap-5); }
 .grid--2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
@@ -143,17 +278,32 @@
    Конструктор: дом из кубиков
    ========================================================================== */
 
-.constructor { display: grid; gap: var(--gap-5); }
+/* Две колонки задаются НА ФОРМЕ, а не на обёртке: дом и склад лежат
+   внутри неё, и колонки внешнего контейнера до них просто не доходили —
+   форма занимала одну колонку, а внутри всё вставало друг под друга. */
+.constructor { display: block; }
+.constructor__form { display: grid; gap: var(--gap-5); }
+
 @media (min-width: 1000px) {
-  .constructor { grid-template-columns: minmax(380px, 46%) 1fr; align-items: start; }
+  .constructor__form {
+    grid-template-columns: minmax(360px, 44%) 1fr;
+    align-items: start;
+  }
 }
 
-/* Дом закреплён сверху, склад скроллится снизу: тащить недалеко.
-   На телефоне это важнее любой анимации — длинный жест физически неудобен. */
+/* Дом «прилипает» и остаётся перед глазами, пока справа прокручивается
+   склад блоков. Иначе тащить нечего: блок и цель не помещаются на экран
+   одновременно. */
 .house-panel {
   position: sticky; top: 68px; z-index: 20;
   background: var(--paper);
   padding-bottom: var(--gap-3);
+}
+@media (min-width: 1000px) {
+  /* На широком экране колонка с домом прокручивается вместе со страницей
+     до своего конца и там останавливается — так итог с ценой всегда виден
+     рядом с блоками. */
+  .house-panel { max-height: calc(100dvh - 84px); overflow: visible; }
 }
 @media (max-width: 999px) {
   .house-panel { box-shadow: 0 12px 20px -18px rgba(35, 32, 29, .8); }

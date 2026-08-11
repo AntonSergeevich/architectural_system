@@ -9,6 +9,64 @@
     return m ? m[2] : '';
   }
 
+  // --- Тема ---------------------------------------------------------------
+  // Три состояния, а не два: «как в системе» — это тоже выбор, и сбрасывать
+  // его насильно нельзя. Кнопка переключает светлую и тёмную; пока человек
+  // её не трогал, работает системная настройка.
+  var themeBtn = document.querySelector('[data-theme-toggle]');
+  if (themeBtn) {
+    var root = document.documentElement;
+
+    function currentTheme() {
+      var explicit = root.getAttribute('data-theme');
+      if (explicit) return explicit;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function paintButton() {
+      themeBtn.dataset.state = currentTheme();
+      themeBtn.setAttribute(
+        'aria-label',
+        currentTheme() === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'
+      );
+    }
+
+    themeBtn.addEventListener('click', function () {
+      var next = currentTheme() === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) { /* приватный режим */ }
+      paintButton();
+    });
+
+    // Пока выбор не сделан, следуем за системой — в том числе если она
+    // переключилась прямо сейчас.
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (!root.getAttribute('data-theme')) paintButton();
+    });
+
+    paintButton();
+  }
+
+  // --- Появление секций при прокрутке -------------------------------------
+  // Только если человек не просил убрать анимации. И только как украшение:
+  // без JS и при reduce-motion всё видно сразу, ничего не прячется навсегда.
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var revealables = document.querySelectorAll('[data-reveal]');
+  if (revealables.length && window.IntersectionObserver && !reduce) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px' });
+
+    revealables.forEach(function (el) {
+      el.classList.add('will-reveal');
+      observer.observe(el);
+    });
+  }
+
   // --- Меню ---------------------------------------------------------------
   var toggle = document.querySelector('[data-menu-toggle]');
   var nav = document.getElementById('nav');

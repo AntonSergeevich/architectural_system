@@ -22,7 +22,7 @@
     {{ catalog_data|json_script:"catalog-data" }}
     <p class="visually-hidden" role="status" aria-live="polite" data-live></p>
 
-    <form method="post" action="{% url 'public:constructor' %}"
+    <form class="constructor__form" method="post" action="{% url 'public:constructor' %}"
           data-calc-form data-calc-url="{% url 'public:calculate' %}">
       {% csrf_token %}
 
