@@ -1,0 +1,24 @@
+# Переносы строк.
+#
+# Проект пишется на Linux (LF), а открывается на Windows. Без этого файла
+# редактор на Windows переписывает окончания строк, и git показывает
+# «изменены» все файлы разом — после чего git pull отказывается работать
+# с сообщением «Your local changes would be overwritten by merge».
+#
+# text=auto: в репозитории всегда LF, в рабочей копии — как принято
+# в системе. Скрипты для сервера принудительно LF: с CRLF bash
+# не запускает их вовсе.
+
+* text=auto
+
+*.sh    text eol=lf
+*.conf  text eol=lf
+*.service text eol=lf
+crontab text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
+*.ico binary

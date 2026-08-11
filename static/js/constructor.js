@@ -5,10 +5,13 @@
    на мобильных он не работает, и держать два разных механизма означает
    получить два разных набора багов.
 
-   Ключевое для телефона:
-   1. Блок берётся УДЕРЖАНИЕМ (180 мс при смещении до 8 px). Сдвинул
-      раньше — страница скроллится как обычно. Без этого перетаскивание
-      всегда воюет со скроллом и всегда проигрывает.
+   Мышь и палец берут блок по-разному, и это принципиально:
+   1. Пальцем — УДЕРЖАНИЕМ (180 мс при смещении до 8 px). Сдвинул раньше —
+      страница прокручивается как обычно. Без этого перетаскивание всегда
+      воюет с прокруткой и всегда проигрывает.
+   1a. Мышью — сразу, как только курсор сдвинулся на 4 px. Мышью
+      прокручивают колесом, конфликта нет, а удержание там читается
+      как «перетаскивание не работает».
    2. Блок поднимается на 56 px над пальцем — иначе тащишь то, чего не видишь.
    3. Слоты магнитные: попадать пикселем в пиксель пальцем невозможно.
    4. Автоскролл у краёв, обработка pointercancel (входящий звонок не должен
@@ -27,6 +30,7 @@
   var CATALOG = JSON.parse(document.getElementById('catalog-data').textContent);
   var HOLD_MS = 180;      // столько нужно удержать, чтобы взять блок
   var MOVE_TOLERANCE = 8; // и не сдвинуться больше, чем на столько
+  var MOUSE_THRESHOLD = 4; // мышь берёт блок сразу, как только сдвинулась
   var LIFT = 56;          // на сколько поднимаем блок над пальцем
   var SNAP = 64;          // радиус притяжения слота
   var EDGE = 80;          // зона автоскролла у края экрана
@@ -273,24 +277,55 @@
     dragMoved = false;
     var startX = e.clientX;
     var startY = e.clientY;
+    var pointerId = e.pointerId;
 
-    holdTimer = setTimeout(function () {
-      startDrag(el, mod, startX, startY, e.pointerId);
-    }, HOLD_MS);
+    // Мышь и палец берут блок по-разному, и это принципиально.
+    //
+    // Пальцем удержание обязательно: иначе перетаскивание отбирает у
+    // страницы прокрутку и воюет с ней. Мышью прокручивают колесом,
+    // никакого конфликта нет — а требовать удержания от мыши значит
+    // сделать вид, будто перетаскивание не работает. Именно так это
+    // и выглядит: нажал, повёл, ничего не поехало.
+    var isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
 
-    function cancelHold(ev) {
-      if (ev && ev.type === 'pointermove') {
-        var moved = Math.hypot(ev.clientX - startX, ev.clientY - startY);
-        if (moved < MOVE_TOLERANCE) return;
-      }
+    function cleanup() {
       clearTimeout(holdTimer);
-      window.removeEventListener('pointermove', cancelHold);
-      window.removeEventListener('pointerup', cancelHold);
-      window.removeEventListener('pointercancel', cancelHold);
+      window.removeEventListener('pointermove', onPreMove);
+      window.removeEventListener('pointerup', cleanup);
+      window.removeEventListener('pointercancel', cleanup);
     }
-    window.addEventListener('pointermove', cancelHold, { passive: true });
-    window.addEventListener('pointerup', cancelHold);
-    window.addEventListener('pointercancel', cancelHold);
+
+    function onPreMove(ev) {
+      var moved = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+
+      if (!isTouch) {
+        // Мышь: поехали сразу, как только курсор сдвинулся заметно.
+        if (moved < MOUSE_THRESHOLD) return;
+        cleanup();
+        startDrag(el, mod, ev.clientX, ev.clientY, pointerId);
+        // Не зовём onPointerMove: он гасит событие через preventDefault,
+        // а этот обработчик пассивный — браузер такое запрещает и ругается
+        // в консоль. Клон и подсветку двигаем напрямую.
+        moveClone(ev.clientX, ev.clientY);
+        highlight(ev.clientX, ev.clientY);
+        return;
+      }
+
+      // Палец: сдвинулся раньше срока — значит это прокрутка, отдаём её
+      // странице и блок не берём.
+      if (moved >= MOVE_TOLERANCE) cleanup();
+    }
+
+    if (isTouch) {
+      holdTimer = setTimeout(function () {
+        cleanup();
+        startDrag(el, mod, startX, startY, pointerId);
+      }, HOLD_MS);
+    }
+
+    window.addEventListener('pointermove', onPreMove, { passive: true });
+    window.addEventListener('pointerup', cleanup);
+    window.addEventListener('pointercancel', cleanup);
   }
 
   function startDrag(el, mod, x, y, pointerId) {
