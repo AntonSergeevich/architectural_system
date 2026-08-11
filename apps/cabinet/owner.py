@@ -146,6 +146,8 @@ def dashboard(request):
             "wip_used": active,
             "wip_limit": site.wip_limit,
             "wip_exceeded": active > site.wip_limit,
+            "is_owner_view": True,
+            **services.telegram_context(request.user),
         },
     )
 

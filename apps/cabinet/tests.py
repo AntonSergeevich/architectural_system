@@ -100,6 +100,29 @@ class AccessTests(CabinetTestCase):
         self.assertContains(response, "Квартира на Мира")
 
 
+class TelegramPanelTests(CabinetTestCase):
+    """Кнопка привязки должна быть на всех экранах, где стоит панель.
+
+    Панель включается в шаблон, а данные для неё приходят из вида —
+    и забыть их можно ровно в одном месте, после чего кабинет честно
+    сообщает «бот не настроен» при полностью настроенном боте.
+    """
+
+    def test_button_is_shown_wherever_the_panel_is(self):
+        pages = [
+            ("cabinet:dashboard", [], "darya@example.com", "owner-pass-123"),
+            ("cabinet:project_detail", [self.project.pk], "darya@example.com", "owner-pass-123"),
+            ("cabinet:my_project", [], "mariya@example.com", "client-pass-123"),
+        ]
+        with self.settings(TELEGRAM_BOT_TOKEN="токен", TELEGRAM_BOT_USERNAME="daarch_bot"):
+            for name, args, email, password in pages:
+                with self.subTest(page=name):
+                    self.client.login(email=email, password=password)
+                    body = self.client.get(reverse(name, args=args)).content.decode()
+                    self.assertIn("t.me/daarch_bot?start=", body)
+                    self.assertNotIn("Бот пока не настроен", body)
+
+
 class ClientAccessIssueTests(CabinetTestCase):
     def test_owner_creates_client_and_issues_password(self):
         """Дарья заводит карточку и выдаёт доступ сама, без разработчика."""
