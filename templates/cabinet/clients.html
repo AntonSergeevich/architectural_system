@@ -1,0 +1,58 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load forms %}
+{% block title %}Заказчики — кабинет{% endblock %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">Кабинет</p>
+    <h1>Заказчики</h1>
+    <p class="muted">Карточка заводится здесь. Доступ в кабинет выдаётся из карточки.</p>
+  </div>
+</header>
+
+<div class="cabgrid">
+  <div class="cabgrid__main">
+    <section class="panel">
+      <header class="panel__head"><h2>Все заказчики</h2></header>
+      {% for client in clients %}
+        <article class="row">
+          <div class="row__main">
+            <a class="row__title" href="{% url 'cabinet:client_detail' client.pk %}">{{ client.name }}</a>
+            <p class="muted">
+              {{ client.phone }}{% if client.email %} · {{ client.email }}{% endif %}
+              {% if client.source %} · {{ client.source }}{% endif %}
+            </p>
+          </div>
+          <div class="row__side">
+            {% if client.user %}<span class="badge badge--ok">есть доступ</span>
+            {% else %}<span class="badge">без доступа</span>{% endif %}
+            {% if client.projects.all %}<span class="badge">проектов: {{ client.projects.all|length }}</span>{% endif %}
+          </div>
+        </article>
+      {% empty %}
+        <p class="muted">Пока никого. Заведите первого заказчика справа.</p>
+      {% endfor %}
+    </section>
+  </div>
+
+  <aside class="cabgrid__side">
+    <section class="panel">
+      <header class="panel__head"><h2>Новый заказчик</h2></header>
+      <form class="adder__form" method="post">
+        {% csrf_token %}
+        {% field form.name %}
+        {% field form.phone %}
+        {% field form.email %}
+        {% field form.messenger %}
+        {% field form.source %}
+        {% field form.notes %}
+        {% if form.non_field_errors %}
+          {% for error in form.non_field_errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+        {% endif %}
+        <button class="btn" type="submit">Завести карточку</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

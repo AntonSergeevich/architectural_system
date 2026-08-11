@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% block title %}{{ template.title }}{% endblock %}
-{% block content %}
+{% block cabinet %}
 <section class="section section--tight">
   <div class="wrap wrap--narrow">
     {% include "cabinet/_nav.html" %}
@@ -47,6 +47,4 @@
 
       <button class="btn" type="submit">Сохранить</button>
     </form>
-  </div>
-</section>
 {% endblock %}

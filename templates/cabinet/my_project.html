@@ -1,107 +1,127 @@
-{% extends "base.html" %}
-{% load richtext %}
+{% extends "cabinet/base_cabinet.html" %}
+{% load richtext forms %}
 {% block title %}Мой проект{% endblock %}
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">Ваш проект</p>
     <h1>{{ project }}</h1>
-    <p class="lead">
-      {{ project.get_status_display }}{% if project.starts_at %} · старт {{ project.starts_at|date:"d.m.Y" }}{% endif %}
+    <p class="muted">
+      {{ project.get_status_display }}
+      {% if project.starts_at %} · старт {{ project.starts_at|date:"d.m.Y" }}{% endif %}
       · готово {{ project.progress }}%
     </p>
+  </div>
+</header>
 
-    <div class="steps" style="margin-top: var(--gap-6)">
-      {% for stage in stages %}
-        <div class="step">
-          <div class="step__num">{{ stage.number }}</div>
-          <div>
-            <h3>{{ stage.title }}</h3>
-            <p class="card__muted">
-              {{ stage.get_status_display }}
-              {% if stage.waiting_on == 'client' %} · <strong>ждём вас</strong>{% endif %}
-            </p>
-
-            {% if stage.files.exists %}
-              <ul>
-                {% for file in stage.files.all %}
-                  <li><a href="{{ file.file.url }}">{{ file.title|default:file.file.name }}</a></li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-
-            {% if stage.revisions.exists %}
-              <p class="card__muted"><strong>Правки</strong></p>
-              <ul>
-                {% for revision in stage.revisions.all %}
-                  <li>{{ revision.text }}
-                    <span class="card__muted">— {{ revision.get_status_display }}</span>
-                    {% if revision.answer %}<br><span class="card__muted">Ответ: {{ revision.answer }}</span>{% endif %}
-                  </li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-
-            {% if stage.status == 'review' %}
-              <form method="post" action="{% url 'cabinet:approve_stage' stage.pk %}" style="margin-top: var(--gap-3)">
-                {% csrf_token %}
-                <button class="btn" type="submit">Согласовать этап</button>
-              </form>
-            {% endif %}
-          </div>
-        </div>
+{% comment %}
+  Первым делом — «ждут ли чего-то от меня». Это вопрос, с которого
+  начинается тревога, и пока он не закрыт, остальное не читается.
+{% endcomment %}
+{% if my_tasks %}
+  <section class="callout callout--ask">
+    <h2>От вас ждут</h2>
+    <ul class="callout__list">
+      {% for task in my_tasks %}
+        <li>
+          <form method="post" action="{% url 'cabinet:task_toggle' project.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="task" value="{{ task.pk }}">
+            <button class="task__check" type="submit" data-task-toggle="{{ task.pk }}"
+                    aria-pressed="false" aria-label="Отметить сделанным">
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <path d="M3 8.5 6.4 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.4"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </form>
+          <span>
+            {{ task.title }}
+            {% if task.due_date %}<span class="muted"> — до {{ task.due_date|date:"d.m" }}</span>{% endif %}
+            {% if task.comment %}<br><span class="muted">{{ task.comment }}</span>{% endif %}
+          </span>
+        </li>
       {% endfor %}
-    </div>
+    </ul>
+    <p class="muted">Отметьте сделанное — я увижу это сразу.</p>
+  </section>
+{% else %}
+  <section class="callout callout--calm">
+    <h2>От вас сейчас ничего не нужно</h2>
+    <p class="muted">
+      Работа идёт с моей стороны. Как только понадобится ваше решение,
+      оно появится здесь и придёт сообщением.
+    </p>
+  </section>
+{% endif %}
 
-    <div class="card" style="margin-top: var(--gap-6)">
-      <h2>Оставить правку</h2>
-      <p class="card__muted">
-        Правки принимаются здесь, а не в мессенджере: так ничего не теряется
-        и всё видно нам обоим.
+{% if pending_changes %}
+  <section class="callout callout--warn">
+    <h2>Нужно ваше решение по смете</h2>
+    <p class="muted">Ниже, в разделе «Деньги», — что именно меняется и почему.</p>
+  </section>
+{% endif %}
+
+{% include "cabinet/_rail.html" %}
+
+<div class="cabgrid">
+  <div class="cabgrid__main">
+    <section class="panel" id="stages">
+      <header class="panel__head">
+        <h2>Что происходит</h2>
+      </header>
+      {% for stage in stages %}
+        {% include "cabinet/_stage.html" %}
+      {% endfor %}
+    </section>
+
+    <section class="panel" id="revision">
+      <header class="panel__head">
+        <h2>Оставить правку</h2>
+      </header>
+      <p class="muted">
+        Правки принимаются здесь, а не в мессенджере: так ничего
+        не теряется, объём виден нам обоим, и на каждую есть ответ
+        в срок по регламенту.
       </p>
-      <form method="post" action="{% url 'cabinet:add_revision' %}">
+      <form class="adder__form" method="post" action="{% url 'cabinet:add_revision' %}">
         {% csrf_token %}
-        <div class="field">
-          <label for="stage">Этап</label>
-          <select id="stage" name="stage">
-            {% for stage in stages %}<option value="{{ stage.pk }}">{{ stage.number }}. {{ stage.title }}</option>{% endfor %}
+        <div class="adder__row">
+          <select name="stage" aria-label="К какому этапу">
+            {% for stage in stages %}
+              <option value="{{ stage.pk }}" {% if current and stage.pk == current.pk %}selected{% endif %}>
+                {{ stage.number }}. {{ stage.title }}
+              </option>
+            {% endfor %}
           </select>
+          {% field form.room %}
         </div>
-        <div class="field">
-          <label for="room">Помещение</label>
-          <input type="text" id="room" name="room" placeholder="гостиная">
-        </div>
-        <div class="field">
-          <label for="text">Что поменять</label>
-          <textarea id="text" name="text" required></textarea>
-        </div>
+        {% field form.text %}
         <button class="btn" type="submit">Отправить правку</button>
       </form>
-    </div>
+    </section>
 
-    {% if contracts %}
-      <h2 style="margin-top: var(--gap-7)">Договоры</h2>
-      <div class="summary-lines">
-        {% for contract in contracts %}
-          <div class="summary-line">
-            <a href="{{ contract.get_absolute_url }}">{{ contract }}</a>
-            <span class="card__muted">{{ contract.get_status_display }}</span>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+    {% include "cabinet/_chat.html" %}
+  </div>
+
+  <aside class="cabgrid__side">
+    {% include "cabinet/_money.html" %}
+    {% include "cabinet/_contracts.html" %}
 
     {% if invoices %}
-      <h2 style="margin-top: var(--gap-7)">Счета</h2>
-      <div class="summary-lines">
-        {% for invoice in invoices %}
-          <div class="summary-line">
-            <a href="{{ invoice.get_absolute_url }}">{{ invoice.title }}</a>
-            <span>{{ invoice.amount|money }} · {{ invoice.get_status_display }}</span>
-          </div>
-        {% endfor %}
-      </div>
+      <section class="panel">
+        <header class="panel__head"><h2>Счета</h2></header>
+        <ul class="files">
+          {% for invoice in invoices %}
+            <li>
+              <a href="{{ invoice.get_absolute_url }}">{{ invoice.title }}</a>
+              <span class="muted">{{ invoice.amount|money }} · {{ invoice.get_status_display }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     {% endif %}
-  </div>
-</section>
+  </aside>
+</div>
 {% endblock %}

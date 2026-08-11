@@ -1,0 +1,105 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load richtext %}
+{% block title %}Сегодня — кабинет{% endblock %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">Кабинет</p>
+    <h1>Сегодня</h1>
+    <p class="muted">Короткий ответ на вопрос «за что взяться». Всё остальное — в разделах.</p>
+  </div>
+  <div class="cabhead__side">
+    <span class="wip {% if wip_exceeded %}is-over{% endif %}">
+      Проектов в работе: {{ wip_used }} из {{ wip_limit }}
+    </span>
+  </div>
+</header>
+
+{% if wip_exceeded %}
+  <section class="callout callout--warn">
+    <h2>Проектов больше, чем предел</h2>
+    <p class="muted">
+      Предел стоит не для красоты: он и есть защита от выгорания.
+      Новые проекты лучше поставить в очередь.
+    </p>
+  </section>
+{% endif %}
+
+{% if overdue %}
+  <section class="panel">
+    <header class="panel__head">
+      <h2>Просроченные касания</h2>
+      <span class="muted">Заявка без следующего шага — это потерянная заявка</span>
+    </header>
+    <ul class="files">
+      {% for lead in overdue %}
+        <li>
+          <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+          <span class="muted">{{ lead.next_action }} · было до {{ lead.next_action_at|date:"d.m H:i" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+<section class="panel">
+  <header class="panel__head">
+    <h2>Проекты в работе</h2>
+    <a class="cabnav__item" href="{% url 'cabinet:projects' %}">Все проекты</a>
+  </header>
+
+  {% for row in rows %}
+    <article class="row">
+      <div class="row__main">
+        <a class="row__title" href="{% url 'cabinet:project_detail' row.project.pk %}">{{ row.project }}</a>
+        <p class="muted">
+          {% if row.stage %}Этап {{ row.stage.number }}: {{ row.stage.title }}{% else %}Этапы не разложены{% endif %}
+          · готово {{ row.project.progress }}%
+          · оплачено {{ row.project.paid_percent }}%
+        </p>
+        {% if row.tasks %}
+          <ul class="row__tasks">
+            {% for task in row.tasks %}<li>{{ task.title }}</li>{% endfor %}
+            {% if row.tasks_total > 3 %}<li class="muted">и ещё {{ row.tasks_total|add:"-3" }}</li>{% endif %}
+          </ul>
+        {% endif %}
+      </div>
+      <div class="row__side">
+        {% if row.unread %}<span class="badge">{{ row.unread }} новых</span>{% endif %}
+        {% if row.project.pending_budget_changes %}<span class="badge badge--warn">смета на согласовании</span>{% endif %}
+      </div>
+    </article>
+  {% empty %}
+    <p class="muted">Активных проектов нет. Заведите проект в карточке заказчика.</p>
+  {% endfor %}
+</section>
+
+{% if new_leads %}
+  <section class="panel">
+    <header class="panel__head"><h2>Новые заявки</h2></header>
+    <ul class="files">
+      {% for lead in new_leads %}
+        <li>
+          <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+          <span class="muted">{{ lead.created_at|date:"d.m H:i" }}{% if lead.estate %} · {{ lead.estate.area|floatformat:"-1" }} м²{% endif %}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+{% if unsigned %}
+  <section class="panel">
+    <header class="panel__head">
+      <h2>Ждут подписи</h2>
+      <span class="muted">Отправлены заказчику, подписанного экземпляра нет</span>
+    </header>
+    <ul class="files">
+      {% for contract in unsigned %}
+        <li>{{ contract }} <span class="muted">— {{ contract.client.name }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+{% endblock %}

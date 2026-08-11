@@ -1,0 +1,71 @@
+{% load forms %}
+{% comment %}
+  Переписка по проекту.
+
+  Она здесь не для удобства — для доказательной базы. В мессенджере
+  «я вам присылала» не значит ничего: сообщение можно удалить, чат —
+  очистить, файл — потерять. Здесь сообщения не редактируются и
+  не удаляются ни одной из сторон, у каждого есть автор и время.
+{% endcomment %}
+<section class="panel" id="chat">
+  <header class="panel__head">
+    <h2>Переписка по проекту</h2>
+    <span class="muted">Сообщения и файлы сохраняются навсегда</span>
+  </header>
+
+  <div class="chat" data-chat>
+    {% for message in messages_list %}
+      <div class="msg {% if message.author_is_owner %}msg--owner{% else %}msg--client{% endif %}">
+        <div class="msg__meta">
+          <strong>{{ message.author_name|default:"—" }}</strong>
+          <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"d.m.Y H:i" }}</time>
+          {% if message.stage %}<span class="muted">· {{ message.stage.title }}</span>{% endif %}
+        </div>
+        {% if message.text %}<p class="msg__text">{{ message.text|linebreaksbr }}</p>{% endif %}
+        {% if message.files.all %}
+          <div class="msg__files">
+            {% for file in message.files.all %}
+              {% if file.is_image %}
+                <a class="msg__thumb" href="{{ file.file.url }}" target="_blank" rel="noopener">
+                  <img src="{{ file.file.url }}" alt="{{ file.name }}" loading="lazy">
+                </a>
+              {% else %}
+                <a class="msg__file" href="{{ file.file.url }}" download>
+                  <span class="msg__file-name">{{ file.name }}</span>
+                  <span class="muted">{{ file.human_size }}</span>
+                </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="muted chat__empty">
+        Здесь пока пусто. Пишите сюда всё, что касается проекта:
+        так ничего не потеряется и всё останется с датой.
+      </p>
+    {% endfor %}
+  </div>
+
+  <form class="chat__form" method="post" enctype="multipart/form-data"
+        action="{% url 'cabinet:message_send' project.pk %}" data-chat-form>
+    {% csrf_token %}
+    <textarea name="text" rows="2" placeholder="Написать сообщение…" data-chat-input></textarea>
+    <div class="chat__tools">
+      <label class="chat__attach">
+        <input type="file" name="files" multiple data-chat-files>
+        <span>Прикрепить файлы</span>
+      </label>
+      <select name="stage" aria-label="К какому этапу">
+        <option value="">Без этапа</option>
+        {% for stage in stages %}
+          <option value="{{ stage.pk }}" {% if current and stage.pk == current.pk %}selected{% endif %}>
+            {{ stage.number }}. {{ stage.title }}
+          </option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Отправить</button>
+    </div>
+    <p class="chat__picked muted" data-chat-picked hidden></p>
+  </form>
+</section>

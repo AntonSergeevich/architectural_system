@@ -25,6 +25,7 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_catalog        # каталог услуг, цены, пресеты, этапы
 python manage.py seed_legal          # документы и шаблоны договоров
+python manage.py seed_tasks          # готовые формулировки задач для этапов
 python manage.py createsuperuser     # это Дарья
 python manage.py runserver
 ```
@@ -72,6 +73,7 @@ docs/          разбор бизнеса и решения — см. ниже
 | [docs/06-карта.md](docs/06-карта.md) | Что делаем в каком порядке и что нужно от Дарьи |
 | [docs/07-конструктор.md](docs/07-конструктор.md) | Дом из кубиков: метафора, механика перетаскивания, мобильная версия |
 | [docs/08-цены-и-оплата.md](docs/08-цены-и-оплата.md) | Откуда взялись цены, как их править, договоры, куки, GetPlatinum |
+| [docs/09-кабинет.md](docs/09-кабинет.md) | Кабинеты Дарьи и заказчика: доступы, шкала этапов, задачи, деньги, договоры, переписка |
 | [DEPLOY.md](DEPLOY.md) | Установка на BEGET VPS: DNS, PostgreSQL, gunicorn, nginx, HTTPS, cron |
 
 ---

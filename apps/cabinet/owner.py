@@ -1,12 +1,13 @@
-"""Кабинет Дарьи: воронка, проекты, цены, договоры, счета."""
+"""Кабинет Дарьи: воронка, заказчики, проекты, цены, договоры, счета."""
 
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -14,8 +15,29 @@ from apps.billing.models import Invoice
 from apps.catalog.models import ComplexityFactor, PriceHistory, PricingSettings, ServiceModule
 from apps.contracts.models import Contract, ContractClause, ContractTemplate
 from apps.core.models import SiteSettings
-from apps.crm.models import Lead
-from apps.projects.models import Project, Stage
+from apps.crm.models import Client, Lead
+from apps.projects.models import (
+    BudgetChange,
+    Project,
+    ProjectPayment,
+    Stage,
+    StageFile,
+    StageTask,
+    TaskPreset,
+)
+
+from . import services
+from .forms import (
+    AccessForm,
+    BudgetChangeForm,
+    ClientForm,
+    ContractUploadForm,
+    MessageForm,
+    PaymentForm,
+    ProjectForm,
+    PropertyForm,
+    TaskForm,
+)
 
 owner_only = user_passes_test(lambda u: u.is_authenticated and u.is_owner)
 
@@ -39,6 +61,7 @@ def leads(request):
         request,
         "cabinet/leads.html",
         {
+            "section": "leads",
             "overdue": [lead for lead in qs if lead.is_overdue],
             "columns": columns,
             "leads": qs,
@@ -66,8 +89,181 @@ def lead_detail(request, pk):
     return render(
         request,
         "cabinet/lead_detail.html",
-        {"lead": lead, "statuses": Lead.Status.choices},
+        {"lead": lead, "statuses": Lead.Status.choices, "section": "leads"},
     )
+
+
+@login_required
+@owner_only
+def dashboard(request):
+    """Первый экран кабинета: что требует Дарью сегодня.
+
+    Не список всего подряд, а короткий ответ на вопрос «за что взяться».
+    Список всего подряд человек всё равно не читает — он его пролистывает
+    и закрывает.
+    """
+    leads_qs = list(Lead.objects.select_related("client").order_by("next_action_at"))
+    projects_qs = list(
+        Project.objects.select_related("client", "estate")
+        .exclude(status=Project.Status.DONE)
+        .prefetch_related("stages__tasks", "messages", "budget_changes")
+    )
+
+    waiting = []
+    for project in projects_qs:
+        unread = services.unread_count(project, request.user)
+        stage = project.current_stage
+        my_tasks = [
+            task
+            for st in project.stages.all()
+            for task in st.tasks.all()
+            if not task.is_done and task.who in {StageTask.Owner.OWNER, StageTask.Owner.BOTH}
+        ]
+        waiting.append(
+            {
+                "project": project,
+                "stage": stage,
+                "unread": unread,
+                "tasks": my_tasks[:3],
+                "tasks_total": len(my_tasks),
+            }
+        )
+
+    site = SiteSettings.get()
+    active = sum(1 for p in projects_qs if p.status == Project.Status.ACTIVE)
+    return render(
+        request,
+        "cabinet/dashboard.html",
+        {
+            "section": "dashboard",
+            "overdue": [lead for lead in leads_qs if lead.is_overdue],
+            "new_leads": [lead for lead in leads_qs if lead.status == Lead.Status.NEW],
+            "rows": waiting,
+            "unsigned": Contract.objects.filter(
+                status__in=[Contract.Status.SENT, Contract.Status.REVIEWED], signed_file=""
+            ).select_related("client", "template")[:10],
+            "wip_used": active,
+            "wip_limit": site.wip_limit,
+            "wip_exceeded": active > site.wip_limit,
+        },
+    )
+
+
+@login_required
+@owner_only
+def clients(request):
+    """Заказчики. Отсюда заводится карточка и выдаётся доступ."""
+    form = ClientForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        client = form.save()
+        messages.success(request, f"Заказчик «{client.name}» заведён.")
+        return redirect("cabinet:client_detail", pk=client.pk)
+
+    qs = (
+        Client.objects.select_related("user")
+        .prefetch_related("projects", "properties")
+        .order_by("-created_at")
+    )
+    return render(request, "cabinet/clients.html", {"clients": qs, "form": form, "section": "clients"})
+
+
+@login_required
+@owner_only
+def client_detail(request, pk):
+    client = get_object_or_404(
+        Client.objects.select_related("user").prefetch_related("properties", "projects"), pk=pk
+    )
+    return render(
+        request,
+        "cabinet/client_detail.html",
+        {
+            "section": "clients",
+            "client": client,
+            "form": ClientForm(instance=client),
+            "estate_form": PropertyForm(),
+            "access_form": AccessForm(initial={"email": client.email, "full_name": client.name}),
+            "project_form": ProjectForm(client=client),
+            # Пароль показывается ровно один раз, сразу после выдачи:
+            # в базе он хранится только хешем, и достать его потом нельзя.
+            "issued_password": request.session.pop("issued_password", None),
+        },
+    )
+
+
+@login_required
+@owner_only
+@require_POST
+def client_edit(request, pk):
+    client = get_object_or_404(Client, pk=pk)
+    form = ClientForm(request.POST, instance=client)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Карточка сохранена.")
+    else:
+        messages.error(request, "Проверьте поля карточки.")
+    return redirect("cabinet:client_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def client_estate(request, pk):
+    """Объект заказчика: без него проект завести не на чем."""
+    client = get_object_or_404(Client, pk=pk)
+    form = PropertyForm(request.POST)
+    if form.is_valid():
+        estate = form.save(commit=False)
+        estate.client = client
+        estate.save()
+        messages.success(request, "Объект добавлен.")
+    else:
+        messages.error(request, "Проверьте данные объекта.")
+    return redirect("cabinet:client_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def client_access(request, pk):
+    """Выдать заказчику доступ в кабинет.
+
+    Логин — почта, пароль показывается один раз. Заказчиков единицы,
+    и по опыту Дарьи доступ она диктует голосом или пересылает
+    в мессенджер — значит, пароль должен быть произносимым.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    form = AccessForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Проверьте почту заказчика.")
+        return redirect("cabinet:client_detail", pk=pk)
+
+    user, password = form.save(client)
+    request.session["issued_password"] = {"email": user.email, "password": password}
+    messages.success(
+        request,
+        "Доступ выдан. Пароль показан ниже — он больше нигде не хранится "
+        "в открытом виде, передайте его заказчику сейчас.",
+    )
+    return redirect("cabinet:client_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def client_project(request, pk):
+    """Завести проект заказчику. Этапы раскладываются сами."""
+    client = get_object_or_404(Client, pk=pk)
+    form = ProjectForm(request.POST, client=client)
+    if not form.is_valid():
+        messages.error(request, "Проверьте поля проекта: нужен объект.")
+        return redirect("cabinet:client_detail", pk=pk)
+
+    project = form.save(commit=False)
+    project.client = client
+    project.save()
+    created = services.create_stages(project)
+    messages.success(request, f"Проект заведён, этапов разложено: {created}.")
+    return redirect("cabinet:project_detail", pk=project.pk)
 
 
 @login_required
@@ -85,6 +281,7 @@ def projects(request):
         request,
         "cabinet/projects.html",
         {
+            "section": "projects",
             "projects": qs,
             "wip_limit": site.wip_limit,
             "wip_used": active,
@@ -96,13 +293,265 @@ def projects(request):
 @login_required
 @owner_only
 def project_detail(request, pk):
-    project = get_object_or_404(
-        Project.objects.select_related("client", "estate").prefetch_related(
-            "stages__revisions", "stages__files"
-        ),
-        pk=pk,
+    """Рабочее место проекта: шкала этапов, задачи, деньги, договоры, чат.
+
+    Всё на одном экране намеренно. Проект — это один объект внимания,
+    и раскладывать его по пяти вкладкам значит заставить человека
+    держать состояние в голове.
+    """
+    project = get_object_or_404(services.project_queryset(), pk=pk)
+    services.mark_messages_read(project, request.user)
+
+    stages = list(project.stages.order_by("number"))
+    current = project.current_stage
+    presets = TaskPreset.objects.filter(is_active=True).filter(
+        Q(stage_number__isnull=True) | Q(stage_number=current.number if current else 0)
     )
-    return render(request, "cabinet/project_detail.html", {"project": project})
+
+    return render(
+        request,
+        "cabinet/project.html",
+        {
+            "section": "projects",
+            "project": project,
+            "stages": stages,
+            "current": current,
+            "presets": presets,
+            "task_form": TaskForm(),
+            "payment_form": PaymentForm(project=project),
+            "budget_form": BudgetChangeForm(project=project),
+            "contract_form": ContractUploadForm(project=project),
+            "message_form": MessageForm(),
+            "messages_list": project.messages.all(),
+            "signed_contracts": [c for c in project.contracts.all() if c.is_signed],
+            "open_contracts": [c for c in project.contracts.all() if not c.is_signed],
+            "is_owner_view": True,
+        },
+    )
+
+
+# --- Действия внутри проекта ------------------------------------------------
+
+
+def _project_or_404(pk):
+    return get_object_or_404(services.project_queryset(), pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def task_add(request, pk):
+    """Добавить задачу этапа — своими словами или готовой формулировкой."""
+    project = _project_or_404(pk)
+    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
+
+    preset_id = request.POST.get("preset")
+    if preset_id:
+        preset = get_object_or_404(TaskPreset, pk=preset_id)
+        StageTask.objects.create(stage=stage, title=preset.title, who=preset.who)
+        messages.success(request, "Задача добавлена.")
+        return redirect("cabinet:project_detail", pk=pk)
+
+    form = TaskForm(request.POST)
+    if form.is_valid():
+        task = form.save(commit=False)
+        task.stage = stage
+        task.save()
+        messages.success(request, "Задача добавлена.")
+    else:
+        messages.error(request, "Напишите, что нужно сделать.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def task_toggle(request, pk):
+    """Отметить задачу сделанной. Доступно обеим сторонам.
+
+    Заказчик отмечает то, что должен он: «прислал фото розеток» —
+    это его строка, и ждать, пока её закроет Дарья, значит опять
+    завести переписку «а вы получили?».
+    """
+    project = _visible_project(request, pk)
+    task = get_object_or_404(StageTask, pk=request.POST.get("task"), stage__project=project)
+
+    if not request.user.is_owner and task.who == StageTask.Owner.OWNER:
+        return JsonResponse({"ok": False, "error": "это задача Дарьи"}, status=403)
+
+    task.toggle(not task.is_done)
+
+    # Без JavaScript сюда приходит обычная форма — и ей нужен не JSON,
+    # а страница обратно. Обещание «кабинет работает без JS» стоит
+    # ровно столько, сколько таких мелочей учтено.
+    if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+        target = (
+            reverse("cabinet:project_detail", args=[project.pk])
+            if request.user.is_owner
+            else reverse("cabinet:my_project")
+        )
+        return redirect(f"{target}#stage-{task.stage_id}")
+
+    return JsonResponse({"ok": True, "done": task.is_done, "progress": project.progress})
+
+
+@login_required
+@owner_only
+@require_POST
+def task_delete(request, pk):
+    project = _project_or_404(pk)
+    task = get_object_or_404(StageTask, pk=request.POST.get("task"), stage__project=project)
+    task.delete()
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def stage_update(request, pk):
+    """Статус этапа и заметка к нему."""
+    project = _project_or_404(pk)
+    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
+
+    status = request.POST.get("status")
+    if status in dict(Stage.Status.choices):
+        stage.status = status
+        if status == Stage.Status.IN_PROGRESS and not stage.started_at:
+            stage.started_at = timezone.localdate()
+            stage.waiting_on = Stage.WaitingOn.OWNER
+        if status == Stage.Status.REVIEW:
+            stage.waiting_on = Stage.WaitingOn.CLIENT
+        if status == Stage.Status.DONE:
+            stage.finished_at = timezone.localdate()
+            stage.waiting_on = Stage.WaitingOn.NOBODY
+    if "note" in request.POST:
+        stage.note = request.POST["note"]
+    stage.save()
+    messages.success(request, f"Этап «{stage.title}» обновлён.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def stage_file(request, pk):
+    """Файл этапа: планировки, эскизы, альбом."""
+    project = _project_or_404(pk)
+    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
+    uploaded = request.FILES.get("file")
+    if uploaded:
+        StageFile.objects.create(
+            stage=stage, file=uploaded, title=request.POST.get("title", "")[:200]
+        )
+        messages.success(request, "Файл добавлен, заказчик увидит его у себя.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def payment_add(request, pk):
+    project = _project_or_404(pk)
+    form = PaymentForm(request.POST, project=project)
+    if form.is_valid():
+        payment = form.save(commit=False)
+        payment.project = project
+        payment.save()
+        messages.success(request, "Оплата записана.")
+    else:
+        messages.error(request, "Проверьте сумму и дату оплаты.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def payment_delete(request, pk):
+    project = _project_or_404(pk)
+    payment = get_object_or_404(ProjectPayment, pk=request.POST.get("payment"), project=project)
+    payment.delete()
+    messages.success(request, "Оплата удалена.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def budget_add(request, pk):
+    """Выход за рамки бюджета — с обоснованием, на согласование заказчику."""
+    project = _project_or_404(pk)
+    form = BudgetChangeForm(request.POST, project=project)
+    if form.is_valid():
+        change = form.save(commit=False)
+        change.project = project
+        change.save()
+        messages.success(
+            request, "Изменение отправлено заказчику. В сумму проекта оно войдёт после согласования."
+        )
+    else:
+        messages.error(request, "Нужны и сумма, и обоснование.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def contract_add(request, pk):
+    """Договор для заказчика: файл, который он скачает и подпишет."""
+    project = _project_or_404(pk)
+    form = ContractUploadForm(request.POST, request.FILES, project=project)
+    if not form.is_valid():
+        messages.error(request, "Выберите шаблон договора.")
+        return redirect("cabinet:project_detail", pk=pk)
+
+    contract = Contract.objects.create(
+        template=form.cleaned_data["template"],
+        project=project,
+        client=project.client,
+        stage=form.cleaned_data.get("stage"),
+        number=form.cleaned_data.get("number", ""),
+        amount=form.cleaned_data.get("amount") or Decimal("0"),
+        file=request.FILES.get("file"),
+        status=Contract.Status.SENT,
+        sent_at=timezone.now(),
+    )
+    messages.success(request, f"Договор «{contract}» отправлен заказчику в кабинет.")
+    return redirect("cabinet:project_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def message_send(request, pk):
+    """Сообщение в переписке. Общее действие для обеих сторон."""
+    project = _visible_project(request, pk)
+    files = request.FILES.getlist("files")
+    form = MessageForm(request.POST, files_attached=bool(files))
+    if not form.is_valid():
+        messages.error(request, "Напишите сообщение или приложите файл.")
+    else:
+        stage = None
+        if request.POST.get("stage"):
+            stage = Stage.objects.filter(pk=request.POST["stage"], project=project).first()
+        services.post_message(project, request.user, form.cleaned_data["text"], files, stage)
+
+    if request.user.is_owner:
+        return redirect(reverse("cabinet:project_detail", args=[project.pk]) + "#chat")
+    return redirect(reverse("cabinet:my_project") + "#chat")
+
+
+def _visible_project(request, pk):
+    """Проект, к которому у пользователя вообще есть доступ.
+
+    Дарья видит любой, заказчик — только свой. Проверка одна на все
+    общие действия: забыть её в одном обработчике означает открыть
+    чужую переписку.
+    """
+    project = _project_or_404(pk)
+    if request.user.is_owner:
+        return project
+    client = getattr(request.user, "client", None)
+    if client is None or project.client_id != client.pk:
+        raise Http404("Проект не найден")
+    return project
 
 
 @login_required
@@ -190,6 +639,7 @@ def prices(request):
         request,
         "cabinet/prices.html",
         {
+            "section": "prices",
             "modules": modules,
             "complexities": ComplexityFactor.objects.all(),
             "pricing": pricing,
@@ -204,6 +654,7 @@ def contracts(request):
         request,
         "cabinet/contracts.html",
         {
+            "section": "contracts",
             "templates": ContractTemplate.objects.prefetch_related("clauses"),
             "issued": Contract.objects.select_related("client", "template")[:50],
         },
@@ -228,7 +679,7 @@ def contract_edit(request, pk):
         messages.success(request, "Договор сохранён.")
         return redirect("cabinet:contract_edit", pk=pk)
 
-    return render(request, "cabinet/contract_edit.html", {"template": template})
+    return render(request, "cabinet/contract_edit.html", {"template": template, "section": "contracts"})
 
 
 @login_required
@@ -259,5 +710,8 @@ def invoices(request):
     return render(
         request,
         "cabinet/invoices.html",
-        {"invoices": Invoice.objects.select_related("client", "project").prefetch_related("payments")},
+        {
+            "invoices": Invoice.objects.select_related("client", "project").prefetch_related("payments"),
+            "section": "invoices",
+        },
     )

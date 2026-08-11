@@ -1,0 +1,149 @@
+{% load richtext forms %}
+{% comment %}
+  Деньги. Три числа, которые обе стороны должны видеть одинаково:
+  сколько договорились, сколько оплачено, сколько осталось. Всё, что
+  сверх договорённости, стоит отдельно и с обоснованием — молча сумма
+  вырасти не может.
+{% endcomment %}
+<section class="panel" id="money">
+  <header class="panel__head">
+    <h2>Деньги</h2>
+    {% if is_owner_view %}<span class="muted">Оплаты вносите вы, заказчик их видит</span>{% endif %}
+  </header>
+
+  <div class="money">
+    <div class="money__row">
+      <span>Договорились</span>
+      <strong>{{ project.agreed_amount|money }}</strong>
+    </div>
+    {% if project.approved_extra %}
+      <div class="money__row">
+        <span>Согласованные изменения</span>
+        <strong>{{ project.approved_extra|money }}</strong>
+      </div>
+      <div class="money__row money__row--total">
+        <span>Итого по проекту</span>
+        <strong>{{ project.total_amount|money }}</strong>
+      </div>
+    {% endif %}
+    <div class="money__row">
+      <span>Оплачено</span>
+      <strong class="money__paid">{{ project.paid_amount|money }}</strong>
+    </div>
+    <div class="money__row money__row--total">
+      <span>Осталось</span>
+      <strong>{{ project.left_to_pay|money }}</strong>
+    </div>
+
+    <div class="money__bar" role="img"
+         aria-label="Оплачено {{ project.paid_percent }} процентов">
+      <span class="money__fill" data-fill="{{ project.paid_percent }}"></span>
+    </div>
+    <p class="muted">Оплачено {{ project.paid_percent }}% от суммы проекта</p>
+  </div>
+
+  {% if project.payments.all %}
+    <table class="table">
+      <thead><tr><th>Дата</th><th>За что</th><th class="ta-r">Сумма</th>{% if is_owner_view %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for payment in project.payments.all %}
+          <tr>
+            <td>{{ payment.paid_on|date:"d.m.Y" }}</td>
+            <td>{{ payment.label }}{% if payment.comment %}<br><span class="muted">{{ payment.comment }}</span>{% endif %}</td>
+            <td class="ta-r">{{ payment.amount|money }}</td>
+            {% if is_owner_view %}
+              <td class="ta-r">
+                <form method="post" action="{% url 'cabinet:payment_delete' project.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="payment" value="{{ payment.pk }}">
+                  <button class="task__del" type="submit" title="Удалить оплату">×</button>
+                </form>
+              </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Оплат пока нет.</p>
+  {% endif %}
+
+  {% if is_owner_view %}
+    <details class="adder">
+      <summary>Записать оплату</summary>
+      <form class="adder__form" method="post" action="{% url 'cabinet:payment_add' project.pk %}">
+        {% csrf_token %}
+        <div class="grid grid--3">
+          {% field payment_form.kind %}
+          {% field payment_form.stage %}
+          {% field payment_form.amount %}
+          {% field payment_form.paid_on %}
+          {% field payment_form.title %}
+        </div>
+        {% field payment_form.comment %}
+        <button class="btn" type="submit">Записать</button>
+      </form>
+    </details>
+  {% endif %}
+
+  {% comment %} Изменения сметы: предложены Дарьей, решение принимает заказчик. {% endcomment %}
+  <div class="changes">
+    <p class="stage__sub">Изменения сметы</p>
+
+    {% for change in project.budget_changes.all %}
+      <div class="change change--{{ change.status }}">
+        <div class="change__head">
+          <strong>{{ change.title }}</strong>
+          <span class="change__sum {% if change.amount > 0 %}is-plus{% endif %}">
+            {% if change.amount > 0 %}+{% endif %}{{ change.amount|money }}
+          </span>
+        </div>
+        {% if change.stage %}<p class="muted">Этап: {{ change.stage.title }}</p>{% endif %}
+        <p><strong>Почему:</strong> {{ change.reason }}</p>
+        {% if change.consequence %}<p><strong>Если не делать:</strong> {{ change.consequence }}</p>{% endif %}
+
+        {% if change.is_pending %}
+          {% if is_owner_view %}
+            <p class="muted">Ждём решения заказчика. В сумму проекта пока не входит.</p>
+          {% else %}
+            <form class="change__decide" method="post" action="{% url 'cabinet:budget_decide' change.pk %}">
+              {% csrf_token %}
+              <input type="text" name="comment" placeholder="Комментарий (по желанию)">
+              <button class="btn" type="submit" name="decision" value="accept">Согласовать</button>
+              <button class="btn btn--ghost" type="submit" name="decision" value="decline">Отказаться</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <p class="muted">
+            {{ change.get_status_display }}
+            {% if change.decided_at %} · {{ change.decided_by }}, {{ change.decided_at|date:"d.m.Y H:i" }}{% endif %}
+            {% if change.client_comment %}<br>«{{ change.client_comment }}»{% endif %}
+          </p>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="muted">Изменений нет — работаем в рамках договорённости.</p>
+    {% endfor %}
+
+    {% if is_owner_view %}
+      <details class="adder">
+        <summary>Оформить изменение сметы</summary>
+        <p class="muted">
+          Сумма не может вырасти молча. Заказчик увидит изменение у себя
+          и либо согласует его, либо откажется — с датой и именем.
+        </p>
+        <form class="adder__form" method="post" action="{% url 'cabinet:budget_add' project.pk %}">
+          {% csrf_token %}
+          <div class="grid grid--3">
+            {% field budget_form.title %}
+            {% field budget_form.amount %}
+            {% field budget_form.stage %}
+          </div>
+          {% field budget_form.reason %}
+          {% field budget_form.consequence %}
+          <button class="btn" type="submit">Отправить на согласование</button>
+        </form>
+      </details>
+    {% endif %}
+  </div>
+</section>

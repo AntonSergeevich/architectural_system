@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+  Общая рамка кабинета. Публичный сайт продаёт, кабинет — работает,
+  и это разные задачи: здесь нужна не «первая страница», а рабочий стол,
+  на котором всё под рукой и ничего не надо искать.
+{% endcomment %}
+
+{% block head %}<link rel="stylesheet" href="{% static 'css/cabinet.css' %}">{% endblock %}
+
+{% block content %}
+<div class="cab">
+  <div class="wrap">
+    <nav class="cabnav" aria-label="Разделы кабинета">
+      {% if user.is_owner %}
+        <a class="cabnav__item {% if section == 'dashboard' %}is-active{% endif %}" href="{% url 'cabinet:dashboard' %}">Сегодня</a>
+        <a class="cabnav__item {% if section == 'leads' %}is-active{% endif %}" href="{% url 'cabinet:leads' %}">Заявки</a>
+        <a class="cabnav__item {% if section == 'clients' %}is-active{% endif %}" href="{% url 'cabinet:clients' %}">Заказчики</a>
+        <a class="cabnav__item {% if section == 'projects' %}is-active{% endif %}" href="{% url 'cabinet:projects' %}">Проекты</a>
+        <a class="cabnav__item {% if section == 'prices' %}is-active{% endif %}" href="{% url 'cabinet:prices' %}">Цены</a>
+        <a class="cabnav__item {% if section == 'contracts' %}is-active{% endif %}" href="{% url 'cabinet:contracts' %}">Договоры</a>
+        <a class="cabnav__item {% if section == 'invoices' %}is-active{% endif %}" href="{% url 'cabinet:invoices' %}">Счета</a>
+        <a class="cabnav__item cabnav__item--minor" href="/admin/">Админка</a>
+      {% else %}
+        <a class="cabnav__item {% if section == 'my_project' %}is-active{% endif %}" href="{% url 'cabinet:my_project' %}">Мой проект</a>
+      {% endif %}
+      <form class="cabnav__exit" method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}<button type="submit">Выйти</button>
+      </form>
+    </nav>
+
+    {% block cabinet %}{% endblock %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/cabinet.js' %}" defer></script>
+{% block cabinet_scripts %}{% endblock %}
+{% endblock %}

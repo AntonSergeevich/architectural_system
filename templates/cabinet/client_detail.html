@@ -1,0 +1,156 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load richtext forms %}
+{% block title %}{{ client.name }} — заказчик{% endblock %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">Заказчик</p>
+    <h1>{{ client.name }}</h1>
+    <p class="muted">
+      {{ client.phone }}{% if client.email %} · {{ client.email }}{% endif %}
+      {% if client.source %} · пришёл: {{ client.source }}{% endif %}
+    </p>
+  </div>
+  <div class="cabhead__side">
+    <a class="btn btn--ghost" href="{% url 'cabinet:clients' %}">Все заказчики</a>
+  </div>
+</header>
+
+{% if issued_password %}
+  {% comment %}
+    Пароль показывается один раз и только сейчас. В базе он лежит хешем,
+    и «посмотреть пароль заказчика» потом будет нельзя — это не недоделка,
+    а единственный правильный способ хранить пароли.
+  {% endcomment %}
+  <section class="callout callout--pass">
+    <h2>Доступ выдан — передайте заказчику</h2>
+    <div class="creds">
+      <div><span class="muted">Логин</span><strong data-copy>{{ issued_password.email }}</strong></div>
+      <div><span class="muted">Пароль</span><strong data-copy>{{ issued_password.password }}</strong></div>
+      <div><span class="muted">Адрес входа</span><strong data-copy>{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:login' %}</strong></div>
+    </div>
+    <p class="muted">
+      Больше этот пароль нигде не показывается: он хранится только
+      в зашифрованном виде. Если потеряется — выдайте новый, это одна кнопка.
+    </p>
+  </section>
+{% endif %}
+
+<div class="cabgrid">
+  <div class="cabgrid__main">
+    <section class="panel">
+      <header class="panel__head">
+        <h2>Проекты</h2>
+      </header>
+      {% for project in client.projects.all %}
+        <article class="row">
+          <div class="row__main">
+            <a class="row__title" href="{% url 'cabinet:project_detail' project.pk %}">{{ project }}</a>
+            <p class="muted">
+              {{ project.get_status_display }} · готово {{ project.progress }}%
+              · {{ project.agreed_amount|money }}
+            </p>
+          </div>
+        </article>
+      {% empty %}
+        <p class="muted">Проектов ещё нет.</p>
+      {% endfor %}
+
+      <details class="adder" {% if not client.projects.all %}open{% endif %}>
+        <summary>Завести проект</summary>
+        {% if client.properties.all %}
+          <form class="adder__form" method="post" action="{% url 'cabinet:client_project' client.pk %}">
+            {% csrf_token %}
+            <div class="grid grid--3">
+              {% field project_form.estate %}
+              {% field project_form.title %}
+              {% field project_form.agreed_amount %}
+              {% field project_form.starts_at %}
+              {% field project_form.status %}
+            </div>
+            <button class="btn" type="submit">Завести проект</button>
+            <p class="muted">Этапы разложатся сами — по нормативам из «Как я работаю».</p>
+          </form>
+        {% else %}
+          <p class="muted">Сначала добавьте объект: проект заводится на объект.</p>
+        {% endif %}
+      </details>
+    </section>
+
+    <section class="panel">
+      <header class="panel__head"><h2>Объекты</h2></header>
+      {% for estate in client.properties.all %}
+        <article class="row">
+          <div class="row__main">
+            <span class="row__title">{{ estate }}</span>
+            <p class="muted">
+              {{ estate.get_kind_display }} · {{ estate.area|floatformat:"-1" }} м²
+              · {{ estate.rooms }} помещений{% if estate.address %} · {{ estate.address }}{% endif %}
+            </p>
+          </div>
+        </article>
+      {% empty %}
+        <p class="muted">Объектов нет.</p>
+      {% endfor %}
+
+      <details class="adder">
+        <summary>Добавить объект</summary>
+        <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}">
+          {% csrf_token %}
+          <div class="grid grid--3">
+            {% field estate_form.city %}
+            {% field estate_form.address %}
+            {% field estate_form.kind %}
+            {% field estate_form.area %}
+            {% field estate_form.rooms %}
+          </div>
+          <button class="btn" type="submit">Добавить</button>
+        </form>
+      </details>
+    </section>
+  </div>
+
+  <aside class="cabgrid__side">
+    <section class="panel">
+      <header class="panel__head"><h2>Доступ в кабинет</h2></header>
+      {% if client.user %}
+        <p class="muted">
+          Доступ есть: <strong>{{ client.user.email }}</strong>.
+          Последний вход:
+          {% if client.user.last_login %}{{ client.user.last_login|date:"d.m.Y H:i" }}{% else %}ещё не заходил{% endif %}.
+        </p>
+      {% else %}
+        <p class="muted">
+          Доступа пока нет. Логином будет почта, пароль можно придумать
+          или доверить системе — она сделает произносимый.
+        </p>
+      {% endif %}
+
+      <form class="adder__form" method="post" action="{% url 'cabinet:client_access' client.pk %}">
+        {% csrf_token %}
+        {% field access_form.email %}
+        {% field access_form.full_name %}
+        {% field access_form.password %}
+        <button class="btn" type="submit">
+          {% if client.user %}Выдать новый пароль{% else %}Выдать доступ{% endif %}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <header class="panel__head"><h2>Карточка</h2></header>
+      <form class="adder__form" method="post" action="{% url 'cabinet:client_edit' client.pk %}">
+        {% csrf_token %}
+        {% field form.name %}
+        {% field form.phone %}
+        {% field form.email %}
+        {% field form.messenger %}
+        {% field form.source %}
+        {% field form.notes %}
+        <button class="btn btn--ghost" type="submit">Сохранить</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

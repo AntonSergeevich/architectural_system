@@ -18,9 +18,9 @@ class ContractTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(Contract)
 class ContractAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "client", "date", "amount", "status")
+    list_display = ("__str__", "client", "date", "amount", "status", "is_signed")
     list_filter = ("status", "template__kind")
-    readonly_fields = ("token",)
+    readonly_fields = ("token", "signed_at", "signed_by")
 
 
 admin.site.register([ClauseQuestion, ContractAck])

@@ -1,9 +1,6 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% block title %}Проекты{% endblock %}
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+{% block cabinet %}
     <h1>Проекты</h1>
 
     <div class="{% if wip_exceeded %}note note--warn{% else %}note{% endif %}">
@@ -31,6 +28,4 @@
         <p>Проектов пока нет.</p>
       {% endfor %}
     </div>
-  </div>
-</section>
 {% endblock %}

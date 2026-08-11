@@ -97,12 +97,39 @@ class Contract(models.Model):
     client = models.ForeignKey(
         "crm.Client", on_delete=models.PROTECT, related_name="contracts", verbose_name="Заказчик"
     )
+    stage = models.ForeignKey(
+        "projects.Stage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contracts",
+        verbose_name="Этап",
+        help_text="Если договор относится к конкретному этапу",
+    )
     number = models.CharField("Номер", max_length=40, blank=True)
     date = models.DateField("Дата", default=timezone.localdate)
     amount = models.DecimalField("Сумма", max_digits=12, decimal_places=2, default=Decimal("0"))
     token = models.CharField("Ссылка", max_length=32, unique=True, default=public_token)
     status = models.CharField("Статус", max_length=16, choices=Status.choices, default=Status.DRAFT)
     signed_at = models.DateTimeField("Подписан", null=True, blank=True)
+
+    # Договор существует в двух видах: текстом на сайте — его собирает
+    # шаблон, и его же Дарья правит, — и файлом. Файл нужен потому,
+    # что подписывают на бумаге: скачал, подписал, сфотографировал, вернул.
+    file = models.FileField(
+        "Файл договора",
+        upload_to="contracts/%Y/%m/",
+        blank=True,
+        help_text="То, что заказчик скачивает и подписывает",
+    )
+    signed_file = models.FileField(
+        "Подписанный экземпляр",
+        upload_to="contracts/signed/%Y/%m/",
+        blank=True,
+        help_text="Загружает заказчик из своего кабинета",
+    )
+    signed_by = models.CharField("Кто подписал", max_length=150, blank=True)
+    sent_at = models.DateTimeField("Отправлен заказчику", null=True, blank=True)
 
     class Meta:
         verbose_name = "Договор"
@@ -114,6 +141,15 @@ class Contract(models.Model):
 
     def get_absolute_url(self):
         return reverse("public:contract", args=[self.token])
+
+    @property
+    def is_signed(self):
+        return bool(self.signed_file) or self.status == self.Status.SIGNED
+
+    @property
+    def waiting_for_client(self):
+        """Отправлен, а подписанного экземпляра нет."""
+        return self.status in {self.Status.SENT, self.Status.REVIEWED} and not self.signed_file
 
 
 class ClauseQuestion(models.Model):

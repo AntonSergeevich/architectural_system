@@ -1,0 +1,45 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load richtext forms %}
+{% block title %}{{ project }} — кабинет{% endblock %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">Проект</p>
+    <h1>{{ project }}</h1>
+    <p class="muted">
+      {{ project.client.name }}
+      {% if project.client.phone %} · {{ project.client.phone }}{% endif %}
+      {% if project.estate %} · {{ project.estate.area|floatformat:"-1" }} м², {{ project.estate.rooms }} помещений{% endif %}
+      · {{ project.get_status_display }}
+    </p>
+  </div>
+  <div class="cabhead__side">
+    <a class="btn btn--ghost" href="{% url 'cabinet:client_detail' project.client.pk %}">Карточка заказчика</a>
+  </div>
+</header>
+
+{% comment %} Шкала: где мы. Дальше — что делаем. {% endcomment %}
+{% include "cabinet/_rail.html" %}
+
+<div class="cabgrid">
+  <div class="cabgrid__main">
+    <section class="panel" id="stages">
+      <header class="panel__head">
+        <h2>Этапы и задачи</h2>
+        <span class="muted">Готово {{ project.progress }}%</span>
+      </header>
+      {% for stage in stages %}
+        {% include "cabinet/_stage.html" %}
+      {% endfor %}
+    </section>
+
+    {% include "cabinet/_chat.html" %}
+  </div>
+
+  <aside class="cabgrid__side">
+    {% include "cabinet/_money.html" %}
+    {% include "cabinet/_contracts.html" %}
+  </aside>
+</div>
+{% endblock %}

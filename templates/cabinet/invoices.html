@@ -1,10 +1,7 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% load richtext %}
 {% block title %}Счета{% endblock %}
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+{% block cabinet %}
     <h1>Счета</h1>
     <div class="table-scroll">
       <table>
@@ -40,6 +37,4 @@
       «Отметить оплату» — для переводов мимо эквайринга. Самозанятая принимает
       деньги и без платёжного сервиса, и система обязана это учитывать.
     </p>
-  </div>
-</section>
 {% endblock %}

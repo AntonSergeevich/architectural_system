@@ -392,15 +392,19 @@
     document.body.appendChild(clone);
     el.classList.add('block--ghost');
 
+    // Держим блок за середину КЛОНА, а не карточки на складе. У блока
+    // с переключателем формата карточка втрое выше: в руке переключатель
+    // скрыт, а половина его высоты всё равно уезжала бы вверх — блок
+    // взлетал над пальцем и выглядел оторванным от него.
+    var held = clone.getBoundingClientRect();
+
     // Тактильное подтверждение захвата: палец закрывает обзор, и одного
     // визуального сигнала мало.
     if (navigator.vibrate) navigator.vibrate(10);
 
     drag = {
       el: el, clone: clone, mod: mod, pointerId: pointerId,
-      // Клон держим за левую четверть, а не за середину: обрезанная
-      // по ширине карточка иначе уезжает от курсора.
-      offsetX: Math.min(rect.width, 300) / 2, offsetY: rect.height / 2,
+      offsetX: held.width / 2, offsetY: held.height / 2,
       slots: slotRects(), target: null, frame: null, x: x, y: y
     };
 

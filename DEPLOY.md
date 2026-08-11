@@ -119,6 +119,7 @@ nano .env
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py seed_catalog     # каталог услуг и цены
 .venv/bin/python manage.py seed_legal       # документы и договоры
+.venv/bin/python manage.py seed_tasks       # готовые задачи для этапов проекта
 .venv/bin/python manage.py collectstatic --noinput
 .venv/bin/python manage.py createsuperuser  # это Дарья
 ```

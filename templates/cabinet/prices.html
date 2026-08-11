@@ -1,10 +1,7 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% load richtext %}
 {% block title %}Цены{% endblock %}
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+{% block cabinet %}
     <h1>Цены</h1>
     <p class="lead">
       Меняются здесь и сразу применяются на сайте. Уже выставленные
@@ -118,6 +115,4 @@
       Сами коэффициенты правятся в админке — они меняются заметно реже цен.
       Здесь только выключатель.
     </p>
-  </div>
-</section>
 {% endblock %}

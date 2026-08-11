@@ -1,0 +1,110 @@
+{% load richtext forms %}
+{% comment %}
+  Договоры по проекту.
+
+  Порядок один и тот же: Дарья прикладывает файл — заказчик скачивает,
+  подписывает и возвращает подписанный экземпляр сюда же. Подписанные
+  лежат отдельным списком: именно их ищут, когда что-то пошло не так,
+  и искать их в переписке — то же самое, что не иметь их вовсе.
+{% endcomment %}
+<section class="panel" id="contracts">
+  <header class="panel__head">
+    <h2>Договоры</h2>
+    {% if not is_owner_view %}<span class="muted">Скачайте, подпишите и загрузите обратно</span>{% endif %}
+  </header>
+
+  {% if open_contracts %}
+    <div class="contracts">
+      {% for contract in open_contracts %}
+        <article class="contract">
+          <div class="contract__head">
+            <strong>{{ contract.template.title }}{% if contract.number %} №{{ contract.number }}{% endif %}</strong>
+            <span class="pill pill--{{ contract.status }}">{{ contract.get_status_display }}</span>
+          </div>
+          <p class="muted">
+            от {{ contract.date|date:"d.m.Y" }}
+            {% if contract.amount %} · {{ contract.amount|money }}{% endif %}
+            {% if contract.stage %} · этап «{{ contract.stage.title }}»{% endif %}
+          </p>
+
+          <div class="contract__actions">
+            {% if contract.file %}
+              <a class="btn btn--ghost" href="{{ contract.file.url }}" download>Скачать договор</a>
+            {% endif %}
+            <a class="btn btn--ghost" href="{{ contract.get_absolute_url }}">Читать с расшифровками</a>
+          </div>
+
+          {% if not is_owner_view %}
+            <form class="contract__upload" method="post" enctype="multipart/form-data"
+                  action="{% url 'cabinet:contract_sign' contract.pk %}">
+              {% csrf_token %}
+              <label class="chat__attach">
+                <input type="file" name="signed_file" required>
+                <span>Выбрать подписанный файл</span>
+              </label>
+              <button class="btn" type="submit">Отправить подписанный</button>
+            </form>
+            <p class="muted">
+              Подойдёт скан или фотография — главное, чтобы читались подписи.
+            </p>
+          {% else %}
+            <p class="muted">
+              {% if contract.waiting_for_client %}Ждём подписанный экземпляр от заказчика.
+              {% else %}Черновик. Отправьте заказчику, приложив файл.{% endif %}
+            </p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Договоров на подписание нет.</p>
+  {% endif %}
+
+  <div class="contracts contracts--signed">
+    <p class="stage__sub">Подписанные договоры</p>
+    {% for contract in signed_contracts %}
+      <article class="contract contract--signed">
+        <div class="contract__head">
+          <strong>{{ contract.template.title }}{% if contract.number %} №{{ contract.number }}{% endif %}</strong>
+          <span class="pill pill--signed">подписан</span>
+        </div>
+        <p class="muted">
+          {% if contract.signed_at %}{{ contract.signed_at|date:"d.m.Y H:i" }}{% endif %}
+          {% if contract.signed_by %} · {{ contract.signed_by }}{% endif %}
+        </p>
+        <div class="contract__actions">
+          {% if contract.signed_file %}
+            <a class="btn btn--ghost" href="{{ contract.signed_file.url }}" download>Подписанный экземпляр</a>
+          {% endif %}
+          {% if contract.file %}
+            <a class="btn btn--ghost" href="{{ contract.file.url }}" download>Исходный файл</a>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <p class="muted">Пока ничего не подписано.</p>
+    {% endfor %}
+  </div>
+
+  {% if is_owner_view %}
+    <details class="adder">
+      <summary>Отправить договор заказчику</summary>
+      <form class="adder__form" method="post" enctype="multipart/form-data"
+            action="{% url 'cabinet:contract_add' project.pk %}">
+        {% csrf_token %}
+        <div class="grid grid--3">
+          {% field contract_form.template %}
+          {% field contract_form.stage %}
+          {% field contract_form.number %}
+          {% field contract_form.amount %}
+        </div>
+        {% field contract_form.file %}
+        <button class="btn" type="submit">Отправить в кабинет заказчику</button>
+      </form>
+      <p class="muted">
+        Текст договора правится в разделе «Договоры» — там же расшифровки
+        пунктов «на человеческом языке».
+      </p>
+    </details>
+  {% endif %}
+</section>

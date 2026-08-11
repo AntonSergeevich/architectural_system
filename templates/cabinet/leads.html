@@ -1,10 +1,7 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% block title %}Заявки{% endblock %}
 
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+{% block cabinet %}
     <h1>Заявки</h1>
 
     {% if overdue %}
@@ -63,6 +60,4 @@
         </tbody>
       </table>
     </div>
-  </div>
-</section>
 {% endblock %}

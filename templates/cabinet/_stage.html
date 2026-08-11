@@ -1,0 +1,177 @@
+{% comment %}
+  Карточка этапа. Один шаблон на оба кабинета: данные под ними одни
+  и те же, а два шаблона однажды разойдутся — и стороны увидят разное.
+  Различает их `is_owner_view`.
+{% endcomment %}
+<article class="stage {% if current and stage.pk == current.pk %}stage--current{% endif %} {% if stage.status == 'done' %}stage--done{% endif %}"
+         id="stage-{{ stage.pk }}">
+
+  <header class="stage__head">
+    <span class="stage__num">{{ stage.number }}</span>
+    <div class="stage__title">
+      <h3>{{ stage.title }}</h3>
+      <p class="stage__status">
+        <span class="pill pill--{{ stage.status }}">{{ stage.get_status_display }}</span>
+        {% if stage.waiting_on == 'client' %}<span class="pill pill--wait">ждём заказчика</span>{% endif %}
+        {% if stage.started_at %}<span class="stage__date">начат {{ stage.started_at|date:"d.m.Y" }}</span>{% endif %}
+        {% if stage.finished_at %}<span class="stage__date">закрыт {{ stage.finished_at|date:"d.m.Y" }}</span>{% endif %}
+      </p>
+    </div>
+  </header>
+
+  {% comment %} Задачи — то самое «что сейчас должно быть сделано». {% endcomment %}
+  <div class="tasks">
+    {% for task in stage.tasks.all %}
+      <div class="task {% if task.is_done %}is-done{% endif %} task--{{ task.who }}"
+           data-task="{{ task.pk }}">
+        {% comment %}
+          Кнопка живёт в форме, а не в JavaScript: без него отметка
+          всё равно ставится, просто с перезагрузкой страницы.
+        {% endcomment %}
+        <form method="post" action="{% url 'cabinet:task_toggle' project.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="task" value="{{ task.pk }}">
+          <button class="task__check" type="submit"
+                  data-task-toggle="{{ task.pk }}"
+                  {% if not is_owner_view and task.who == 'owner' %}disabled title="Это задача Дарьи"{% endif %}
+                  aria-pressed="{% if task.is_done %}true{% else %}false{% endif %}"
+                  aria-label="{% if task.is_done %}Снять отметку{% else %}Отметить сделанным{% endif %}">
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path d="M3 8.5 6.4 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.4"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </form>
+
+        <div class="task__body">
+          <p class="task__title">{{ task.title }}</p>
+          {% if task.comment %}<p class="task__note">{{ task.comment }}</p>{% endif %}
+          <p class="task__meta">
+            <span class="who who--{{ task.who }}">{{ task.get_who_display }}</span>
+            {% if task.due_date %}<span>до {{ task.due_date|date:"d.m" }}</span>{% endif %}
+            {% if task.done_at %}<span>сделано {{ task.done_at|date:"d.m H:i" }}</span>{% endif %}
+          </p>
+        </div>
+
+        {% if is_owner_view %}
+          <form method="post" action="{% url 'cabinet:task_delete' project.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="task" value="{{ task.pk }}">
+            <button class="task__del" type="submit" title="Убрать задачу" aria-label="Убрать задачу">×</button>
+          </form>
+        {% endif %}
+      </div>
+    {% empty %}
+      {% comment %}
+        Заказчику эта строка нужна только на текущем этапе. Повторённая
+        у всех восьми, она превращается в шум, сквозь который перестают
+        читать и то, что важно.
+      {% endcomment %}
+      {% if is_owner_view %}
+        <p class="muted">Задач пока нет. Добавьте, что должно быть сделано на этом этапе.</p>
+      {% elif current and stage.pk == current.pk %}
+        <p class="muted">По этому этапу от вас пока ничего не нужно.</p>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if is_owner_view %}
+    <details class="adder">
+      <summary>Добавить задачу</summary>
+
+      {% if presets %}
+        <p class="adder__label">Готовые — нажмите, чтобы поставить:</p>
+        <div class="chips">
+          {% for preset in presets %}
+            <form method="post" action="{% url 'cabinet:task_add' project.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="stage" value="{{ stage.pk }}">
+              <input type="hidden" name="preset" value="{{ preset.pk }}">
+              <button class="chip" type="submit">
+                {{ preset.title }}
+                <span class="chip__who">{{ preset.get_who_display }}</span>
+              </button>
+            </form>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form class="adder__form" method="post" action="{% url 'cabinet:task_add' project.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="stage" value="{{ stage.pk }}">
+        <div class="adder__row">
+          <input type="text" name="title" placeholder="Или напишите свою задачу" required>
+          <select name="who" aria-label="Кто делает">
+            <option value="owner">Дарья</option>
+            <option value="client">Заказчик</option>
+            <option value="both">Вместе</option>
+          </select>
+          <input type="date" name="due_date" aria-label="Срок">
+          <button class="btn" type="submit">Поставить</button>
+        </div>
+      </form>
+    </details>
+
+    <details class="adder">
+      <summary>Этап: статус, заметка, файлы</summary>
+      <form class="adder__form" method="post" action="{% url 'cabinet:stage_update' project.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="stage" value="{{ stage.pk }}">
+        <div class="adder__row">
+          <select name="status" aria-label="Статус этапа">
+            {% for value, label in stage.Status.choices %}
+              <option value="{{ value }}" {% if stage.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="note" value="{{ stage.note }}" placeholder="Заметка (видите только вы)">
+          <button class="btn" type="submit">Сохранить</button>
+        </div>
+      </form>
+
+      <form class="adder__form" method="post" enctype="multipart/form-data"
+            action="{% url 'cabinet:stage_file' project.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="stage" value="{{ stage.pk }}">
+        <div class="adder__row">
+          <input type="text" name="title" placeholder="Название файла">
+          <input type="file" name="file" required>
+          <button class="btn btn--ghost" type="submit">Приложить</button>
+        </div>
+      </form>
+    </details>
+  {% endif %}
+
+  {% if stage.files.all %}
+    <div class="stage__files">
+      <p class="stage__sub">Файлы этапа</p>
+      <ul class="files">
+        {% for file in stage.files.all %}
+          <li><a href="{{ file.file.url }}" download>{{ file.title|default:file.file.name }}</a>
+            <span class="muted">{{ file.uploaded_at|date:"d.m.Y" }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if stage.revisions.all %}
+    <div class="stage__files">
+      <p class="stage__sub">Правки</p>
+      <ul class="files">
+        {% for revision in stage.revisions.all %}
+          <li>{{ revision.text }}
+            <span class="muted">— {{ revision.get_status_display }}</span>
+            {% if revision.answer %}<br><span class="muted">Ответ: {{ revision.answer }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if not is_owner_view and stage.status == 'review' %}
+    <form method="post" action="{% url 'cabinet:approve_stage' stage.pk %}" class="stage__approve">
+      {% csrf_token %}
+      <button class="btn" type="submit">Согласовать этап</button>
+      <span class="muted">Согласование фиксируется с датой — это защищает нас обоих.</span>
+    </form>
+  {% endif %}
+</article>

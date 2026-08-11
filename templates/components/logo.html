@@ -32,6 +32,13 @@
 
   <span class="logo__text">
     <span class="logo__name">{{ site.owner_name }}</span>
-    <span class="logo__title">{{ caption|default:site.owner_title }}</span>
+    {% comment %}
+      Не `default:site.owner_title`. Аргумент фильтра — единственное место
+      в шаблоне, где несуществующая переменная не превращается в пустую
+      строку, а роняет страницу целиком. Ровно это и случилось на странице
+      входа: LoginView кладёт в контекст свой `site`, и нашего поля
+      у него нет.
+    {% endcomment %}
+    <span class="logo__title">{% if caption %}{{ caption }}{% else %}{{ site.owner_title }}{% endif %}</span>
   </span>
 </a>

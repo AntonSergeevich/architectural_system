@@ -1,9 +1,6 @@
-{% extends "base.html" %}
+{% extends "cabinet/base_cabinet.html" %}
 {% block title %}Договоры{% endblock %}
-{% block content %}
-<section class="section section--tight">
-  <div class="wrap">
-    {% include "cabinet/_nav.html" %}
+{% block cabinet %}
     <h1>Договоры</h1>
 
     <h2>Шаблоны</h2>
@@ -35,6 +32,4 @@
         </tbody>
       </table>
     </div>
-  </div>
-</section>
 {% endblock %}

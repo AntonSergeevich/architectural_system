@@ -1,8 +1,13 @@
 """Кабинет заказчика.
 
 Отвечает на вопрос, с которого начинается тревога: что происходит с моим
-проектом прямо сейчас. Каждый вопрос «а что там у нас», заданный
-в мессенджер, — это дефект интерфейса, а не назойливость заказчика.
+проектом прямо сейчас и ждут ли чего-то от меня. Каждый вопрос «а что там
+у нас», заданный в мессенджер, — это дефект интерфейса, а не назойливость
+заказчика.
+
+Кабинет заказчика — не урезанная копия кабинета Дарьи. У них разные
+вопросы: она спрашивает «за что взяться», он — «когда и что от меня».
+Поэтому и экраны разные, а данные под ними одни и те же.
 """
 
 from django.contrib import messages
@@ -12,10 +17,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.contracts.models import Contract
 from apps.core.forms import RevisionForm
 from apps.core.models import SiteSettings
 from apps.core.utils import working_deadline
-from apps.projects.models import Approval, Project, Revision, Stage
+from apps.projects.models import Approval, BudgetChange, Project, Revision, Stage
+
+from . import services
+from .forms import MessageForm
 
 
 def _project_for(user):
@@ -23,11 +32,12 @@ def _project_for(user):
     if client is None:
         raise Http404("Проект не найден")
     project = (
-        Project.objects.filter(client=client)
+        services.project_queryset()
+        .filter(client=client)
         .exclude(status=Project.Status.DONE)
         .order_by("-created_at")
         .first()
-        or Project.objects.filter(client=client).order_by("-created_at").first()
+        or services.project_queryset().filter(client=client).order_by("-created_at").first()
     )
     if project is None:
         raise Http404("Проект не найден")
@@ -37,19 +47,109 @@ def _project_for(user):
 @login_required
 def project(request):
     obj = _project_for(request.user)
-    stages = obj.stages.prefetch_related("revisions", "files").order_by("number")
+    services.mark_messages_read(obj, request.user)
+
+    stages = list(obj.stages.order_by("number"))
+    current = obj.current_stage
+
+    # «Что от меня ждут» — первое, что человек должен увидеть. Всё
+    # остальное он посмотрит, только если этот вопрос закрыт.
+    my_tasks = [
+        task
+        for stage in stages
+        for task in stage.tasks.all()
+        if not task.is_done and task.who in {"client", "both"}
+    ]
+
+    contracts = list(obj.contracts.all())
     return render(
         request,
         "cabinet/my_project.html",
         {
             "project": obj,
             "stages": stages,
-            "current": obj.current_stage,
+            "current": current,
+            "my_tasks": my_tasks,
             "form": RevisionForm(),
+            "message_form": MessageForm(),
+            "messages_list": obj.messages.all(),
+            "open_contracts": [c for c in contracts if not c.is_signed],
+            "signed_contracts": [c for c in contracts if c.is_signed],
+            "pending_changes": obj.pending_budget_changes,
+            "decided_changes": [c for c in obj.budget_changes.all() if not c.is_pending],
             "invoices": obj.invoices.all(),
-            "contracts": obj.contracts.all(),
+            "is_owner_view": False,
+            "section": "my_project",
         },
     )
+
+
+@login_required
+@require_POST
+def contract_sign(request, pk):
+    """Заказчик возвращает подписанный экземпляр.
+
+    Файл ложится рядом с договором и переводит его в «подписанные».
+    Дальше он никуда не денется: это и есть то, ради чего договор
+    вообще подписывают.
+    """
+    obj = _project_for(request.user)
+    contract = get_object_or_404(Contract, pk=pk, project=obj)
+    uploaded = request.FILES.get("signed_file")
+    if not uploaded:
+        messages.error(request, "Приложите файл с подписанным договором.")
+        return redirect("cabinet:my_project")
+
+    contract.signed_file = uploaded
+    contract.status = Contract.Status.SIGNED
+    contract.signed_at = timezone.now()
+    contract.signed_by = request.user.full_name or str(request.user)
+    contract.save(update_fields=["signed_file", "status", "signed_at", "signed_by"])
+
+    services.post_message(
+        obj,
+        request.user,
+        f"Подписанный договор «{contract}» загружен.",
+        stage=contract.stage,
+    )
+    messages.success(request, "Договор подписан и сохранён. Спасибо.")
+    return redirect("cabinet:my_project")
+
+
+@login_required
+@require_POST
+def budget_decide(request, pk):
+    """Согласовать или отклонить изменение сметы.
+
+    Решение фиксируется с датой и именем — иначе разговор «мы же
+    договаривались» опять становится словом против слова.
+    """
+    obj = _project_for(request.user)
+    change = get_object_or_404(BudgetChange, pk=pk, project=obj)
+    if not change.is_pending:
+        messages.info(request, "Решение по этому изменению уже принято.")
+        return redirect("cabinet:my_project")
+
+    accepted = request.POST.get("decision") == "accept"
+    change.decide(
+        accepted,
+        by=request.user.full_name or str(request.user),
+        comment=request.POST.get("comment", ""),
+    )
+
+    services.post_message(
+        obj,
+        request.user,
+        ("Согласовано: " if accepted else "Отклонено: ") + change.title,
+        stage=change.stage,
+    )
+    messages.success(
+        request,
+        "Изменение согласовано, сумма проекта обновлена."
+        if accepted
+        else "Изменение отклонено. Работаем в прежних рамках.",
+    )
+    return redirect("cabinet:my_project")
 
 
 @login_required
