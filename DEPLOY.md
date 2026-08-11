@@ -91,7 +91,7 @@ nano .env
 | `DJANGO_ALLOWED_HOSTS` | `daarch.ru,www.daarch.ru` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://daarch.ru,https://www.daarch.ru` |
 | `SITE_URL` | `https://daarch.ru` |
-| `POSTGRES_*` | То, что задали в пункте 3 |
+| `POSTGRES_*` | **Снять комментарии** с этих пяти строк и подставить то, что задали в пункте 3. По умолчанию они закомментированы: без них проект работает на SQLite, и это правильно для локальной разработки, но не для сервера |
 | `EMAIL_*` | Почта для уведомлений |
 
 Закрыть файл от чужих глаз: `chmod 600 .env`.
