@@ -10,8 +10,12 @@
     <p class="eyebrow">Конструктор</p>
     <h1>Соберите свой дом</h1>
     <p class="lead">
-      Каждый блок — часть работы. Перетащите его на дом или просто нажмите.
-      Чего не хватает — видно сразу: дом без крыши, без окон, без стен.
+      Пока на площадке только фундамент — обмер, бриф и планировка,
+      без них проекта не бывает. Всё остальное перетащите на дом сами:
+      возьмите блок и отпустите его на подсвеченном месте.
+    </p>
+    <p class="lead">
+      Так видно, из чего собирается проект и во что обходится каждая часть.
       Расчёт получится под вашу квартиру, а не «от стольки-то за квадрат».
     </p>
   </div>
@@ -29,7 +33,7 @@
       <div class="constructor__left">
       <div class="house-panel">
         <div class="house" data-house>
-          <p class="house__hint">Ваш дом</p>
+          <p class="house__hint" data-house-hint>Перетащите блок сюда</p>
           <div class="slot" data-part="roof"><span class="visually-hidden">Крыша — авторский надзор</span></div>
           <div class="slot" data-part="light"><span class="visually-hidden">Комплектация</span></div>
           <div class="slot" data-part="facade"><span class="visually-hidden">Фасад — концепция</span></div>
@@ -136,19 +140,13 @@
 
         <div class="shelf" data-shelf>
           <p class="shelf__head">Проектирование</p>
-          <div class="shelf__group">
-            {% for module in design_modules %}{% include "components/block.html" %}{% endfor %}
-          </div>
+          {% for section in design_sections %}{% include "components/shelf_section.html" %}{% endfor %}
 
           <p class="shelf__head">Реализация</p>
-          <div class="shelf__group">
-            {% for module in realization_modules %}{% include "components/block.html" %}{% endfor %}
-          </div>
+          {% for section in realization_sections %}{% include "components/shelf_section.html" %}{% endfor %}
 
           <p class="shelf__head">Разовое</p>
-          <div class="shelf__group">
-            {% for module in extra_modules %}{% include "components/block.html" %}{% endfor %}
-          </div>
+          {% for section in extra_sections %}{% include "components/shelf_section.html" %}{% endfor %}
         </div>
 
         <div class="warnings" data-warnings>

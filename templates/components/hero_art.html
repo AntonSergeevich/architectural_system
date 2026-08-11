@@ -1,0 +1,62 @@
+{% comment %}
+Иллюстрация первого экрана: линейный набросок интерьера.
+
+Почему набросок, а не фотография. Фотография чужого интерьера обещает
+конкретную картинку, которой у заказчика не будет, — а мы как раз
+и говорим, что дом будет про него, а не про референс. Линия обещает
+только атмосферу. Плюс это буквально то, с чего начинается работа
+Дарьи: ручной эскиз.
+
+Линии прорисовываются при загрузке — так же, как их рисуют от руки,
+одну за другой. Пар над чашкой поднимается бесконечно: он и делает
+сцену живой, всё остальное статично.
+
+Анимация целиком отключается при prefers-reduced-motion: рисунок
+просто сразу нарисован.
+{% endcomment %}
+<svg class="art" viewBox="0 0 520 470" fill="none" aria-hidden="true" focusable="false"
+     stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+
+  <g class="art__scene">
+    <path class="art__line" style="--i:0" d="M28 424 H492"/>
+    <path class="art__line" style="--i:1" d="M64 60 H150 V172 H64 Z"/>
+    <path class="art__line art__line--soft" style="--i:2" d="M78 140 L98 108 L114 132 L128 116 L136 140"/>
+
+    <path class="art__line" style="--i:3" d="M452 424 V186"/>
+    <path class="art__line" style="--i:4" d="M420 186 H484 L470 142 H434 Z"/>
+    <path class="art__line art__line--soft" style="--i:5" d="M436 424 H468"/>
+
+    <path class="art__line" style="--i:6" d="M84 424 L92 372 H132 L140 424"/>
+    <path class="art__line art__line--soft" style="--i:7" d="M112 372 C112 342 96 330 86 322"/>
+    <path class="art__line art__line--soft" style="--i:8" d="M112 372 C112 336 128 320 142 312"/>
+    <path class="art__line art__line--soft" style="--i:9" d="M112 372 C112 350 114 332 112 316"/>
+
+    <path class="art__line" style="--i:10" d="M166 356 V300 Q166 268 198 268 H392 Q424 268 424 300 V356"/>
+    <path class="art__line" style="--i:11" d="M160 300 Q146 300 146 316 V356"/>
+    <path class="art__line" style="--i:12" d="M430 300 Q444 300 444 316 V356"/>
+    <path class="art__line" style="--i:13" d="M146 356 H444 V386 H146 Z"/>
+    <path class="art__line" style="--i:14" d="M160 386 V408"/>
+    <path class="art__line" style="--i:15" d="M430 386 V408"/>
+    <path class="art__line art__line--soft" style="--i:16" d="M292 268 V356"/>
+
+    <path class="art__line" style="--i:17" d="M246 232 Q222 236 220 262 Q218 292 232 316"/>
+    <path class="art__line" style="--i:18" d="M232 316 Q246 336 282 336 Q322 336 340 316"/>
+    <path class="art__line" style="--i:19" d="M340 316 Q356 300 348 288 Q340 278 318 282"/>
+    <path class="art__line" style="--i:20" d="M232 316 Q226 344 240 356"/>
+
+    <path class="art__line" style="--i:21" d="M262 186 Q288 186 292 210 Q296 234 274 240 Q250 244 244 222 Q240 200 262 186 Z"/>
+    <path class="art__line" style="--i:22" d="M256 186 Q252 166 270 162 Q290 158 294 176 Q296 190 284 194"/>
+    <path class="art__line art__line--soft" style="--i:23" d="M288 168 Q306 160 310 174 Q313 186 300 190"/>
+
+    <path class="art__line" style="--i:24" d="M244 246 Q262 266 292 272"/>
+    <path class="art__line" style="--i:25" d="M292 272 H326 V290 Q326 302 309 302 Q292 302 292 290 Z"/>
+    <path class="art__line" style="--i:26" d="M326 276 Q340 278 339 288 Q338 297 327 297"/>
+    <path class="art__line art__line--soft" style="--i:27" d="M286 306 H332"/>
+  </g>
+
+  <g class="art__steam" stroke-width="1.4">
+    <path class="art__vapor" style="--v:0" d="M302 262 q-9 -16 0 -28 q9 -13 0 -24"/>
+    <path class="art__vapor" style="--v:1" d="M314 264 q-7 -13 0 -22 q7 -10 0 -18"/>
+    <path class="art__vapor" style="--v:2" d="M291 264 q-6 -11 0 -18 q6 -9 0 -15"/>
+  </g>
+</svg>

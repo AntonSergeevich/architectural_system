@@ -34,12 +34,27 @@ class PublicPagesTests(TestCase):
                 response = self.client.get(reverse("public:legal", args=[kind]))
                 self.assertEqual(response.status_code, 200)
 
-    def test_constructor_starts_with_assembled_house(self):
-        """Стартовое состояние — «Под ключ»: клиент разбирает, а не собирает."""
+    def test_constructor_starts_with_the_foundation_only(self):
+        """Стартовое состояние — только фундамент, дом собирают с нуля.
+
+        Обязательные модули всё равно посчитаны: убрать обмер, бриф
+        и планировку нельзя, без них проекта не существует. А всё,
+        от чего можно отказаться, изначально снято.
+        """
         response = self.client.get(reverse("public:constructor"))
         self.assertContains(response, "Соберите свой дом")
-        self.assertGreater(response.context["calc"].design_total, 0)
-        self.assertGreater(response.context["calc"].realization_total, 0)
+
+        calc = response.context["calc"]
+        self.assertGreater(calc.design_total, 0)
+        self.assertEqual(calc.realization_total, 0)
+        self.assertTrue(all(line.module.is_required for line in calc.lines))
+
+    def test_optional_modules_are_offered_as_warnings_from_the_start(self):
+        """Чего не хватает — видно сразу, а не после снятия галочки."""
+        response = self.client.get(reverse("public:constructor"))
+        missing = {m.code for m in response.context["calc"].missing}
+        self.assertIn("A7", missing)
+        self.assertIn("B1", missing)
 
     def test_constructor_works_without_javascript(self):
         modules = ServiceModule.objects.filter(is_active=True, unit="sqm")[:2]

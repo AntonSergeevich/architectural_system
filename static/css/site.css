@@ -107,23 +107,28 @@
 .lead { font-size: var(--step-1); color: var(--ink-2); max-width: 62ch; }
 
 /* --- Первый экран --------------------------------------------------------
-   Плакатный заголовок и рядом — работающий мини-расчёт. Число появляется
-   до всякой заявки: это то, ради чего сюда пришли. */
-.hero { padding: var(--gap-8) 0 var(--gap-7); }
+   Слева — заголовок и мини-расчёт единым столбцом: расчёт продолжает
+   мысль заголовка, а не висит сбоку сам по себе. Справа — линейный
+   набросок интерьера. */
+.hero { padding: var(--gap-8) 0 var(--gap-8); overflow: hidden; }
+
+.hero__inner { display: grid; gap: var(--gap-7); align-items: center; }
+@media (min-width: 980px) {
+  .hero__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap-6); }
+}
+
 .hero__title {
   font-size: var(--step-5);
   letter-spacing: -0.055em;
   line-height: .88;
   color: var(--ink);
-  margin-bottom: var(--gap-6);
+  margin-bottom: var(--gap-5);
   text-transform: lowercase;
 }
 .hero__line { display: block; }
 .hero__line--accent { color: var(--brand-500); }
 
-.js .hero__line {
-  animation: rise .7s var(--ease) backwards;
-}
+.js .hero__line { animation: rise .7s var(--ease) backwards; }
 .js .hero__line:nth-child(2) { animation-delay: .08s; }
 .js .hero__line:nth-child(3) { animation-delay: .16s; }
 
@@ -132,69 +137,91 @@
   to   { opacity: 1; transform: none; }
 }
 
-.hero__grid { display: grid; gap: var(--gap-6); align-items: start; }
-@media (min-width: 900px) {
-  .hero__grid { grid-template-columns: 1fr minmax(300px, 380px); gap: var(--gap-7); }
-}
-
-.hero__sub { font-size: var(--step-1); max-width: 46ch; color: var(--ink-2); }
+.hero__sub { font-size: var(--step-1); max-width: 44ch; color: var(--ink-2); }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); margin-top: var(--gap-6); }
 
-/* Мини-расчёт */
+/* Мини-расчёт: вопрос и ответ в одну строку каждый, кнопка следом. */
 .quick {
+  margin-top: var(--gap-6);
+  max-width: 460px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius-3); padding: var(--gap-5);
   box-shadow: var(--shadow-1);
 }
-.quick__label { font-size: var(--step--1); color: var(--muted); font-weight: 600; margin-bottom: var(--gap-2); }
-.quick__row { display: flex; align-items: baseline; gap: var(--gap-2); }
+.quick__ask {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--gap-4); flex-wrap: wrap;
+}
+.quick__label { font-size: var(--step-0); color: var(--ink-2); font-weight: 600; margin: 0; }
+.quick__field { display: inline-flex; align-items: baseline; gap: var(--gap-2); }
 .quick__input {
-  width: 5.5ch; min-height: 0; padding: 0;
+  width: 4.5ch; min-height: 0; padding: 0 0 2px;
   font-family: var(--font-display);
-  font-size: var(--step-4); font-weight: 800; letter-spacing: -.04em;
-  color: var(--brand-500);
-  background: none; border: 0; border-bottom: 3px solid var(--brand-200);
+  font-size: var(--step-3); font-weight: 800; letter-spacing: -.04em;
+  color: var(--brand-500); text-align: right;
+  background: none; border: 0; border-bottom: 2px solid var(--brand-200);
   border-radius: 0;
 }
 .quick__input:focus { box-shadow: none; border-bottom-color: var(--brand-500); }
-/* Стрелки у числового поля крадут место и мешают крупной цифре. */
+/* Стрелки числового поля крадут место у крупной цифры. */
 .quick__input::-webkit-outer-spin-button,
 .quick__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .quick__input { -moz-appearance: textfield; appearance: textfield; }
-.quick__unit { font-size: var(--step-1); color: var(--muted); }
+.quick__unit { font-size: var(--step-0); color: var(--muted); }
 
-.quick__result { margin: var(--gap-4) 0 var(--gap-2); font-size: var(--step-0); color: var(--ink-2); }
-.quick__price { display: block; font-family: var(--font-display); font-size: var(--step-2); letter-spacing: -.03em; color: var(--ink); }
-.quick__note { font-size: var(--step--2); color: var(--muted); margin-bottom: var(--gap-4); }
-
-/* --- Бегущая строка ------------------------------------------------------
-   Короткий манифест, который читается за секунду. Дублируется текстом
-   для скринридера, сама лента от него скрыта. */
-.marquee {
-  overflow: hidden; white-space: nowrap;
-  border-block: 1px solid var(--line);
-  background: var(--paper-alt);
-  padding: var(--gap-4) 0;
-  user-select: none;
+.quick__answer {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--gap-4); flex-wrap: wrap;
+  margin: var(--gap-4) 0 var(--gap-5);
+  padding-top: var(--gap-4); border-top: 1px solid var(--line-soft);
 }
-.marquee__track {
-  display: inline-flex; align-items: center; gap: var(--gap-5);
-  padding-right: var(--gap-5);
-  animation: slide 28s linear infinite;
-}
-.marquee__item {
+.quick__caption { font-size: var(--step--1); color: var(--muted); }
+.quick__price {
   font-family: var(--font-display); font-weight: 800;
-  font-size: var(--step-2); letter-spacing: -.03em;
-  text-transform: lowercase; color: var(--ink);
+  font-size: var(--step-2); letter-spacing: -.03em; color: var(--ink);
+  white-space: nowrap;
 }
-.marquee__dot { color: var(--brand-500); font-size: var(--step-0); }
+.quick .btn { width: 100%; }
+.quick__note { font-size: var(--step--2); color: var(--muted); margin: var(--gap-4) 0 0; }
 
-@keyframes slide {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
+/* --- Набросок ------------------------------------------------------------- */
+
+.hero__art { color: var(--ink-2); }
+@media (max-width: 979px) { .hero__art { display: none; } }
+
+.art { width: 100%; height: auto; display: block; }
+.art__line { opacity: .55; }
+.art__line--soft { opacity: .3; }
+
+/* Линии прорисовываются одна за другой — так же, как их рисуют от руки.
+   Длина штриха заведомо больше любого пути в рисунке, поэтому один
+   и тот же набор чисел годится для всех. */
+.js .art__line {
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  animation: draw 1.1s var(--ease) forwards;
+  animation-delay: calc(var(--i) * .07s);
 }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Пар — единственное, что движется постоянно. Он и делает сцену живой. */
+.art__vapor {
+  opacity: 0;
+  stroke: var(--brand-500);
+  transform-origin: center bottom;
+  animation: vapor 3.4s ease-in-out infinite;
+  animation-delay: calc(2s + var(--v) * .55s);
+}
+@keyframes vapor {
+  0%   { opacity: 0; transform: translateY(6px) scaleY(.85); }
+  25%  { opacity: .55; }
+  70%  { opacity: .3; }
+  100% { opacity: 0; transform: translateY(-26px) scaleY(1.15); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .marquee__track { animation: none; }
+  .js .art__line { stroke-dashoffset: 0; animation: none; }
+  .art__vapor { opacity: .4; animation: none; }
 }
 
 /* --- Цифры ---------------------------------------------------------------- */
@@ -359,19 +386,40 @@
   text-align: center;
   color: transparent;
 }
+/* Пустое место — тонкий контур, и только. Штриховка внутри каждого
+   слота превращала недостроенный дом в кашу из серых коробок:
+   вместо «здесь чего-то нет» читалось «здесь что-то сломалось». */
 .slot.is-empty {
-  background: repeating-linear-gradient(
-    45deg, transparent, transparent 6px,
-    color-mix(in srgb, var(--muted-2) 35%, transparent) 6px,
-    color-mix(in srgb, var(--muted-2) 35%, transparent) 7px);
-  border: 2px dashed var(--muted-2);
+  background: none;
+  border: 1.5px dashed color-mix(in srgb, var(--muted-2) 70%, transparent);
   color: var(--muted);
 }
 .slot.is-filled { border: 2px solid transparent; }
+/* Куда можно положить — видно с момента, как блок взяли в руку,
+   а не когда его уже поднесли. Иначе человек тащит наугад и решает,
+   что перетаскивание не работает. */
+.slot.is-available {
+  border: 2px dashed var(--brand-400);
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  animation: slot-pulse 1.2s var(--ease) infinite;
+}
 .slot.is-target {
   border-color: var(--brand-500);
+  border-style: solid;
+  background: color-mix(in srgb, var(--brand-500) 22%, transparent);
   box-shadow: 0 0 0 4px var(--brand-100);
+  animation: none;
 }
+@keyframes slot-pulse {
+  0%, 100% { opacity: .75; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot.is-available { animation: none; }
+}
+
+.house.is-receiving { outline: 2px dashed var(--brand-300); outline-offset: -4px; }
+.house.is-receiving .house__hint { color: var(--brand-500); font-weight: 600; }
 
 .slot[data-part="foundation"] { left: 6%; right: 6%; bottom: 4%; height: 9%; }
 .slot[data-part="foundation"].is-filled { background: var(--ink-2); }
@@ -435,6 +483,17 @@
 .shelf__group { display: grid; gap: var(--gap-2); }
 .shelf__head { font-size: var(--step--1); color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
 
+/* Взаимоисключающие блоки — крыша, окна, стены — сведены в рамку
+   с заголовком. Без неё человек кладёт «выезды», видит крышу, кладёт
+   «надзор» — снова крышу, и логика выглядит сломанной. */
+.shelf__choice {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+  padding: var(--gap-4);
+  background: var(--surface-2);
+}
+.shelf__choice-head { font-size: var(--step--1); font-weight: 700; margin-bottom: var(--gap-3); }
+
 .block {
   /* touch-action: none только на самих блоках. Повесить его на контейнер —
      значит убить прокрутку всей страницы. */
@@ -450,7 +509,7 @@
   cursor: grab;
   transition: border-color .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
 }
-.block:hover { border-color: var(--brand-300); }
+.block:hover { border-color: var(--brand-300); box-shadow: var(--shadow-1); }
 .block.is-selected { border-color: var(--brand-500); background: var(--brand-50); }
 .block.is-required { cursor: default; opacity: .85; }
 
@@ -467,7 +526,9 @@
    чего не видит. Позиционирование только трансформом — layout не трогаем. */
 .block--dragging {
   position: fixed; left: 0; top: 0; z-index: 60;
-  width: var(--drag-width, 260px);
+  /* Ширину клона ограничиваем: карточка блока во всю колонку, поднятая
+     под курсор, закрывает пол-экрана вместе с домом, куда её несут. */
+  width: min(var(--drag-width, 260px), 300px);
   pointer-events: none;
   box-shadow: var(--shadow-lift);
   border-color: var(--brand-500);

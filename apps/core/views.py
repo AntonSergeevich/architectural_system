@@ -45,15 +45,45 @@ def _client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
+def _shelf_sections(modules):
+    """Блоки склада: одиночные и группы «выберите один вариант».
+
+    Крыша, окна и стены — это по нескольку взаимоисключающих блоков.
+    Если показать их вперемешку с остальными, человек кладёт «выезды»,
+    видит крышу, кладёт «надзор» — снова крышу, и логика выглядит
+    сломанной. Заголовок группы объясняет это раньше, чем возникнет
+    вопрос.
+    """
+    sections = []
+    by_group = {}
+    for module in modules:
+        if not module.group_id:
+            sections.append({"group": None, "modules": [module]})
+            continue
+        section = by_group.get(module.group_id)
+        if section is None:
+            section = {"group": module.group, "modules": []}
+            by_group[module.group_id] = section
+            sections.append(section)
+        section["modules"].append(module)
+    return sections
+
+
 def _catalog_context():
     modules = list(
         ServiceModule.objects.filter(is_active=True).select_related("group").order_by("block", "order")
     )
+    design = [m for m in modules if m.block == Block.DESIGN]
+    realization = [m for m in modules if m.block == Block.REALIZATION]
+    extra = [m for m in modules if m.block == Block.EXTRA]
     return {
         "modules": modules,
-        "design_modules": [m for m in modules if m.block == Block.DESIGN],
-        "realization_modules": [m for m in modules if m.block == Block.REALIZATION],
-        "extra_modules": [m for m in modules if m.block == Block.EXTRA],
+        "design_sections": _shelf_sections(design),
+        "realization_sections": _shelf_sections(realization),
+        "extra_sections": _shelf_sections(extra),
+        "design_modules": design,
+        "realization_modules": realization,
+        "extra_modules": extra,
         "groups": ModuleGroup.objects.prefetch_related("modules").all(),
         "presets": Preset.objects.filter(is_active=True).prefetch_related("modules"),
         "complexities": ComplexityFactor.objects.all(),
@@ -178,10 +208,13 @@ def constructor(request):
     """
     context = _catalog_context()
     pricing = context["pricing"]
-    preset = default_preset()
     complexity = default_complexity()
 
-    selected = list(preset.modules.filter(is_active=True)) if preset else []
+    # Стартовое состояние — только фундамент. Дом собирают с нуля:
+    # так каждый блок оказывается осознанным решением, а не галочкой,
+    # которую забыли снять.
+    preset = None
+    selected = []
     area = Decimal("60")
     rooms = 2
     months = None

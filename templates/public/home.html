@@ -10,67 +10,61 @@
    которые надо самому умножить на свою площадь.
 {% endcomment %}
 <section class="hero">
-  <div class="wrap">
-    <p class="eyebrow">{{ site.city }} · дизайн интерьера, надзор, комплектация</p>
+  <div class="wrap hero__inner">
+    <div class="hero__text">
+      <p class="eyebrow">{{ site.city }} · дизайн интерьера, надзор, комплектация</p>
 
-    <h1 class="hero__title">
-      <span class="hero__line">Дом,</span>
-      <span class="hero__line hero__line--accent">который</span>
-      <span class="hero__line">про вас</span>
-    </h1>
+      <h1 class="hero__title">
+        <span class="hero__line">Дом,</span>
+        <span class="hero__line hero__line--accent">который</span>
+        <span class="hero__line">про вас</span>
+      </h1>
 
-    <div class="hero__grid">
       <p class="hero__sub">
         Не «как на референсе» и не «как у всех». Интерьер, в который
         вы заходите, садитесь на диван и говорите: вах, как мне хорошо.
       </p>
 
-      {% comment %} Мини-расчёт. Считает по тем же числам, что и конструктор:
-         разойтись они не могут — оба берут цены из каталога. {% endcomment %}
+      {% comment %}
+        Мини-расчёт стоит прямо под заголовком, а не сбоку и ниже: это
+        продолжение мысли «дом, который про вас» — вот ваш дом, вот его
+        цена. Считает он по тем же числам, что и конструктор: разойтись
+        они не могут, оба берут цены из каталога.
+      {% endcomment %}
       <div class="quick" data-quick
            data-per-sqm="{{ hero_pricing.per_sqm }}"
            data-fixed="{{ hero_pricing.fixed }}"
            data-small-enabled="{{ hero_pricing.small_enabled|yesno:'1,0' }}"
            data-small-threshold="{{ hero_pricing.small_threshold }}"
            data-small-price="{{ hero_pricing.small_price }}">
-        <label class="quick__label" for="quick-area">У меня квартира</label>
-        <div class="quick__row">
-          <input class="quick__input" id="quick-area" type="number"
-                 min="1" max="10000" step="1" value="84" inputmode="numeric">
-          <span class="quick__unit">м²</span>
+        <div class="quick__ask">
+          <label class="quick__label" for="quick-area">У меня квартира</label>
+          <span class="quick__field">
+            <input class="quick__input" id="quick-area" type="number"
+                   min="1" max="10000" step="1" value="84" inputmode="numeric">
+            <span class="quick__unit">м²</span>
+          </span>
         </div>
 
-        <p class="quick__result">
-          Полный проект —
+        <div class="quick__answer">
+          <span class="quick__caption">Полный проект</span>
           <strong class="quick__price" data-quick-price>≈ 412 000 ₽</strong>
-        </p>
+        </div>
+
+        <a class="btn btn--big" href="{% url 'public:constructor' %}" data-quick-link>
+          Собрать свой проект
+        </a>
+
         <p class="quick__note">
           Ориентировочно, по полному пакету. Дальше можно убрать всё,
           без чего вы готовы обойтись, — и увидеть, чем за это платите.
         </p>
-
-        <a class="btn btn--big btn--block" href="{% url 'public:constructor' %}" data-quick-link>
-          Собрать свой проект
-        </a>
       </div>
     </div>
+
+    <div class="hero__art">{% include "components/hero_art.html" %}</div>
   </div>
 </section>
-
-{% comment %} Бегущая строка: короткий манифест, который читается за секунду
-   и сразу отсекает тех, кому нужно «спокойно и как у всех». {% endcomment %}
-<div class="marquee" aria-hidden="true">
-  <div class="marquee__track">
-    {% for i in "12" %}
-      <span class="marquee__item">яркие</span><span class="marquee__dot">◆</span>
-      <span class="marquee__item">цветные</span><span class="marquee__dot">◆</span>
-      <span class="marquee__item">наполненные</span><span class="marquee__dot">◆</span>
-      <span class="marquee__item">не как у всех</span><span class="marquee__dot">◆</span>
-      <span class="marquee__item">про вас</span><span class="marquee__dot">◆</span>
-    {% endfor %}
-  </div>
-</div>
-<p class="visually-hidden">Яркие, цветные, наполненные интерьеры — не как у всех, а про вас.</p>
 
 <section class="section" data-reveal>
   <div class="wrap facts">

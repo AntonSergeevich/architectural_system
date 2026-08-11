@@ -68,6 +68,7 @@
     }
     if (on) selected.add(id); else selected.delete(id);
 
+    clearPresetHighlight();
     syncInputs();
     paintShelf();
     paintHouse();
@@ -199,18 +200,11 @@
     });
   }
 
-  // --- Тап и клавиатура: путь без перетаскивания ---------------------------
-  // Не запасной вариант, а требование. Тот, у кого не получилось потащить,
-  // не должен уйти с сайта.
-
-  shelf.addEventListener('click', function (e) {
-    if (e.target.closest('[data-expand]')) return;
-    var el = e.target.closest('[data-module]');
-    if (!el || dragMoved) return;
-    var mod = moduleOf(el);
-    if (mod.required) return;
-    select(mod.id, !selected.has(mod.id));
-  });
+  // --- Клавиатура ----------------------------------------------------------
+  // Блок ставится только перетаскиванием: так решено, чтобы человек
+  // physically собирал дом, а не отмечал галочки. Но клавиатура остаётся —
+  // мышью владеют не все, и оставить их без единого пути было бы
+  // не решением, а недоделкой.
 
   shelf.addEventListener('keydown', function (e) {
     var el = e.target.closest('[data-module]');
@@ -342,9 +336,23 @@
 
     drag = {
       el: el, clone: clone, mod: mod, pointerId: pointerId,
-      offsetX: rect.width / 2, offsetY: rect.height / 2,
+      // Клон держим за левую четверть, а не за середину: обрезанная
+      // по ширине карточка иначе уезжает от курсора.
+      offsetX: Math.min(rect.width, 300) / 2, offsetY: rect.height / 2,
       slots: slotRects(), target: null, frame: null, x: x, y: y
     };
+
+    // Подсказка появляется в момент взятия, а не при наведении: человек
+    // должен видеть, куда нести, ещё до того как понесёт.
+    house.classList.add('is-receiving');
+    if (mod.housePart) {
+      // У блока дома одно законное место — его и подсвечиваем.
+      drag.slots.forEach(function (slot) {
+        if (accepts(slot, mod)) slot.el.classList.add('is-available');
+      });
+    }
+    // У разовой услуги своего места в доме нет: подсвечен весь участок,
+    // подсвечивать при этом каждый слот — только рябить в глазах.
 
     try { el.setPointerCapture(pointerId); } catch (err) { /* мышь без capture — не беда */ }
     window.addEventListener('pointermove', onPointerMove, { passive: false });
@@ -379,17 +387,33 @@
     autoscroll(e.clientY);
   }
 
+  function accepts(slot, mod) {
+    // Блок со своим элементом дома идёт в свой слот. Блок без элемента —
+    // разовая услуга — кладётся куда угодно на участок: своего места
+    // в доме у него нет, но и запрещать его перетаскивать незачем.
+    return mod.housePart ? slot.part === mod.housePart : true;
+  }
+
+  function overHouse(x, y) {
+    var r = house.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
   function nearestSlot(x, y) {
     var best = null;
     var bestDistance = Infinity;
     drag.slots.forEach(function (slot) {
-      if (slot.part !== drag.mod.housePart) return;
+      if (!accepts(slot, drag.mod)) return;
       var d = Math.hypot(x - slot.cx, y - slot.cy);
       if (d < bestDistance) { bestDistance = d; best = slot; }
     });
-    // Радиус притяжения плюс половина размера дома: попасть пальцем
-    // в конкретный слот сложно, а промахнуться мимо дома целиком — нет.
-    return bestDistance <= Math.max(SNAP, house.clientWidth / 3) ? best : null;
+    if (!best) return null;
+
+    // Попасть точно в слот пальцем невозможно, да и не нужно: у блока
+    // всё равно одно законное место. Поэтому засчитываем и близкое
+    // попадание, и бросок в любую точку дома.
+    if (bestDistance <= SNAP || overHouse(x, y)) return best;
+    return null;
   }
 
   function highlight(x, y) {
@@ -410,6 +434,8 @@
     var target = drag.target;
 
     if (target) target.el.classList.remove('is-target');
+    house.classList.remove('is-receiving');
+    drag.slots.forEach(function (slot) { slot.el.classList.remove('is-available'); });
     drag.clone.remove();
     drag.el.classList.remove('block--ghost');
     if (drag.frame) cancelAnimationFrame(drag.frame);
@@ -459,7 +485,13 @@
     });
   }
 
-  // Первая отрисовка: стартовое состояние — собранный дом «Под ключ».
+  function clearPresetHighlight() {
+    root.querySelectorAll('[data-preset]').forEach(function (b) {
+      b.classList.remove('is-active');
+    });
+  }
+
+  // Первая отрисовка.
   syncInputs();
   paintShelf();
   paintHouse();
