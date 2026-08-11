@@ -9,9 +9,12 @@
   border-bottom: 1px solid var(--line-soft);
 }
 .header__inner {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: var(--gap-4); min-height: 68px;
+  display: flex; align-items: center;
+  gap: var(--gap-4); min-height: 72px;
 }
+/* Логотип слева, меню и инструменты прижаты вправо. Без этого третий
+   элемент во flex со space-between оказывается посреди шапки. */
+.header__inner .nav { margin-left: auto; }
 
 /* Логотип: знак «ДА» плюс подпись. Знак наследует currentColor, поэтому
    работает в шапке, в подвале и в обеих темах без второго файла. */
@@ -20,19 +23,24 @@
   text-decoration: none; color: var(--ink); line-height: 1.1;
 }
 .logo__mark { color: var(--brand-500); flex: none; transition: transform .25s var(--ease); }
+.footer .logo__mark { width: 48px; height: 31px; }
 .logo:hover .logo__mark { transform: translateY(-1px); }
 .logo__text { display: grid; }
 .logo__name {
   font-family: var(--font-display); font-weight: 800;
   letter-spacing: -0.04em; font-size: var(--step-1);
 }
-.logo__title { font-size: var(--step--2); color: var(--muted); letter-spacing: .02em; }
+.logo__title {
+  font-size: var(--step--2); color: var(--muted); letter-spacing: .02em;
+  white-space: nowrap;
+}
+@media (max-width: 560px) { .logo__title { display: none; } }
 
 .footer .logo { margin-bottom: var(--gap-3); }
 
 /* --- Переключатель темы --------------------------------------------------
    Кнопка появляется только при работающем JS: без него она бесполезна. */
-.header__tools { display: flex; align-items: center; gap: var(--gap-2); }
+.header__tools { display: flex; align-items: center; gap: var(--gap-2); flex: none; }
 
 .theme {
   display: none;
@@ -291,6 +299,10 @@
   }
 }
 
+/* Колонок ровно две, и обе — прямые дети формы. Любой лишний блок
+   на этом уровне уехал бы в чужую колонку и развалил раскладку. */
+.constructor__left, .constructor__right { min-width: 0; }
+
 /* Дом «прилипает» и остаётся перед глазами, пока справа прокручивается
    склад блоков. Иначе тащить нечего: блок и цель не помещаются на экран
    одновременно. */
@@ -312,7 +324,7 @@
 .house {
   position: relative;
   aspect-ratio: 5 / 4;
-  max-height: 44dvh;
+  max-height: 30dvh;
   margin-inline: auto;
   width: 100%;
   background:
@@ -321,6 +333,15 @@
   overflow: hidden;
 }
 @media (min-width: 1000px) { .house { max-height: none; aspect-ratio: 4 / 3; } }
+
+@media (max-width: 999px) {
+  /* Компактнее: панель с домом и итогом должна умещаться в экран,
+     иначе тащить блок некуда — цель уезжает за край. */
+  .total { padding: var(--gap-3); }
+  .total__row { padding: var(--gap-1) 0; }
+  .total__value { font-size: var(--step-0); }
+  .total__row--grand .total__value { font-size: var(--step-1); }
+}
 
 /* Каждый элемент дома — свой слот. Пустой слот рисуется пунктиром:
    это и есть «правило честного отказа». Текст можно пролистать, дыру нельзя. */
@@ -356,13 +377,13 @@
 .slot[data-part="facade"] { left: 12%; right: 12%; bottom: 51%; height: 12%; }
 .slot[data-part="facade"].is-filled { background: var(--brand-200); }
 
-.slot[data-part="finish"] { left: 12%; width: 9%; bottom: 13%; height: 38%; }
+.slot[data-part="finish"] { left: 12%; width: 7%; bottom: 13%; height: 38%; }
 .slot[data-part="finish"].is-filled {
   background: repeating-linear-gradient(
     0deg, var(--brand-300), var(--brand-300) 5px, var(--brand-200) 5px, var(--brand-200) 10px);
 }
 
-.slot[data-part="windows"] { left: 30%; width: 22%; bottom: 24%; height: 20%; }
+.slot[data-part="windows"] { left: 33%; width: 17%; bottom: 25%; height: 15%; }
 .slot[data-part="windows"].is-filled { background: #cfe0e6; border-color: var(--ink-2); }
 .slot[data-part="windows"].has-light { background: #F6DFA0; box-shadow: 0 0 26px rgba(246, 223, 160, .95); }
 
@@ -373,23 +394,33 @@
   border: 0;
 }
 
-.slot[data-part="light"] { right: 18%; width: 8%; bottom: 63%; height: 16%; }
-.slot[data-part="light"].is-filled { background: var(--muted); border-radius: 3px 3px 0 0; }
+/* Труба: стоит на скате, а не висит сбоку. */
+.slot[data-part="light"] { right: 22%; width: 6%; bottom: 66%; height: 14%; }
+.slot[data-part="light"].is-filled { background: var(--ink-2); border-radius: 2px 2px 0 0; }
 
 .slot[data-part="garden"] { right: 2%; width: 10%; bottom: 13%; height: 22%; }
 .slot[data-part="garden"].is-filled { background: var(--ok); border-radius: 50% 50% 20% 20%; }
+/* Сад — не дыра в доме, а необязательное украшение рядом с ним. Пунктир
+   на его месте читался бы как поломка, а не как «этого нет». */
+.slot[data-part="garden"].is-empty { background: none; border: 0; }
 
-/* Итог всегда виден в момент постановки блока — иначе теряется весь смысл. */
+/* Итог всегда виден в момент постановки блока — иначе теряется весь смысл.
+   Но именно поэтому он НЕ липкий сам по себе: липким внутри липкой панели
+   он наезжал на дом и закрывал то, ради чего человек сюда пришёл.
+   Панель целиком прилипает, а внутри неё дом и итог просто лежат друг
+   под другом. */
 .total {
-  position: sticky; bottom: 0; z-index: 21;
+  margin-top: var(--gap-3);
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius-3); padding: var(--gap-4);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-1);
 }
 .total__row { display: flex; justify-content: space-between; gap: var(--gap-4); padding: var(--gap-2) 0; }
 .total__row + .total__row { border-top: 1px solid var(--line-soft); }
 .total__label { color: var(--muted); font-size: var(--step--1); }
 .total__value { font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em; font-size: var(--step-1); white-space: nowrap; }
+.total__notes { margin-top: var(--gap-4); }
+.total__notes .total__note { margin-top: var(--gap-3); }
 .total__note { font-size: var(--step--2); color: var(--muted); margin-top: var(--gap-3); }
 .total__row--grand { border-top: 2px solid var(--ink); margin-top: var(--gap-2); }
 .total__row--grand .total__value { color: var(--brand-500); font-size: var(--step-2); }

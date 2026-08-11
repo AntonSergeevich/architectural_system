@@ -2,9 +2,22 @@
   <div class="wrap header__inner">
     {% include "components/logo.html" %}
 
+
+    <nav class="nav" id="nav">
+      <a href="{% url 'public:about' %}">Обо мне</a>
+      <a href="{% url 'public:services' %}">Услуги</a>
+      <a href="{% url 'public:portfolio' %}">Работы</a>
+      <a href="{% url 'public:how' %}">Как я работаю</a>
+      <a href="{% url 'public:objections' %}">Вопросы</a>
+      <a class="nav__cta" href="{% url 'public:constructor' %}">Собрать проект</a>
+      {% if user.is_authenticated %}
+        <a class="nav__minor" href="{% url 'cabinet:home' %}">Кабинет</a>
+      {% endif %}
+    </nav>
+
     <div class="header__tools">
-      {# Переключатель темы. Без JS кнопка не показывается: она без него
-         ничего не делает, а неработающая кнопка хуже её отсутствия. #}
+      {% comment %} Переключатель темы. Без JS кнопка не показывается: она без него
+         ничего не делает, а неработающая кнопка хуже её отсутствия. {% endcomment %}
       <button class="theme" type="button" data-theme-toggle
               aria-label="Переключить тему" title="Переключить тему">
         <svg class="theme__sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -23,17 +36,5 @@
         <span class="visually-hidden">Меню</span>
       </button>
     </div>
-
-    <nav class="nav" id="nav">
-      <a href="{% url 'public:about' %}">Обо мне</a>
-      <a href="{% url 'public:services' %}">Услуги</a>
-      <a href="{% url 'public:portfolio' %}">Работы</a>
-      <a href="{% url 'public:how' %}">Как я работаю</a>
-      <a href="{% url 'public:objections' %}">Вопросы</a>
-      <a class="nav__cta" href="{% url 'public:constructor' %}">Собрать проект</a>
-      {% if user.is_authenticated %}
-        <a class="nav__minor" href="{% url 'cabinet:home' %}">Кабинет</a>
-      {% endif %}
-    </nav>
   </div>
 </header>

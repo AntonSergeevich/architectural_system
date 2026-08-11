@@ -21,8 +21,8 @@
     {% else %}{{ module.price|money }}{% endif %}
   </span>
 
-  {# Галочка — источник правды для формы: она же уходит на сервер при
-     выключенном JavaScript, и она же делает блок доступным с клавиатуры. #}
+  {% comment %} Галочка — источник правды для формы: она же уходит на сервер при
+     выключенном JavaScript, и она же делает блок доступным с клавиатуры. {% endcomment %}
   <label class="visually-hidden" for="module-{{ module.pk }}">{{ module.title }}</label>
   <input class="visually-hidden" type="checkbox" name="modules" id="module-{{ module.pk }}"
          value="{{ module.pk }}"

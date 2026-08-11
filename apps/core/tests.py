@@ -71,6 +71,45 @@ class PublicPagesTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 200)
 
 
+class TemplateHygieneTests(TestCase):
+    """Комментарии не должны утекать на страницу.
+
+    Django понимает `{# … #}` только в пределах одной строки: закрывающую
+    скобку он ищет до конца строки и, не найдя, печатает всё как обычный
+    текст. Многострочный комментарий поэтому выводится посетителю целиком —
+    ровно это и случилось в шапке.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_no_template_syntax_leaks_into_pages(self):
+        pages = [
+            "public:home", "public:constructor", "public:about", "public:services",
+            "public:how", "public:objections", "public:contacts",
+        ]
+        for name in pages:
+            with self.subTest(page=name):
+                body = self.client.get(reverse(name)).content.decode()
+                for leak in ["{#", "#}", "{% comment", "{% endcomment", "{{ ", "{% if", "{% for"]:
+                    self.assertNotIn(leak, body, f"{name}: на страницу утёк {leak!r}")
+
+    def test_source_has_no_multiline_hash_comments(self):
+        import pathlib
+        import re
+
+        # Однострочные {# … #} допустимы, многострочные — нет.
+        broken = re.compile(r"\{#(?![^\n#]*#\})")
+        offenders = [
+            str(path)
+            for path in pathlib.Path("templates").rglob("*.html")
+            if broken.search(path.read_text(encoding="utf-8"))
+        ]
+        self.assertEqual(offenders, [], "многострочные {# #} печатаются как текст")
+
+
 class HeroCalculatorTests(TestCase):
     """Мини-расчёт на главной обязан совпадать с конструктором.
 
