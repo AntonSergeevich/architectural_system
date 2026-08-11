@@ -17,7 +17,82 @@ class Unit(models.TextChoices):
     STAGE = "stage", "за этап"
     MONTH = "month", "в месяц"
     VISIT = "visit", "за выезд"
+    HOURS = "hours", "пакет часов"
     CUSTOM = "custom", "индивидуальный расчёт"
+
+
+class PricingSettings(models.Model):
+    """Правила расчёта, которые Дарья включает и выключает сама.
+
+    Отдельная строка настроек, а не константы в коде: «убрать коэффициент
+    сложности, а через месяц, может быть, вернуть» — это переключатель
+    в кабинете, а не работа программиста.
+    """
+
+    complexity_enabled = models.BooleanField(
+        "Учитывать сложность интерьера",
+        default=False,
+        help_text="Выключено — вопрос про характер интерьера не показывается, "
+        "цена одна для всех. Включается одной галочкой в любой момент, "
+        "коэффициенты и так заведены",
+    )
+
+    small_area_enabled = models.BooleanField("Фикс для маленьких помещений", default=True)
+    small_area_threshold = models.DecimalField(
+        "Площадь до, м²", max_digits=6, decimal_places=1, default=Decimal("20")
+    )
+    small_area_price = models.DecimalField(
+        "Фиксированная цена",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("80000"),
+        help_text="Любой пакет услуг для помещения такой площади стоит эту сумму. "
+        "На маленьком метраже расчёт за квадрат даёт цифру, за которую "
+        "работать нельзя: включения там столько же",
+    )
+
+    months_per_100_sqm = models.PositiveSmallIntegerField(
+        "Месяцев стройки на 100 м²",
+        default=12,
+        help_text="Средний срок по практике: объект в 100 м² строится около года "
+        "от демонтажа до картины на стене. Из этого числа считается "
+        "ориентировочный срок авторского надзора",
+    )
+    show_grand_total = models.BooleanField(
+        "Показывать общий итог",
+        default=True,
+        help_text="Проектирование и надзор всё равно показываются отдельными "
+        "строками. Общий итог — чтобы «50 000 в месяц» не выглядело "
+        "меньше, чем оно есть за весь срок стройки",
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Правила расчёта"
+        verbose_name_plural = "Правила расчёта"
+
+    def __str__(self):
+        return "Правила расчёта"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def months_for(self, area):
+        """Ориентировочный срок стройки для площади, в месяцах."""
+        area = Decimal(area or 0)
+        if area <= 0:
+            return self.months_per_100_sqm
+        months = int(round(float(area) / 100 * self.months_per_100_sqm))
+        # Меньше трёх месяцев ремонт не идёт даже в студии, а завышать
+        # ориентир нечестно — это же деньги заказчика.
+        return max(3, months)
 
 
 class Block(models.TextChoices):
@@ -95,6 +170,21 @@ class ServiceModule(models.Model):
         help_text="Для «за м²» — цена одного квадратного метра",
     )
 
+    included_units = models.DecimalField(
+        "Единиц в пакете",
+        max_digits=6,
+        decimal_places=1,
+        default=Decimal("0"),
+        help_text="Для пакета часов: сколько часов входит в базовую цену",
+    )
+    extra_unit_price = models.DecimalField(
+        "Цена сверх пакета",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Для пакета часов: сколько стоит каждый следующий час",
+    )
+
     is_required = models.BooleanField(
         "Обязательный",
         default=False,
@@ -149,10 +239,18 @@ class ServiceModule(models.Model):
         """
         if self.unit == Unit.CUSTOM:
             return None
+
         if self.unit == Unit.SQM:
             base = self.price * Decimal(area or 0)
+        elif self.unit == Unit.HOURS:
+            # Пакет часов: базовая цена покрывает included_units, каждый
+            # следующий час считается отдельно.
+            hours = Decimal(quantity or self.included_units or 1)
+            extra = max(hours - self.included_units, Decimal("0"))
+            base = self.price + extra * self.extra_unit_price
         else:
             base = self.price * Decimal(quantity or 1)
+
         if self.affected_by_complexity:
             base *= Decimal(complexity)
         return base.quantize(Decimal("1"))

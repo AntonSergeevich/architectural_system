@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import ComplexityFactor, ModuleGroup, Preset, PriceHistory, ServiceModule
+from .models import (
+    ComplexityFactor,
+    ModuleGroup,
+    Preset,
+    PriceHistory,
+    PricingSettings,
+    ServiceModule,
+)
 
 
 @admin.register(ServiceModule)
@@ -12,7 +19,10 @@ class ServiceModuleAdmin(admin.ModelAdmin):
     ordering = ("block", "order")
     fieldsets = (
         (None, {"fields": ("code", "title", "short_title", "block", "group", "house_part", "order")}),
-        ("Цена", {"fields": ("unit", "price", "affected_by_complexity")}),
+        (
+            "Цена",
+            {"fields": ("unit", "price", "included_units", "extra_unit_price", "affected_by_complexity")},
+        ),
         ("Поведение", {"fields": ("is_required", "is_active", "duration_days")}),
         ("Тексты", {"fields": ("description", "outcome", "not_included", "warning")}),
     )
@@ -50,3 +60,29 @@ class PriceHistoryAdmin(admin.ModelAdmin):
     list_display = ("module", "price", "unit", "changed_at", "comment")
     list_filter = ("module",)
     readonly_fields = ("changed_at",)
+
+
+@admin.register(PricingSettings)
+class PricingSettingsAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (
+            "Сложность интерьера",
+            {
+                "fields": ("complexity_enabled",),
+                "description": "Пока выключено, вопрос про характер интерьера "
+                "на сайте не показывается и цена одна для всех. "
+                "Коэффициенты заведены и ждут — включение занимает одну галочку",
+            },
+        ),
+        (
+            "Маленькие помещения",
+            {"fields": ("small_area_enabled", "small_area_threshold", "small_area_price")},
+        ),
+        ("Сроки и итог", {"fields": ("months_per_100_sqm", "show_grand_total")}),
+    )
+
+    def has_add_permission(self, request):
+        return not PricingSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

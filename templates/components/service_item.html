@@ -8,6 +8,7 @@
       {% elif module.unit == 'month' %}{{ module.price|money }}/мес
       {% elif module.unit == 'stage' %}{{ module.price|money }}/этап
       {% elif module.unit == 'visit' %}{{ module.price|money }}/выезд
+      {% elif module.unit == 'hours' %}{{ module.price|money }} за {{ module.included_units|floatformat:"-1" }} ч, далее +{{ module.extra_unit_price|money }}/ч
       {% else %}{{ module.price|money }}{% endif %}
     </span>
   </button>

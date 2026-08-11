@@ -13,6 +13,61 @@
 
     <form method="post">
       {% csrf_token %}
+
+      <div class="card" style="margin-bottom: var(--gap-5)">
+        <h2>Правила расчёта</h2>
+
+        <div class="check">
+          <input type="checkbox" name="complexity_enabled" id="complexity_enabled"
+                 {% if pricing.complexity_enabled %}checked{% endif %}>
+          <label for="complexity_enabled">
+            <strong>Учитывать сложность интерьера</strong><br>
+            <span class="card__muted">
+              Пока выключено — вопрос про характер интерьера на сайте
+              не показывается, цена одна для всех. Коэффициенты уже заведены
+              и ждут: включение — вот эта галочка, ничего дописывать не нужно.
+            </span>
+          </label>
+        </div>
+
+        <div class="check" style="margin-top: var(--gap-4)">
+          <input type="checkbox" name="small_area_enabled" id="small_area_enabled"
+                 {% if pricing.small_area_enabled %}checked{% endif %}>
+          <label for="small_area_enabled"><strong>Фикс для маленьких помещений</strong></label>
+        </div>
+        <div class="grid grid--3" style="margin-top: var(--gap-3)">
+          <div class="field">
+            <label for="small_area_threshold">Площадь до, м²</label>
+            <input type="number" step="0.1" id="small_area_threshold" name="small_area_threshold"
+                   value="{{ pricing.small_area_threshold|floatformat:'-1' }}">
+          </div>
+          <div class="field">
+            <label for="small_area_price">Цена за любой пакет</label>
+            <input type="number" step="1" id="small_area_price" name="small_area_price"
+                   value="{{ pricing.small_area_price|floatformat:0 }}">
+          </div>
+          <div class="field">
+            <label for="months_per_100_sqm">Месяцев стройки на 100 м²</label>
+            <input type="number" min="1" max="60" id="months_per_100_sqm" name="months_per_100_sqm"
+                   value="{{ pricing.months_per_100_sqm }}">
+            <p class="field__hint">Из этого числа считается срок надзора</p>
+          </div>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" name="show_grand_total" id="show_grand_total"
+                 {% if pricing.show_grand_total %}checked{% endif %}>
+          <label for="show_grand_total">
+            <strong>Показывать общий итог</strong><br>
+            <span class="card__muted">
+              Проектирование и надзор всё равно идут отдельными строками.
+              Общий итог — чтобы «50 000 в месяц» не выглядело меньше,
+              чем оно есть за весь срок стройки.
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div class="table-scroll">
         <table>
           <thead><tr><th>Код</th><th>Услуга</th><th>Единица</th><th>Цена</th><th>На сайте</th></tr></thead>
@@ -28,6 +83,10 @@
                   {% else %}
                     <input type="number" step="1" min="0" name="price_{{ module.pk }}"
                            value="{{ module.price|floatformat:0 }}" style="max-width: 140px">
+                    {% if module.unit == 'hours' %}
+                      <span class="card__muted">за {{ module.included_units|floatformat:"-1" }} ч,
+                        далее +{{ module.extra_unit_price|floatformat:0 }} ₽/ч</span>
+                    {% endif %}
                   {% endif %}
                 </td>
                 <td>
@@ -55,7 +114,10 @@
         </div>
       {% endfor %}
     </div>
-    <p class="field__hint">Правятся в админке — они меняются заметно реже цен.</p>
+    <p class="field__hint">
+      Сами коэффициенты правятся в админке — они меняются заметно реже цен.
+      Здесь только выключатель.
+    </p>
   </div>
 </section>
 {% endblock %}

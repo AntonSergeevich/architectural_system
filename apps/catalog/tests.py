@@ -8,7 +8,14 @@ from django.utils import timezone
 
 from apps.core.utils import normalize_phone, working_deadline
 
-from .models import ComplexityFactor, ModuleGroup, Preset, ServiceModule, Unit
+from .models import (
+    ComplexityFactor,
+    ModuleGroup,
+    Preset,
+    PricingSettings,
+    ServiceModule,
+    Unit,
+)
 from .pricing import calculate
 
 
@@ -75,7 +82,24 @@ class PricingTests(TestCase):
         fixed = lambda calc: next(l.amount for l in calc.lines if l.module.code == "A1")
         self.assertEqual(fixed(small), fixed(big))
 
-    def test_complexity_applies_only_where_allowed(self):
+    def test_complexity_is_off_by_default(self):
+        """Дарья считает, что вензеля и минимализм стоят одинаково.
+
+        Коэффициенты заведены, но выключены: включение — одна галочка
+        в кабинете, дописывать ничего не придётся.
+        """
+        settings = PricingSettings.get()
+        self.assertFalse(settings.complexity_enabled)
+
+        calc = calculate(area=100, complexity=self.author, modules=[self.render3d])
+        amounts = {line.module.code: line.amount for line in calc.lines}
+        self.assertEqual(amounts["A6c"], Decimal("90000"))
+
+    def test_complexity_applies_when_switched_on(self):
+        settings = PricingSettings.get()
+        settings.complexity_enabled = True
+        settings.save()
+
         calc = calculate(area=100, complexity=self.author, modules=[self.render3d])
         amounts = {line.module.code: line.amount for line in calc.lines}
         # 900 × 100 × 1.3
@@ -120,6 +144,98 @@ class PricingTests(TestCase):
             m.price for m in [self.plans, self.render3d, self.drawings]
         )
         self.assertEqual(per_sqm, Decimal("2500"))
+
+
+class SmallAreaTests(TestCase):
+    """Фикс для маленьких помещений.
+
+    Считать санузел по квадратам бессмысленно: включения там столько же,
+    сколько в комнате втрое больше, а сумма выходит такая, за которую
+    работать нельзя.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.plans = ServiceModule.objects.create(
+            code="A3", title="Планировки", unit=Unit.SQM, price=Decimal("700"), is_required=True
+        )
+        cls.render3d = ServiceModule.objects.create(
+            code="A6c", title="3D", unit=Unit.SQM, price=Decimal("900")
+        )
+        cls.supervision = ServiceModule.objects.create(
+            code="B1", title="Надзор", unit=Unit.MONTH, price=Decimal("50000"),
+            block="realization", affected_by_complexity=False,
+        )
+
+    def test_small_room_costs_fixed_price_for_any_package(self):
+        for modules in ([], [self.render3d]):
+            with self.subTest(modules=len(modules)):
+                calc = calculate(area=15, modules=modules)
+                self.assertEqual(calc.design_total, Decimal("80000"))
+
+    def test_threshold_is_inclusive(self):
+        self.assertEqual(calculate(area=20, modules=[]).design_total, Decimal("80000"))
+        self.assertNotEqual(calculate(area=21, modules=[]).design_total, Decimal("80000"))
+
+    def test_supervision_is_added_on_top_of_the_fixed_price(self):
+        calc = calculate(area=15, modules=[self.supervision], months=4)
+        self.assertEqual(calc.design_total, Decimal("80000"))
+        self.assertEqual(calc.realization_total, Decimal("200000"))
+        self.assertEqual(calc.grand_total, Decimal("280000"))
+
+    def test_rule_can_be_switched_off(self):
+        settings = PricingSettings.get()
+        settings.small_area_enabled = False
+        settings.save()
+        self.assertNotEqual(calculate(area=15, modules=[]).design_total, Decimal("80000"))
+
+
+class MonthsTests(TestCase):
+    """Срок надзора: около года на 100 м² по практике Дарьи."""
+
+    def test_months_estimated_from_area(self):
+        settings = PricingSettings.get()
+        self.assertEqual(settings.months_for(100), 12)
+        self.assertEqual(settings.months_for(50), 6)
+
+    def test_short_projects_never_go_below_three_months(self):
+        self.assertEqual(PricingSettings.get().months_for(10), 3)
+
+    def test_explicit_months_win(self):
+        calc = calculate(area=100, modules=[], months=18)
+        self.assertEqual(calc.months, 18)
+
+    def test_grand_total_includes_supervision_for_the_whole_build(self):
+        """«50 000 в месяц» выглядит небольшой суммой, пока её не умножили."""
+        supervision = ServiceModule.objects.create(
+            code="B1", title="Надзор", unit=Unit.MONTH, price=Decimal("50000"),
+            block="realization", affected_by_complexity=False,
+        )
+        calc = calculate(area=100, modules=[supervision])
+        self.assertEqual(calc.months, 12)
+        self.assertEqual(calc.realization_total, Decimal("600000"))
+
+
+class HourPackTests(TestCase):
+    """Консультация: два часа в базовой цене, дальше поштучно."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.consult = ServiceModule.objects.create(
+            code="C1", title="Консультация", unit=Unit.HOURS, price=Decimal("8000"),
+            included_units=Decimal("2"), extra_unit_price=Decimal("1000"),
+            block="extra", affected_by_complexity=False,
+        )
+
+    def test_base_price_covers_included_hours(self):
+        self.assertEqual(self.consult.amount_for(area=0, quantity=2), Decimal("8000"))
+
+    def test_extra_hours_are_added(self):
+        self.assertEqual(self.consult.amount_for(area=0, quantity=4), Decimal("10000"))
+
+    def test_fewer_hours_do_not_reduce_the_price(self):
+        """Час консультации не дешевле двух: базовая цена — это пакет."""
+        self.assertEqual(self.consult.amount_for(area=0, quantity=1), Decimal("8000"))
 
 
 class PresetTests(TestCase):

@@ -1,12 +1,16 @@
-# Регулярные задачи. Установить: crontab -u darya deploy/crontab
+# Регулярные задачи. Установить: crontab -u daarch deploy/crontab
 #
 # Напоминания о просроченных касаниях по заявкам: раз в час в рабочее время.
 # Ночью и в выходные не шлём — регламент Дарьи это прямо запрещает,
 # и система не должна его нарушать за неё.
-0 10-19 * * 1-5  cd /srv/darya && .venv/bin/python manage.py remind_overdue
+0 10-19 * * 1-5  cd /srv/daarch && .venv/bin/python manage.py remind_overdue
+
+# Сверка незакрытых счетов с GetPlatinum. Их коллбэк приходит ровно один раз
+# и повторов не имеет: если он не дошёл, платёж останется неучтённым.
+17 * * * *  cd /srv/daarch && .venv/bin/python manage.py sync_payments
 
 # Резервные копии базы и файлов — каждую ночь.
-30 3 * * *  /srv/darya/deploy/backup.sh >> /var/log/darya-backup.log 2>&1
+30 3 * * *  /srv/daarch/deploy/backup.sh >> /var/log/daarch-backup.log 2>&1
 
 # Обновление сертификата.
 15 4 * * *  certbot renew --quiet --deploy-hook "systemctl reload nginx"

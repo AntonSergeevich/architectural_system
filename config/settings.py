@@ -214,13 +214,19 @@ SERVER_EMAIL = env("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 SITE_URL = env("SITE_URL", "http://127.0.0.1:8000")
 
 # --- Оплата: GetPlatinum ---------------------------------------------------
-# Реквизиты выдаёт платёжный сервис. Пока их нет, приём оплат отключён:
-# кнопка не показывается, счёт остаётся с ручной отметкой об оплате.
-GETPLATINUM_MERCHANT_ID = env("GETPLATINUM_MERCHANT_ID", "")
-GETPLATINUM_SECRET_KEY = env("GETPLATINUM_SECRET_KEY", "")
+# Базовый адрес API вида https://<аккаунт>.getplatinum.ru/api/public/pay —
+# он свой у каждой организации. Ключ берётся в личном кабинете:
+# Настройки → организация → API-ключ. Он же используется для проверки
+# подписи коллбэков, отдельного секрета у них нет.
 GETPLATINUM_API_URL = env("GETPLATINUM_API_URL", "")
-GETPLATINUM_TEST_MODE = env_bool("GETPLATINUM_TEST_MODE", True)
-PAYMENTS_ENABLED = bool(GETPLATINUM_MERCHANT_ID and GETPLATINUM_SECRET_KEY and GETPLATINUM_API_URL)
+GETPLATINUM_API_KEY = env("GETPLATINUM_API_KEY", "")
+# Ставка НДС для кассового чека. Для самозанятого — «none»: НДС
+# не применяется. Ошибка здесь means нарушение налогового учёта,
+# поэтому значение вынесено в настройки, а не зашито в код.
+GETPLATINUM_VAT = env("GETPLATINUM_VAT", "none")
+# Пока адрес и ключ не заданы, приём оплат выключен: кнопка не
+# показывается, счёт отмечается оплаченным вручную.
+PAYMENTS_ENABLED = bool(GETPLATINUM_API_URL and GETPLATINUM_API_KEY)
 
 # --- Регламент -------------------------------------------------------------
 # Часы работы. Из них считается обещанный срок ответа: не календарные сутки,

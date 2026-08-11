@@ -1,20 +1,20 @@
 # Копировать в /etc/systemd/system/darya.service
 #   sudo systemctl daemon-reload && sudo systemctl enable --now darya
 [Unit]
-Description=Gunicorn для сайта Дарьи
+Description=Gunicorn для daarch.ru
 After=network.target postgresql.service
 
 [Service]
 Type=notify
-User=darya
+User=daarch
 Group=www-data
-WorkingDirectory=/srv/darya
-EnvironmentFile=/srv/darya/.env
-RuntimeDirectory=darya
+WorkingDirectory=/srv/daarch
+EnvironmentFile=/srv/daarch/.env
+RuntimeDirectory=daarch
 # Сокет вместо порта: nginx и приложение на одной машине, лишний сетевой
 # стек между ними не нужен, а права на файл сокета проверяются ядром.
-ExecStart=/srv/darya/.venv/bin/gunicorn config.wsgi:application \
-    --bind unix:/run/darya/gunicorn.sock \
+ExecStart=/srv/daarch/.venv/bin/gunicorn config.wsgi:application \
+    --bind unix:/run/daarch/gunicorn.sock \
     --workers 3 \
     --timeout 60 \
     --access-logfile - \

@@ -93,8 +93,15 @@ class CalculatorForm(forms.Form):
         queryset=ServiceModule.objects.filter(is_active=True),
         required=False,
     )
-    supervision_months = forms.IntegerField(required=False, min_value=1, max_value=60)
-    procurement_stages = forms.IntegerField(required=False, min_value=1, max_value=20)
+    # Срок стройки: подставляется по площади (около года на 100 м² —
+    # средний показатель по практике Дарьи), но заказчик может поправить.
+    supervision_months = forms.IntegerField(
+        label="Месяцев стройки", required=False, min_value=1, max_value=60
+    )
+    consultation_hours = forms.DecimalField(
+        label="Часов консультации", required=False, min_value=1, max_value=24,
+        max_digits=4, decimal_places=1,
+    )
 
 
 class ClauseQuestionForm(forms.Form):

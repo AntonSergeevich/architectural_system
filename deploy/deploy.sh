@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Выкатка одной командой. Запускать из корня проекта на сервере:
-#   cd /srv/darya && ./deploy/deploy.sh
+#   cd /srv/daarch && ./deploy/deploy.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -29,10 +29,10 @@ echo "→ Проверка боевых настроек"
 "$PY" manage.py check --deploy
 
 echo "→ Перезапуск"
-sudo systemctl restart darya
+sudo systemctl restart daarch
 sleep 2
-systemctl is-active --quiet darya && echo "✓ Готово" || {
+systemctl is-active --quiet daarch && echo "✓ Готово" || {
     echo "✗ Сервис не поднялся, смотрим журнал:"
-    sudo journalctl -u darya -n 40 --no-pager
+    sudo journalctl -u daarch -n 40 --no-pager
     exit 1
 }

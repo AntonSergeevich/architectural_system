@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.billing.models import Invoice
-from apps.catalog.models import ComplexityFactor, PriceHistory, ServiceModule
+from apps.catalog.models import ComplexityFactor, PriceHistory, PricingSettings, ServiceModule
 from apps.contracts.models import Contract, ContractClause, ContractTemplate
 from apps.core.models import SiteSettings
 from apps.crm.models import Lead
@@ -139,7 +139,26 @@ def prices(request):
     они хранят свои цифры.
     """
     modules = ServiceModule.objects.order_by("block", "order")
+    pricing = PricingSettings.get()
+
     if request.method == "POST":
+        # Правила расчёта — те же переключатели, что и цены: включить
+        # коэффициент сложности через месяц должно быть одной галочкой,
+        # а не задачей разработчику.
+        pricing.complexity_enabled = "complexity_enabled" in request.POST
+        pricing.small_area_enabled = "small_area_enabled" in request.POST
+        pricing.show_grand_total = "show_grand_total" in request.POST
+        for field in ("small_area_threshold", "small_area_price", "months_per_100_sqm"):
+            raw = request.POST.get(field)
+            if not raw:
+                continue
+            try:
+                value = Decimal(raw.replace(",", ".").replace(" ", ""))
+            except (ArithmeticError, ValueError):
+                continue
+            setattr(pricing, field, int(value) if field == "months_per_100_sqm" else value)
+        pricing.save()
+
         changed = 0
         for module in modules:
             raw = request.POST.get(f"price_{module.pk}")
@@ -170,7 +189,11 @@ def prices(request):
     return render(
         request,
         "cabinet/prices.html",
-        {"modules": modules, "complexities": ComplexityFactor.objects.all()},
+        {
+            "modules": modules,
+            "complexities": ComplexityFactor.objects.all(),
+            "pricing": pricing,
+        },
     )
 
 

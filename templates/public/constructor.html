@@ -41,21 +41,40 @@
 
         <div class="total">
           <div class="total__row">
-            <span class="total__label">Проектирование</span>
+            <span class="total__label">Проектирование
+              <span class="card__muted" data-fixed-note {% if not calc.fixed_design_price %}hidden{% endif %}>
+                — фиксированная цена для помещения до {{ pricing.small_area_threshold|floatformat:"-1" }} м²
+              </span>
+            </span>
             <span class="total__value" data-total="design" data-value="{{ calc.design_total|floatformat:0 }}">{{ calc.design_total|money }}</span>
           </div>
           <div class="total__row">
-            <span class="total__label">Реализация: надзор и комплектация</span>
+            <span class="total__label">Надзор и комплектация
+              <span class="card__muted">за <span data-months>{{ calc.months }}</span> мес стройки</span>
+            </span>
             <span class="total__value" data-total="realization" data-value="{{ calc.realization_total|floatformat:0 }}">{{ calc.realization_total|money }}</span>
           </div>
           <div class="total__row">
             <span class="total__label">Разовые услуги</span>
             <span class="total__value" data-total="extra" data-value="{{ calc.extra_total|floatformat:0 }}">{{ calc.extra_total|money }}</span>
           </div>
+          {% if pricing.show_grand_total %}
+            <div class="total__row total__row--grand">
+              <span class="total__label"><strong>Всего за проект и стройку</strong></span>
+              <span class="total__value" data-total="grand" data-value="{{ calc.grand_total|floatformat:0 }}">{{ calc.grand_total|money }}</span>
+            </div>
+          {% endif %}
+
           <p class="total__note" data-custom-note {% if not calc.has_custom %}hidden{% endif %}>
             В наборе есть услуги с индивидуальным расчётом — их стоимость
             я назову после разговора: посчитать её заранее одной цифрой
             невозможно.
+          </p>
+          <p class="total__note">
+            Надзор и комплектация считаются помесячно и идут столько,
+            сколько идёт стройка. Объект в 100 м² по моей практике строится
+            около года — от демонтажа до картины на стене. Срок можно
+            поправить рядом с площадью.
           </p>
           <p class="total__note">
             Расчёт ориентировочный. Точную стоимость и срок я назову после
@@ -76,16 +95,24 @@
               <input type="number" min="1" max="50" id="id_rooms" name="rooms" value="{{ rooms }}" required>
             </div>
             <div class="field">
-              <label for="id_complexity">Какой интерьер</label>
-              <select id="id_complexity" name="complexity">
-                {% for item in complexities %}
-                  <option value="{{ item.pk }}" {% if complexity and complexity.pk == item.pk %}selected{% endif %}>{{ item.title }}</option>
-                {% endfor %}
-              </select>
-              <p class="field__hint">
-                {% if complexity %}{{ complexity.description }}{% endif %}
-              </p>
+              <label for="id_months">Месяцев стройки</label>
+              <input type="number" min="1" max="60" id="id_months" name="supervision_months" value="{{ months }}">
+              <p class="field__hint">Подставлено по площади, можно поправить</p>
             </div>
+
+            {% if pricing.complexity_enabled %}
+              <div class="field">
+                <label for="id_complexity">Какой интерьер</label>
+                <select id="id_complexity" name="complexity">
+                  {% for item in complexities %}
+                    <option value="{{ item.pk }}" {% if complexity and complexity.pk == item.pk %}selected{% endif %}>{{ item.title }}</option>
+                  {% endfor %}
+                </select>
+                <p class="field__hint">
+                  {% if complexity %}{{ complexity.description }}{% endif %}
+                </p>
+              </div>
+            {% endif %}
           </div>
 
           <p class="shelf__head">Готовые наборы</p>

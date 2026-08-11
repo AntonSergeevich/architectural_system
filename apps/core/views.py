@@ -10,7 +10,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.catalog.models import Block, ComplexityFactor, ModuleGroup, Preset, ServiceModule
+from apps.catalog.models import (
+    Block,
+    ComplexityFactor,
+    ModuleGroup,
+    Preset,
+    PricingSettings,
+    ServiceModule,
+)
 from apps.catalog.pricing import calculate, default_complexity, default_preset
 from apps.contracts.models import ClauseQuestion, Contract, ContractAck
 from apps.crm.models import Client, Lead, Property, Quote, QuoteItem
@@ -50,6 +57,7 @@ def _catalog_context():
         "groups": ModuleGroup.objects.prefetch_related("modules").all(),
         "presets": Preset.objects.filter(is_active=True).prefetch_related("modules"),
         "complexities": ComplexityFactor.objects.all(),
+        "pricing": PricingSettings.get(),
     }
 
 
@@ -141,12 +149,14 @@ def constructor(request):
     как потеря, а не как экономия.
     """
     context = _catalog_context()
+    pricing = context["pricing"]
     preset = default_preset()
     complexity = default_complexity()
 
     selected = list(preset.modules.filter(is_active=True)) if preset else []
     area = Decimal("60")
     rooms = 2
+    months = None
 
     if request.method == "POST":
         # Путь без JavaScript: те же поля обычным POST, считает тот же код.
@@ -156,7 +166,16 @@ def constructor(request):
             rooms = form.cleaned_data["rooms"]
             complexity = form.cleaned_data.get("complexity") or complexity
             selected = list(form.cleaned_data["modules"])
-    calc = calculate(area=area, rooms=rooms, complexity=complexity, modules=selected)
+            months = form.cleaned_data.get("supervision_months")
+
+    calc = calculate(
+        area=area,
+        rooms=rooms,
+        complexity=complexity,
+        modules=selected,
+        months=months,
+        settings=pricing,
+    )
 
     context.update(
         {
@@ -165,6 +184,7 @@ def constructor(request):
             "area": area,
             "rooms": rooms,
             "complexity": complexity,
+            "months": calc.months,
             "selected_ids": [line.module.pk for line in calc.lines],
             # Отдаём словарём и печатаем через |json_script: он экранирует
             # содержимое так, что текст из базы не может закрыть тег script.
@@ -222,7 +242,6 @@ def calculate_api(request):
         complexity=form.cleaned_data.get("complexity") or default_complexity(),
         modules=form.cleaned_data["modules"],
         months=form.cleaned_data.get("supervision_months"),
-        stages=form.cleaned_data.get("procurement_stages"),
     )
     return JsonResponse({"ok": True, "calc": calc.as_dict()})
 
@@ -337,7 +356,6 @@ def save_quote(request):
         complexity=complexity,
         modules=form.cleaned_data["modules"],
         months=form.cleaned_data.get("supervision_months"),
-        stages=form.cleaned_data.get("procurement_stages"),
     )
 
     with transaction.atomic():
@@ -345,8 +363,8 @@ def save_quote(request):
             area=form.cleaned_data["area"],
             rooms=form.cleaned_data["rooms"],
             complexity=complexity,
-            supervision_months=form.cleaned_data.get("supervision_months") or 6,
-            procurement_stages=form.cleaned_data.get("procurement_stages") or 3,
+            supervision_months=calc.months,
+            procurement_stages=1,
             design_total=calc.design_total,
             realization_total=calc.realization_total,
             extra_total=calc.extra_total,

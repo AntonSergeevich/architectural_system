@@ -161,7 +161,8 @@
     var map = {
       design: calc.design_total,
       realization: calc.realization_total,
-      extra: calc.extra_total
+      extra: calc.extra_total,
+      grand: calc.grand_total
     };
     Object.keys(map).forEach(function (key) {
       var el = root.querySelector('[data-total="' + key + '"]');
@@ -170,6 +171,12 @@
 
     var custom = root.querySelector('[data-custom-note]');
     if (custom) custom.hidden = !calc.has_custom;
+
+    var fixed = root.querySelector('[data-fixed-note]');
+    if (fixed) fixed.hidden = !calc.fixed_design;
+
+    var months = root.querySelector('[data-months]');
+    if (months) months.textContent = calc.months;
 
     var box = root.querySelector('[data-warnings]');
     if (!box) return;
