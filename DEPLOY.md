@@ -66,7 +66,7 @@ GRANT ALL ON SCHEMA public TO dades;
 
 ```bash
 sudo mkdir -p /srv/dades && sudo chown dades:dades /srv/dades
-git clone https://github.com/AntonSergeevich/architectural_system.git /srv/dades
+git clone -b main https://github.com/AntonSergeevich/architectural_system.git /srv/dades
 cd /srv/dades
 
 python3 -m venv .venv
@@ -94,7 +94,9 @@ nano .env
 | `POSTGRES_*` | **Снять комментарии** с этих пяти строк и подставить то, что задали в пункте 3. По умолчанию они закомментированы: без них проект работает на SQLite, и это правильно для локальной разработки, но не для сервера |
 | `EMAIL_*` | Почта Дарьи `dark-ost@ya.ru`. Пароль — **не** пароль от почты, а пароль приложения: Яндекс ID → Безопасность → Пароли приложений → Почта |
 | `TELEGRAM_BOT_TOKEN` | Токен бота `@daarch_bot` от @BotFather |
-| `TELEGRAM_CHAT_ID` | Кому бот пишет — как узнать, ниже |
+| `TELEGRAM_CHAT_ID` | Куда бот пишет Дарье — как узнать, ниже |
+| `TELEGRAM_BOT_USERNAME` | `daarch_bot`, без «@» |
+| `TELEGRAM_WEBHOOK_SECRET` | Длинная случайная строка, как секретный ключ Django |
 
 Закрыть файл от чужих глаз: `chmod 600 .env`.
 
@@ -181,7 +183,42 @@ sudo mkdir -p /srv/backups && sudo chown dades:dades /srv/backups
 
 ---
 
-## 9. Контент: фото, тексты, регламент
+## 9. Бот: включить приём сообщений
+
+Уведомления бот умеет отправлять сразу, как только заполнен токен.
+А вот **слышать** — только после регистрации вебхука: без него кнопка
+«Подключить Telegram» в кабинете не сработает, потому что код привязки
+некому будет получить.
+
+Регистрируется один раз, после того как заработал HTTPS:
+
+```bash
+cd /srv/dades
+.venv/bin/python manage.py telegram_webhook
+.venv/bin/python manage.py telegram_webhook --info   # проверить
+```
+
+В `.env` для этого нужны две строки:
+
+```
+TELEGRAM_BOT_USERNAME=daarch_bot
+TELEGRAM_WEBHOOK_SECRET=<длинная случайная строка>
+```
+
+Секрет генерируется так же, как ключ Django:
+`python3 -c "import secrets;print(secrets.token_urlsafe(24))"`.
+Он попадает в адрес вебхука, и без него в этот адрес может постучаться
+кто угодно.
+
+Проверка целиком: зайти в кабинет, нажать «Подключить Telegram»,
+в открывшемся боте нажать «Запустить». В кабинете после обновления
+страницы появится «подключено».
+
+Сменили домен — зарегистрируйте вебхук заново.
+
+---
+
+## 10. Контент: фото, тексты, регламент
 
 Всё, что видно на сайте, правится Дарьей без программиста. Вход:
 `https://da-des.ru/admin/`, логин и пароль — те, что задали
@@ -202,7 +239,7 @@ sudo mkdir -p /srv/backups && sudo chown dades:dades /srv/backups
 
 ---
 
-## 10. Приём оплат: GetPlatinum
+## 11. Приём оплат: GetPlatinum
 
 Пока реквизиты не заданы, приём оплат **выключен**: кнопка не показывается,
 счёт помечается оплаченным вручную в кабинете. Это сделано намеренно —
@@ -247,7 +284,7 @@ GETPLATINUM_VAT=none
 
 ---
 
-## 11. Обновление
+## 12. Обновление
 
 ```bash
 ssh dades@155.212.209.229
