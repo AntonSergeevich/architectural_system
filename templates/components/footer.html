@@ -1,0 +1,33 @@
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div class="footer__col">
+      <p class="footer__name">{{ site.owner_name }}</p>
+      <p class="footer__muted">{{ site.owner_title }}</p>
+      <p><a href="tel:{{ site.phone }}">{{ site.phone }}</a></p>
+      {% if site.email %}<p><a href="mailto:{{ site.email }}">{{ site.email }}</a></p>{% endif %}
+    </div>
+
+    <div class="footer__col">
+      <p class="footer__head">Сайт</p>
+      <a href="{% url 'public:services' %}">Услуги</a>
+      <a href="{% url 'public:constructor' %}">Собрать проект</a>
+      <a href="{% url 'public:portfolio' %}">Работы</a>
+      <a href="{% url 'public:how' %}">Как я работаю</a>
+      <a href="{% url 'public:articles' %}">Полезное</a>
+    </div>
+
+    <div class="footer__col">
+      <p class="footer__head">Документы</p>
+      {% for doc in legal_menu %}
+        <a href="{{ doc.get_absolute_url }}">{{ doc.title }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="footer__col">
+      <p class="footer__head">Реквизиты</p>
+      <p class="footer__muted">{{ site.legal_name }}</p>
+      <p class="footer__muted">ИНН {{ site.inn }}</p>
+      <p class="footer__muted">{{ site.city }} и удалённая работа</p>
+    </div>
+  </div>
+</footer>

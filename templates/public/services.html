@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Услуги — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    <p class="eyebrow">Услуги</p>
+    <h1>Что входит и что не входит</h1>
+    <p class="lead">
+      Проектирование, авторский надзор и комплектация — это один результат
+      в трёх договорах. Ниже — каждый блок работы подробно.
+      Цену под вашу квартиру можно собрать в <a href="{% url 'public:constructor' %}">конструкторе</a>.
+    </p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <h2>Проектирование</h2>
+    <div class="accordion">
+      {% for module in design_modules %}{% include "components/service_item.html" %}{% endfor %}
+    </div>
+
+    <h2 style="margin-top: var(--gap-7)">Реализация</h2>
+    <div class="accordion">
+      {% for module in realization_modules %}{% include "components/service_item.html" %}{% endfor %}
+    </div>
+
+    <h2 style="margin-top: var(--gap-7)">Разовое</h2>
+    <div class="accordion">
+      {% for module in extra_modules %}{% include "components/service_item.html" %}{% endfor %}
+    </div>
+
+    <div class="note note--warn" style="margin-top: var(--gap-7)">
+      <h3>Авторский надзор — это не технический надзор</h3>
+      <p>Авторский надзор — контроль соответствия результата проектным решениям:
+        то ли положено, того ли цвета, в том ли месте, той ли фактуры.</p>
+      <p>Технический надзор — функция и ответственность прораба: качество пирога
+        пола и стен, технологии разводки сантехники, сечение кабеля, приёмка
+        скрытых работ. Дизайнер такого не делает и не имеет права делать.</p>
+      <p><strong>Вам нужны оба, и это разные люди.</strong></p>
+    </div>
+  </div>
+</section>
+{% endblock %}

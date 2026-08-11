@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Заявка отправлена — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    <h1>Заявка у меня</h1>
+    <p class="lead">
+      Отвечу в рабочее время — до {{ deadline|date:"d.m в H:i" }}.
+      Это по регламенту: будни с {{ site.workday_start }}:00 до {{ site.workday_end }}:00,
+      суббота и воскресенье — выходные.
+    </p>
+    <p class="lead">
+      Иногда я отвечаю и раньше, но обещать это было бы нечестно.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--ghost" href="{% url 'public:portfolio' %}">Посмотреть работы</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

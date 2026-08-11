@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}{{ contract.template.title }} — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Договор{% if contract.number %} №{{ contract.number }}{% endif %} от {{ contract.date|date:"d.m.Y" }}</p>
+    <h1>{{ contract.template.title }}</h1>
+    <p class="lead">
+      Важные пункты подсвечены. У каждого есть расшифровка обычным языком —
+      нажмите «Что это значит». Если что-то непонятно, отметьте пункт галочкой:
+      я увижу и разберу именно его, а не весь договор целиком.
+    </p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    {% if contract.template.intro %}<div class="doc">{{ contract.template.intro|richtext }}</div>{% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      {% for clause in contract.template.clauses.all %}
+        <div class="clause {% if clause.is_important %}is-important{% endif %}">
+          <p><span class="clause__num">{{ clause.number }}</span> <strong>{{ clause.title }}</strong></p>
+          <p>{{ clause.text }}</p>
+
+          {% if clause.plain_text %}
+            <button class="clause__toggle" type="button" data-target="plain-{{ clause.pk }}">Что это значит</button>
+            <div class="clause__plain" id="plain-{{ clause.pk }}" hidden>{{ clause.plain_text|richtext }}</div>
+          {% endif %}
+
+          <div class="check" style="margin-top: var(--gap-3)">
+            <input type="checkbox" name="clause" value="{{ clause.pk }}" id="q-{{ clause.pk }}"
+                   {% if clause.pk in asked %}checked{% endif %}>
+            <label for="q-{{ clause.pk }}">По этому пункту есть вопрос</label>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if contract.template.outro %}<div class="doc">{{ contract.template.outro|richtext }}</div>{% endif %}
+
+      <div class="note" style="margin-top: var(--gap-6)">
+        <h3>Регламент — часть договора</h3>
+        {{ site.regulations|richtext }}
+      </div>
+
+      {% if not contract.ack %}
+        <div class="card" style="margin-top: var(--gap-5)">
+          <div class="field">
+            <label for="ack_name">Ваше имя</label>
+            <input type="text" id="ack_name" name="ack_name" value="{{ contract.client.name }}">
+          </div>
+          <div class="check">
+            <input type="checkbox" name="ack" id="ack" value="1">
+            <label for="ack">Я прочитал договор и регламент и понимаю их</label>
+          </div>
+        </div>
+      {% else %}
+        <p class="message message--success">
+          Подтверждено: {{ contract.ack.name }}, {{ contract.ack.created_at|date:"d.m.Y H:i" }}
+        </p>
+      {% endif %}
+
+      <button class="btn btn--big btn--block" type="submit" style="margin-top: var(--gap-5)">Сохранить</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

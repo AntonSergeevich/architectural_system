@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.client.name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    {% include "cabinet/_nav.html" %}
+    <h1>{{ lead.client.name }}</h1>
+    <p class="lead">
+      {% if lead.client.phone %}<a href="tel:{{ lead.client.phone }}">{{ lead.client.phone }}</a>{% endif %}
+      {% if lead.client.email %} · <a href="mailto:{{ lead.client.email }}">{{ lead.client.email }}</a>{% endif %}
+      {% if lead.client.messenger %} · {{ lead.client.messenger }}{% endif %}
+    </p>
+
+    {% if lead.estate %}
+      <div class="card">
+        <p class="card__title">Объект</p>
+        <p>{{ lead.estate.get_kind_display }}, {{ lead.estate.area }} м², {{ lead.estate.rooms }} помещений</p>
+        <p class="card__muted">
+          {{ lead.estate.city }}{% if lead.estate.address %}, {{ lead.estate.address }}{% endif %} ·
+          ключи {% if lead.estate.keys_received %}получены{% else %}не получены{% endif %} ·
+          строители {% if lead.estate.has_builders %}свои{% else %}нужны{% endif %}
+          {% if lead.estate.desired_move_in %} · заезд: {{ lead.estate.desired_move_in }}{% endif %}
+        </p>
+      </div>
+    {% endif %}
+
+    {% if lead.message %}
+      <div class="card" style="margin-top: var(--gap-4)">
+        <p class="card__title">Сообщение</p><p>{{ lead.message|linebreaksbr }}</p>
+      </div>
+    {% endif %}
+
+    {% if lead.answers %}
+      <div class="card" style="margin-top: var(--gap-4)">
+        <p class="card__title">Анкета</p>
+        <div class="summary-lines">
+          {% for key, value in lead.answers.items %}
+            <div class="summary-line"><span class="card__muted">{{ key }}</span><span>{{ value }}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <form method="post" style="margin-top: var(--gap-6)">
+      {% csrf_token %}
+      <div class="field">
+        <label for="status">Статус</label>
+        <select id="status" name="status">
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if lead.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="next_action">Следующий шаг</label>
+        <input type="text" id="next_action" name="next_action" value="{{ lead.next_action }}">
+        <p class="field__hint">Пустым он быть не может: заявка без следующего шага теряется.</p>
+      </div>
+      <div class="field">
+        <label for="next_action_at">Когда</label>
+        <input type="datetime-local" id="next_action_at" name="next_action_at"
+               value="{{ lead.next_action_at|date:'Y-m-d\TH:i' }}">
+      </div>
+      <div class="field">
+        <label for="lost_reason">Причина отказа</label>
+        <input type="text" id="lost_reason" name="lost_reason" value="{{ lead.lost_reason }}">
+      </div>
+      <button class="btn" type="submit">Сохранить</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

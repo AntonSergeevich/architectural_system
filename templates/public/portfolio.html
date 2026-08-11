@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Работы — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    <p class="eyebrow">Портфолио</p>
+    <h1>Объекты</h1>
+  </div>
+</section>
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="works">
+      {% for project in projects %}
+        <a class="work" href="{{ project.get_absolute_url }}">
+          <span class="work__img">
+            {% if project.cover %}<img src="{{ project.cover.image.url }}" alt="{{ project.title }}" loading="lazy">{% endif %}
+          </span>
+          <span class="work__title">{{ project.title }}</span>
+          <span class="work__meta">
+            {{ project.city }}{% if project.area %} · {{ project.area }} м²{% endif %}{% if project.year %} · {{ project.year }}{% endif %}
+          </span>
+        </a>
+      {% empty %}
+        <p>Скоро здесь появятся объекты.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

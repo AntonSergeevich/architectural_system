@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Ваше предложение — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Предложение{% if quote.valid_until %} · действует до {{ quote.valid_until|date:"d.m.Y" }}{% endif %}</p>
+    <h1>Ваш проект</h1>
+    <p class="lead">
+      {{ quote.area }} м²{% if quote.rooms %}, {{ quote.rooms }} помещений{% endif %}{% if quote.complexity %} · {{ quote.complexity.title }}{% endif %}
+    </p>
+    {% if quote.is_expired %}
+      <p class="message message--warning">Срок этого предложения истёк — напишите мне, пересчитаю по текущим ценам.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <div class="summary-lines">
+      {% for item in quote.items.all %}
+        <div class="summary-line">
+          <span>{{ item.title }}
+            {% if item.unit == 'month' %}<span class="card__muted">· {{ item.quantity|floatformat:0 }} мес</span>
+            {% elif item.unit == 'stage' %}<span class="card__muted">· {{ item.quantity|floatformat:0 }} этапа</span>{% endif %}
+          </span>
+          <span>{% if item.amount %}{{ item.amount|money }}{% else %}по расчёту{% endif %}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="total" style="margin-top: var(--gap-6); position: static">
+      <div class="total__row"><span class="total__label">Проектирование</span><span class="total__value">{{ quote.design_total|money }}</span></div>
+      <div class="total__row"><span class="total__label">Реализация</span><span class="total__value">{{ quote.realization_total|money }}</span></div>
+      {% if quote.extra_total %}<div class="total__row"><span class="total__label">Разовое</span><span class="total__value">{{ quote.extra_total|money }}</span></div>{% endif %}
+      <p class="total__note">
+        Расчёт ориентировочный. Точную стоимость и срок назову после встречи.
+      </p>
+    </div>
+
+    {% if quote.comment %}<div class="note" style="margin-top: var(--gap-5)">{{ quote.comment|richtext }}</div>{% endif %}
+
+    <div class="hero__actions">
+      <a class="btn btn--big" href="{% url 'public:contacts' %}?quote={{ quote.token }}">Обсудить</a>
+      <a class="btn btn--ghost" href="{% url 'public:constructor' %}">Поменять состав</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Заявки{% endblock %}
+
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>Заявки</h1>
+
+    {% if overdue %}
+      <div class="note note--warn">
+        <h3>Просрочено: {{ overdue|length }}</h3>
+        <p>Заявка без сделанного следующего шага — это и есть потерянная заявка.</p>
+        <ul>
+          {% for lead in overdue %}
+            <li>
+              <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+              — {{ lead.next_action }}, {{ lead.next_action_at|date:"d.m H:i" }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="grid grid--3" style="margin-top: var(--gap-6)">
+      {% for label, items in columns %}
+        <div class="card">
+          <p class="card__title">{{ label }} <span class="card__muted">{{ items|length }}</span></p>
+          <div class="summary-lines">
+            {% for lead in items %}
+              <div class="summary-line">
+                <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+                <span class="card__muted" {% if lead.is_overdue %}style="color: var(--err)"{% endif %}>
+                  {{ lead.next_action_at|date:"d.m" }}
+                </span>
+              </div>
+            {% empty %}
+              <p class="card__muted">Пусто</p>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <h2 style="margin-top: var(--gap-7)">Все заявки</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Заказчик</th><th>Объект</th><th>Статус</th><th>Следующий шаг</th><th>Когда</th></tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+            <tr>
+              <td><a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a></td>
+              <td>{{ lead.estate|default:"—" }}</td>
+              <td>{{ lead.get_status_display }}</td>
+              <td>{{ lead.next_action }}</td>
+              <td {% if lead.is_overdue %}style="color: var(--err)"{% endif %}>{{ lead.next_action_at|date:"d.m H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">Заявок пока нет.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

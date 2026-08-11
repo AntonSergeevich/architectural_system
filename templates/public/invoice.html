@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Счёт — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Счёт{% if invoice.number %} №{{ invoice.number }}{% endif %}</p>
+    <h1>{{ invoice.title }}</h1>
+
+    <div class="summary-lines" style="margin-top: var(--gap-5)">
+      <div class="summary-line"><span>Сумма</span><span>{{ invoice.amount|money }}</span></div>
+      <div class="summary-line"><span>Оплачено</span><span>{{ invoice.paid_amount|money }}</span></div>
+      <div class="summary-line"><span>Осталось</span><span><strong>{{ invoice.left_to_pay|money }}</strong></span></div>
+      <div class="summary-line"><span>Статус</span><span>{{ invoice.get_status_display }}</span></div>
+      {% if invoice.due_date %}<div class="summary-line"><span>Оплатить до</span><span>{{ invoice.due_date|date:"d.m.Y" }}</span></div>{% endif %}
+    </div>
+
+    {% if invoice.is_payable %}
+      {% if payments_enabled %}
+        <form method="post" action="{% url 'billing:pay' invoice.token %}" style="margin-top: var(--gap-6)">
+          {% csrf_token %}
+          <button class="btn btn--big btn--block" type="submit">Оплатить картой</button>
+        </form>
+        <p class="field__hint">Оплата проходит на стороне платёжного сервиса GetPlatinum. Данные карты я не вижу и не храню.</p>
+      {% else %}
+        <div class="note" style="margin-top: var(--gap-6)">
+          <p>Онлайн-оплата сейчас недоступна. Напишите мне — пришлю реквизиты
+            для перевода: <a href="tel:{{ site.phone }}">{{ site.phone }}</a></p>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    <p class="card__muted" style="margin-top: var(--gap-6)">
+      {{ site.legal_name }}, ИНН {{ site.inn }}. Чек формируется в приложении
+      «Мой налог» и приходит вам после оплаты.
+    </p>
+  </div>
+</section>
+{% endblock %}

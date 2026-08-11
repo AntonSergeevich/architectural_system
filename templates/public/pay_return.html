@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Оплата — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    {% if ok %}
+      <h1>Спасибо</h1>
+      <p class="lead">
+        Платёж отправлен. Подтверждение приходит от платёжного сервиса
+        и обычно занимает несколько секунд — статус счёта обновится сам.
+      </p>
+    {% else %}
+      <h1>Платёж не прошёл</h1>
+      <p class="lead">Деньги не списаны. Можно попробовать ещё раз или написать мне.</p>
+    {% endif %}
+    <p>Счёт: <strong>{{ invoice.title }}</strong> — {{ invoice.get_status_display }}</p>
+    <div class="hero__actions">
+      <a class="btn" href="{{ invoice.get_absolute_url }}">К счёту</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

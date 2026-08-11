@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Как я работаю — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    <p class="eyebrow">Процесс</p>
+    <h1>Восемь этапов</h1>
+    <p class="lead">
+      Я называю дату старта и длительность каждого этапа. Дату, когда вы въедете,
+      я не назову — и никто честный не назовёт: она зависит от бригады,
+      от поставок и от того, как быстро мы будем согласовывать.
+    </p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="steps">
+      {% for stage in stages %}
+        <div class="step">
+          <div class="step__num">{{ stage.number }}</div>
+          <div>
+            <h3>{{ stage.title }}</h3>
+            <p>{{ stage.description }}</p>
+            {% if stage.what_client_does %}<p class="card__muted">Что делаете вы: {{ stage.what_client_does }}</p>{% endif %}
+            <p class="step__days">Моя работа: {{ stage.working_days }} рабочих дней · Ваши согласования: {{ stage.client_days }} дней</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="note" style="margin-top: var(--gap-6)">
+      <p><strong>Итого по нормативу:</strong> {{ total_days }} рабочих дней моей работы
+        и {{ client_days }} дней на ваши согласования.</p>
+      <p>Вторая цифра — не формальность. Половина сдвигов по срокам возникает
+        из-за ожидания ответа, и честнее показать это сразу, чем объяснять потом.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap wrap--narrow">
+    <h2>Регламент</h2>
+    <div class="note">{{ site.regulations|richtext }}</div>
+    <h3 style="margin-top: var(--gap-6)">И ещё три правила</h3>
+    <ul>
+      <li><strong>Правки — письменно и в одном месте.</strong> В кабинете проекта.
+        Так ничего не теряется и всё видно обоим.</li>
+      <li><strong>Правки по этапам.</strong> Принимаются, пока этап не утверждён.
+        После утверждения возврат к нему — отдельная работа.</li>
+      <li><strong>Созвоны по записи.</strong> Внезапный звонок посреди работы над
+        чужим проектом — это чужой проект, сорванный на полдня.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

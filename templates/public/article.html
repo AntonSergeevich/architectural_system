@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}{{ article.title }} — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow doc">
+    <h1>{{ article.title }}</h1>
+    {% if article.lead %}<p class="lead">{{ article.lead }}</p>{% endif %}
+    {{ article.body|richtext }}
+    <div class="hero__actions"><a class="btn" href="{% url 'public:constructor' %}">Собрать проект</a></div>
+  </div>
+</section>
+{% endblock %}

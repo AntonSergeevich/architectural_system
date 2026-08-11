@@ -1,0 +1,15 @@
+<nav class="nav" style="gap: var(--gap-4); flex-wrap: wrap; margin-bottom: var(--gap-6)">
+  {% if user.is_owner %}
+    <a href="{% url 'cabinet:leads' %}">Заявки</a>
+    <a href="{% url 'cabinet:projects' %}">Проекты</a>
+    <a href="{% url 'cabinet:prices' %}">Цены</a>
+    <a href="{% url 'cabinet:contracts' %}">Договоры</a>
+    <a href="{% url 'cabinet:invoices' %}">Счета</a>
+    <a href="/admin/">Админка</a>
+  {% else %}
+    <a href="{% url 'cabinet:my_project' %}">Мой проект</a>
+  {% endif %}
+  <form method="post" action="{% url 'accounts:logout' %}" style="display:inline">
+    {% csrf_token %}<button class="clause__toggle" type="submit">Выйти</button>
+  </form>
+</nav>

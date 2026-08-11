@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Цены{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>Цены</h1>
+    <p class="lead">
+      Меняются здесь и сразу применяются на сайте. Уже выставленные
+      предложения не меняются — они хранят свои цифры.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Код</th><th>Услуга</th><th>Единица</th><th>Цена</th><th>На сайте</th></tr></thead>
+          <tbody>
+            {% for module in modules %}
+              <tr>
+                <td>{{ module.code }}</td>
+                <td>{{ module.title }}</td>
+                <td class="card__muted">{{ module.get_unit_display }}</td>
+                <td>
+                  {% if module.unit == 'custom' %}
+                    <span class="card__muted">по расчёту</span>
+                  {% else %}
+                    <input type="number" step="1" min="0" name="price_{{ module.pk }}"
+                           value="{{ module.price|floatformat:0 }}" style="max-width: 140px">
+                  {% endif %}
+                </td>
+                <td>
+                  <input type="checkbox" name="active_{{ module.pk }}" {% if module.is_active %}checked{% endif %}>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="field" style="margin-top: var(--gap-5)">
+        <label for="comment">Комментарий к изменению</label>
+        <input type="text" id="comment" name="comment" placeholder="например: подняла с нового года">
+      </div>
+      <button class="btn" type="submit">Сохранить</button>
+    </form>
+
+    <h2 style="margin-top: var(--gap-7)">Коэффициенты сложности</h2>
+    <div class="summary-lines">
+      {% for item in complexities %}
+        <div class="summary-line">
+          <span>{{ item.title }} <span class="card__muted">{{ item.description }}</span></span>
+          <span>×{{ item.factor }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="field__hint">Правятся в админке — они меняются заметно реже цен.</p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ template.title }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    {% include "cabinet/_nav.html" %}
+    <h1>{{ template.title }}</h1>
+    <p class="lead">
+      Расшифровка «на человеческом языке» — это то, что коллеги проговаривают
+      маркером, сидя рядом с заказчиком. Без неё подсветка важного бессмысленна.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label for="version">Редакция</label>
+        <input type="text" id="version" name="version" value="{{ template.version }}" style="max-width: 160px">
+      </div>
+      <div class="field">
+        <label for="intro">Вводная часть</label>
+        <textarea id="intro" name="intro">{{ template.intro }}</textarea>
+      </div>
+
+      {% for clause in template.clauses.all %}
+        <div class="clause {% if clause.is_important %}is-important{% endif %}">
+          <p><span class="clause__num">{{ clause.number }}</span> <strong>{{ clause.title }}</strong></p>
+          <div class="field">
+            <label for="text_{{ clause.pk }}">Текст пункта</label>
+            <textarea id="text_{{ clause.pk }}" name="text_{{ clause.pk }}">{{ clause.text }}</textarea>
+          </div>
+          <div class="field">
+            <label for="plain_{{ clause.pk }}">На человеческом языке</label>
+            <textarea id="plain_{{ clause.pk }}" name="plain_{{ clause.pk }}">{{ clause.plain_text }}</textarea>
+          </div>
+          <div class="check">
+            <input type="checkbox" name="important_{{ clause.pk }}" id="important_{{ clause.pk }}"
+                   {% if clause.is_important %}checked{% endif %}>
+            <label for="important_{{ clause.pk }}">Важный — подсветить</label>
+          </div>
+        </div>
+      {% endfor %}
+
+      <div class="field" style="margin-top: var(--gap-5)">
+        <label for="outro">Заключительная часть</label>
+        <textarea id="outro" name="outro">{{ template.outro }}</textarea>
+      </div>
+
+      <button class="btn" type="submit">Сохранить</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

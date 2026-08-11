@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="ru" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.owner_name }} — {{ site.owner_title }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}Дизайн интерьера, авторский надзор и комплектация. {{ site.city }} и удалённая работа.{% endblock %}">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {% block head %}{% endblock %}
+  <script>document.documentElement.classList.replace('no-js','js');</script>
+</head>
+<body>
+<a class="skip" href="#main">К содержанию</a>
+
+{% include "components/header.html" %}
+
+<main id="main">
+  {% if messages %}
+    <div class="wrap messages">
+      {% for message in messages %}
+        <p class="message message--{{ message.tags }}">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+{% include "components/footer.html" %}
+{% include "components/cookies.html" %}
+
+<script src="{% static 'js/app.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

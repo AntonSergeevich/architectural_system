@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Договоры{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>Договоры</h1>
+
+    <h2>Шаблоны</h2>
+    <div class="grid grid--3">
+      {% for template in templates %}
+        <a class="card" href="{% url 'cabinet:contract_edit' template.pk %}">
+          <p class="card__title">{{ template.title }}</p>
+          <p class="card__muted">Редакция {{ template.version }} · пунктов: {{ template.clauses.count }}</p>
+        </a>
+      {% endfor %}
+    </div>
+
+    <h2 style="margin-top: var(--gap-7)">Выставленные</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Договор</th><th>Заказчик</th><th>Дата</th><th>Статус</th><th>Вопросы</th></tr></thead>
+        <tbody>
+          {% for contract in issued %}
+            <tr>
+              <td><a href="{{ contract.get_absolute_url }}">{{ contract }}</a></td>
+              <td>{{ contract.client.name }}</td>
+              <td>{{ contract.date|date:"d.m.Y" }}</td>
+              <td>{{ contract.get_status_display }}</td>
+              <td>{{ contract.questions.count }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">Пока нет.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}

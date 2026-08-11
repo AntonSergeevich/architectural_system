@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}{{ doc.title }} — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow doc">
+    <h1>{{ doc.title }}</h1>
+    <p class="card__muted">Редакция {{ doc.version }} от {{ doc.published_at|date:"d.m.Y" }}</p>
+    {{ doc.body|richtext }}
+  </div>
+</section>
+{% endblock %}

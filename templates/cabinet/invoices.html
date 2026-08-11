@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Счета{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>Счета</h1>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Счёт</th><th>Заказчик</th><th>Сумма</th><th>Оплачено</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+          {% for invoice in invoices %}
+            <tr>
+              <td><a href="{{ invoice.get_absolute_url }}">{{ invoice.title }}</a></td>
+              <td>{{ invoice.client.name }}</td>
+              <td>{{ invoice.amount|money }}</td>
+              <td>{{ invoice.paid_amount|money }}</td>
+              <td>{{ invoice.get_status_display }}</td>
+              <td>
+                <form method="post" style="display:flex; gap:.5rem">
+                  {% csrf_token %}
+                  <input type="hidden" name="invoice" value="{{ invoice.pk }}">
+                  {% if invoice.status == 'draft' %}
+                    <button class="clause__toggle" type="submit" name="action" value="issue">Выставить</button>
+                  {% endif %}
+                  {% if invoice.is_payable %}
+                    <button class="clause__toggle" type="submit" name="action" value="paid">Отметить оплату</button>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">Счетов пока нет.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="field__hint">
+      «Отметить оплату» — для переводов мимо эквайринга. Самозанятая принимает
+      деньги и без платёжного сервиса, и система обязана это учитывать.
+    </p>
+  </div>
+</section>
+{% endblock %}

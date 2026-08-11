@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Полезное — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Полезное</p>
+    <h1>Материалы</h1>
+    <p class="lead">Для тех, у кого ремонт не завтра.</p>
+    <div class="grid" style="margin-top: var(--gap-6)">
+      {% for item in articles %}
+        <a class="card" href="{{ item.get_absolute_url }}">
+          <p class="card__title">{{ item.title }}</p>
+          <p class="card__muted">{{ item.lead }}</p>
+        </a>
+      {% empty %}
+        <p>Пока пусто.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

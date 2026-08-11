@@ -1,0 +1,40 @@
+{% load richtext %}
+<div class="block {% if module.is_required %}is-required{% endif %} {% if module.pk in selected_ids %}is-selected{% endif %}"
+     data-module="{{ module.pk }}"
+     role="button" tabindex="0"
+     aria-pressed="{% if module.pk in selected_ids %}true{% else %}false{% endif %}">
+
+  <span class="block__grip" aria-hidden="true">⋮⋮</span>
+
+  <span class="block__title">
+    {{ module.label }}
+    {% if module.is_required %}<span class="card__muted"> · входит всегда</span>{% endif %}
+  </span>
+
+  <span class="block__price">
+    {% if module.unit == 'custom' %}по расчёту
+    {% elif module.unit == 'sqm' %}{{ module.price|money }}/м²
+    {% elif module.unit == 'month' %}{{ module.price|money }}/мес
+    {% elif module.unit == 'stage' %}{{ module.price|money }}/этап
+    {% elif module.unit == 'visit' %}{{ module.price|money }}/выезд
+    {% else %}{{ module.price|money }}{% endif %}
+  </span>
+
+  {# Галочка — источник правды для формы: она же уходит на сервер при
+     выключенном JavaScript, и она же делает блок доступным с клавиатуры. #}
+  <label class="visually-hidden" for="module-{{ module.pk }}">{{ module.title }}</label>
+  <input class="visually-hidden" type="checkbox" name="modules" id="module-{{ module.pk }}"
+         value="{{ module.pk }}"
+         {% if module.pk in selected_ids %}checked{% endif %}
+         {% if module.is_required %}disabled{% endif %}>
+
+  <button class="clause__toggle" type="button" data-expand="more-{{ module.pk }}">Подробнее</button>
+
+  <div class="block__more" id="more-{{ module.pk }}" hidden>
+    {% if module.description %}<p>{{ module.description }}</p>{% endif %}
+    {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
+    {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days }} рабочих дней</p>{% endif %}
+    {% if module.not_included %}<p><strong>Не входит:</strong> {{ module.not_included }}</p>{% endif %}
+    {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning }}</p>{% endif %}
+  </div>
+</div>

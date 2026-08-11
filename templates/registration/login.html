@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Вход — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    <h1>Вход в кабинет</h1>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<p class="message message--error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+      <div class="field">
+        <label for="id_username">Email или телефон</label>
+        <input type="text" name="username" id="id_username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="id_password">Пароль</label>
+        <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn--block" type="submit">Войти</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

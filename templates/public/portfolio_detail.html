@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}{{ project.title }} — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    <p class="eyebrow">{{ project.city }}{% if project.year %} · {{ project.year }}{% endif %}</p>
+    <h1>{{ project.title }}</h1>
+    {% if project.summary %}<p class="lead">{{ project.summary }}</p>{% endif %}
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="works">
+      {% for photo in project.photos.all %}
+        <figure class="work">
+          <span class="work__img"><img src="{{ photo.image.url }}" alt="{{ photo.caption|default:project.title }}" loading="lazy"></span>
+          {% if photo.caption %}<figcaption class="work__meta">{{ photo.caption }}</figcaption>{% endif %}
+        </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow doc">
+    {% if project.task %}<h2>Задача</h2>{{ project.task|richtext }}{% endif %}
+    {% if project.solution %}<h2>Решение</h2>{{ project.solution|richtext }}{% endif %}
+    {% if project.result %}<h2>Результат</h2>{{ project.result|richtext }}{% endif %}
+
+    {% if project.modules.exists %}
+      <h2>Что было сделано</h2>
+      <ul>{% for module in project.modules.all %}<li>{{ module.title }}</li>{% endfor %}</ul>
+    {% endif %}
+
+    {% if project.show_client %}
+      <div class="note" style="margin-top: var(--gap-6)">
+        {% if project.client_quote %}<p>«{{ project.client_quote }}»</p>{% endif %}
+        {% if project.client_name %}<p class="card__muted">{{ project.client_name }}</p>{% endif %}
+      </div>
+    {% endif %}
+
+    <div class="hero__actions">
+      <a class="btn" href="{% url 'public:constructor' %}">Собрать похожий проект</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

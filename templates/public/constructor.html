@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static richtext %}
+
+{% block title %}Собрать проект — {{ site.owner_name }}{% endblock %}
+{% block description %}Соберите свой проект как дом из кубиков и увидите цену под вашу квартиру.{% endblock %}
+
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    <p class="eyebrow">Конструктор</p>
+    <h1>Соберите свой дом</h1>
+    <p class="lead">
+      Каждый блок — часть работы. Перетащите его на дом или просто нажмите.
+      Чего не хватает — видно сразу: дом без крыши, без окон, без стен.
+      Расчёт получится под вашу квартиру, а не «от стольки-то за квадрат».
+    </p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap constructor" data-constructor>
+    {{ catalog_data|json_script:"catalog-data" }}
+    <p class="visually-hidden" role="status" aria-live="polite" data-live></p>
+
+    <form method="post" action="{% url 'public:constructor' %}"
+          data-calc-form data-calc-url="{% url 'public:calculate' %}">
+      {% csrf_token %}
+
+      <div class="house-panel">
+        <div class="house" data-house>
+          <p class="house__hint">Ваш дом</p>
+          <div class="slot" data-part="roof"><span class="visually-hidden">Крыша — авторский надзор</span></div>
+          <div class="slot" data-part="light"><span class="visually-hidden">Комплектация</span></div>
+          <div class="slot" data-part="facade"><span class="visually-hidden">Фасад — концепция</span></div>
+          <div class="slot" data-part="walls"><span class="visually-hidden">Стены — чертежи</span></div>
+          <div class="slot" data-part="finish"><span class="visually-hidden">Отделка — реальные материалы</span></div>
+          <div class="slot" data-part="windows"><span class="visually-hidden">Окна — визуализация</span></div>
+          <div class="slot" data-part="garden"><span class="visually-hidden">Декоратор</span></div>
+          <div class="slot" data-part="foundation"><span class="visually-hidden">Фундамент — обмер, бриф, планировки, альбом</span></div>
+        </div>
+
+        <div class="total">
+          <div class="total__row">
+            <span class="total__label">Проектирование</span>
+            <span class="total__value" data-total="design" data-value="{{ calc.design_total|floatformat:0 }}">{{ calc.design_total|money }}</span>
+          </div>
+          <div class="total__row">
+            <span class="total__label">Реализация: надзор и комплектация</span>
+            <span class="total__value" data-total="realization" data-value="{{ calc.realization_total|floatformat:0 }}">{{ calc.realization_total|money }}</span>
+          </div>
+          <div class="total__row">
+            <span class="total__label">Разовые услуги</span>
+            <span class="total__value" data-total="extra" data-value="{{ calc.extra_total|floatformat:0 }}">{{ calc.extra_total|money }}</span>
+          </div>
+          <p class="total__note" data-custom-note {% if not calc.has_custom %}hidden{% endif %}>
+            В наборе есть услуги с индивидуальным расчётом — их стоимость
+            я назову после разговора: посчитать её заранее одной цифрой
+            невозможно.
+          </p>
+          <p class="total__note">
+            Расчёт ориентировочный. Точную стоимость и срок я назову после
+            встречи, когда пойму, что именно вам нужно.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom: var(--gap-5)">
+          <div class="grid grid--3">
+            <div class="field">
+              <label for="id_area">Площадь, м²</label>
+              <input type="number" step="0.1" min="1" max="10000" id="id_area" name="area" value="{{ area|floatformat:'-1' }}" required>
+            </div>
+            <div class="field">
+              <label for="id_rooms">Помещений</label>
+              <input type="number" min="1" max="50" id="id_rooms" name="rooms" value="{{ rooms }}" required>
+            </div>
+            <div class="field">
+              <label for="id_complexity">Какой интерьер</label>
+              <select id="id_complexity" name="complexity">
+                {% for item in complexities %}
+                  <option value="{{ item.pk }}" {% if complexity and complexity.pk == item.pk %}selected{% endif %}>{{ item.title }}</option>
+                {% endfor %}
+              </select>
+              <p class="field__hint">
+                {% if complexity %}{{ complexity.description }}{% endif %}
+              </p>
+            </div>
+          </div>
+
+          <p class="shelf__head">Готовые наборы</p>
+          <div class="presets">
+            {% for item in presets %}
+              <button class="preset {% if preset and preset.pk == item.pk %}is-active{% endif %}"
+                      type="button" data-preset="{{ item.pk }}">{{ item.title }}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="shelf" data-shelf>
+          <p class="shelf__head">Проектирование</p>
+          <div class="shelf__group">
+            {% for module in design_modules %}{% include "components/block.html" %}{% endfor %}
+          </div>
+
+          <p class="shelf__head">Реализация</p>
+          <div class="shelf__group">
+            {% for module in realization_modules %}{% include "components/block.html" %}{% endfor %}
+          </div>
+
+          <p class="shelf__head">Разовое</p>
+          <div class="shelf__group">
+            {% for module in extra_modules %}{% include "components/block.html" %}{% endfor %}
+          </div>
+        </div>
+
+        <div class="warnings" data-warnings>
+          {% for module in calc.missing %}
+            {% if module.warning %}
+              <div class="warning">
+                <strong>Без блока «{{ module.label }}»</strong>
+                <span>{{ module.warning }}</span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <noscript>
+          <p class="note" style="margin-top: var(--gap-5)">
+            Перетаскивание требует JavaScript. Отметьте нужные блоки галочками
+            и нажмите «Пересчитать» — расчёт будет тот же самый.
+          </p>
+          <button class="btn btn--block" type="submit" style="margin-top: var(--gap-4)">Пересчитать</button>
+        </noscript>
+
+        <div class="hero__actions">
+          <button class="btn btn--big" type="button"
+                  data-save-quote data-url="{% url 'public:save_quote' %}">
+            Получить это предложение
+          </button>
+          <a class="btn btn--ghost" href="{% url 'public:contacts' %}">Просто написать</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/constructor.js' %}" defer></script>
+{% endblock %}

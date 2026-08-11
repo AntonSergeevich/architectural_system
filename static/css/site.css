@@ -1,0 +1,352 @@
+/* Публичный сайт: шапка, экраны, портфолио, конструктор, подвал. */
+
+/* --- Шапка ---------------------------------------------------------------- */
+
+.header {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.header__inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--gap-4); min-height: 68px;
+}
+
+.logo { display: grid; text-decoration: none; color: var(--ink); line-height: 1.1; }
+.logo__name { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; font-size: var(--step-1); }
+.logo__title { font-size: var(--step--2); color: var(--muted); letter-spacing: .02em; }
+
+.nav { display: flex; align-items: center; gap: var(--gap-5); }
+.nav a { color: var(--ink-2); text-decoration: none; font-size: var(--step--1); }
+.nav a:hover { color: var(--brand-500); }
+.nav__cta {
+  color: #fff !important; background: var(--brand-500);
+  padding: var(--gap-2) var(--gap-4); border-radius: var(--radius-pill);
+  min-height: 40px; display: inline-flex; align-items: center;
+}
+.nav__cta:hover { background: var(--brand-600); }
+.nav__minor { color: var(--muted) !important; }
+
+.burger { display: none; background: none; border: 0; padding: 12px; cursor: pointer; }
+.burger span { display: block; width: 24px; height: 2px; background: var(--ink); margin: 5px 0; transition: transform .2s var(--ease), opacity .2s; }
+.burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+@media (max-width: 900px) {
+  .burger { display: block; }
+  .nav {
+    position: fixed; inset: 68px 0 auto 0;
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: var(--paper); border-bottom: 1px solid var(--line);
+    padding: var(--gap-4) 1.25rem var(--gap-6);
+    transform: translateY(-120%); transition: transform .25s var(--ease);
+    max-height: calc(100dvh - 68px); overflow-y: auto;
+  }
+  .nav.is-open { transform: translateY(0); }
+  .nav a { padding: var(--gap-4) 0; font-size: var(--step-1); border-bottom: 1px solid var(--line-soft); }
+  .nav__cta { justify-content: center; margin-top: var(--gap-4); border-bottom: 0; }
+}
+
+/* --- Экраны --------------------------------------------------------------- */
+
+.section { padding: var(--gap-8) 0; }
+.section--tight { padding: var(--gap-7) 0; }
+.section--alt { background: var(--paper-alt); }
+.section--ink { background: var(--brand-500); color: #fff; }
+.section--ink h2, .section--ink a { color: #fff; }
+
+.eyebrow {
+  font-size: var(--step--2); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--brand-500); font-weight: 600; margin-bottom: var(--gap-3);
+}
+
+.lead { font-size: var(--step-1); color: var(--ink-2); max-width: 62ch; }
+
+/* Плакатный заголовок — главный элемент первого экрана. */
+.hero { padding: var(--gap-8) 0 var(--gap-7); }
+.hero__title {
+  font-size: var(--step-5);
+  letter-spacing: -0.055em;
+  line-height: .92;
+  color: var(--brand-500);
+  margin-bottom: var(--gap-5);
+}
+.hero__sub { font-size: var(--step-1); max-width: 46ch; color: var(--ink-2); }
+.hero__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); margin-top: var(--gap-6); }
+
+.grid { display: grid; gap: var(--gap-5); }
+.grid--2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid--3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-3); padding: var(--gap-5);
+}
+.card__title { font-size: var(--step-1); margin-bottom: var(--gap-2); }
+.card__muted { color: var(--muted); font-size: var(--step--1); }
+
+.split { display: grid; gap: var(--gap-7); grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .split { grid-template-columns: 1fr 1fr; } }
+
+.portrait { border-radius: var(--radius-3); overflow: hidden; background: var(--sand); aspect-ratio: 4/5; }
+.portrait img { width: 100%; height: 100%; object-fit: cover; }
+
+/* --- Портфолио ------------------------------------------------------------ */
+
+.works { display: grid; gap: var(--gap-5); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.work { text-decoration: none; color: inherit; display: grid; gap: var(--gap-3); }
+.work__img { aspect-ratio: 4/3; background: var(--sand); border-radius: var(--radius-3); overflow: hidden; }
+.work__img img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s var(--ease); }
+.work:hover .work__img img { transform: scale(1.03); }
+.work__title { font-weight: 700; font-size: var(--step-1); }
+.work__meta { color: var(--muted); font-size: var(--step--1); }
+
+/* --- Услуги и вопросы ----------------------------------------------------- */
+
+.accordion { border-top: 1px solid var(--line); }
+.accordion__item { border-bottom: 1px solid var(--line); }
+.accordion__head {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--gap-4);
+  background: none; border: 0; padding: var(--gap-5) 0; cursor: pointer;
+  font: inherit; font-weight: 700; font-size: var(--step-1); color: var(--ink); text-align: left;
+}
+.accordion__head::after { content: "+"; font-size: var(--step-2); color: var(--brand-500); flex: none; }
+.accordion__item.is-open .accordion__head::after { content: "−"; }
+.accordion__body { padding-bottom: var(--gap-5); max-width: 70ch; color: var(--ink-2); }
+.accordion__body[hidden] { display: none; }
+
+.note {
+  border-left: 3px solid var(--brand-500);
+  background: var(--brand-50);
+  padding: var(--gap-4) var(--gap-5);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+}
+.note--warn { border-color: var(--warn); background: var(--warn-bg); }
+
+/* --- Этапы ---------------------------------------------------------------- */
+
+.steps { display: grid; gap: var(--gap-4); counter-reset: step; }
+.step {
+  display: grid; grid-template-columns: 56px 1fr; gap: var(--gap-4);
+  padding: var(--gap-5); background: var(--surface);
+  border: 1px solid var(--line-soft); border-radius: var(--radius-3);
+}
+.step__num {
+  font-family: var(--font-display); font-size: var(--step-2); font-weight: 800;
+  color: var(--brand-500); letter-spacing: -.04em; line-height: 1;
+}
+.step__days { color: var(--muted); font-size: var(--step--1); margin-top: var(--gap-2); }
+
+/* ==========================================================================
+   Конструктор: дом из кубиков
+   ========================================================================== */
+
+.constructor { display: grid; gap: var(--gap-5); }
+@media (min-width: 1000px) {
+  .constructor { grid-template-columns: minmax(380px, 46%) 1fr; align-items: start; }
+}
+
+/* Дом закреплён сверху, склад скроллится снизу: тащить недалеко.
+   На телефоне это важнее любой анимации — длинный жест физически неудобен. */
+.house-panel {
+  position: sticky; top: 68px; z-index: 20;
+  background: var(--paper);
+  padding-bottom: var(--gap-3);
+}
+@media (max-width: 999px) {
+  .house-panel { box-shadow: 0 12px 20px -18px rgba(35, 32, 29, .8); }
+}
+
+.house {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  max-height: 44dvh;
+  margin-inline: auto;
+  width: 100%;
+  background:
+    linear-gradient(to bottom, var(--surface-2) 0%, var(--paper-alt) 100%);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+}
+@media (min-width: 1000px) { .house { max-height: none; aspect-ratio: 4 / 3; } }
+
+/* Каждый элемент дома — свой слот. Пустой слот рисуется пунктиром:
+   это и есть «правило честного отказа». Текст можно пролистать, дыру нельзя. */
+.slot {
+  position: absolute;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  transition: background .25s var(--ease), border-color .25s var(--ease), opacity .25s;
+  font-size: var(--step--2);
+  text-align: center;
+  color: transparent;
+}
+.slot.is-empty {
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 6px,
+    color-mix(in srgb, var(--muted-2) 35%, transparent) 6px,
+    color-mix(in srgb, var(--muted-2) 35%, transparent) 7px);
+  border: 2px dashed var(--muted-2);
+  color: var(--muted);
+}
+.slot.is-filled { border: 2px solid transparent; }
+.slot.is-target {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 4px var(--brand-100);
+}
+
+.slot[data-part="foundation"] { left: 6%; right: 6%; bottom: 4%; height: 9%; }
+.slot[data-part="foundation"].is-filled { background: var(--ink-2); }
+
+.slot[data-part="walls"] { left: 12%; right: 12%; bottom: 13%; height: 38%; }
+.slot[data-part="walls"].is-filled { background: var(--sand); }
+
+.slot[data-part="facade"] { left: 12%; right: 12%; bottom: 51%; height: 12%; }
+.slot[data-part="facade"].is-filled { background: var(--brand-200); }
+
+.slot[data-part="finish"] { left: 12%; width: 9%; bottom: 13%; height: 38%; }
+.slot[data-part="finish"].is-filled {
+  background: repeating-linear-gradient(
+    0deg, var(--brand-300), var(--brand-300) 5px, var(--brand-200) 5px, var(--brand-200) 10px);
+}
+
+.slot[data-part="windows"] { left: 30%; width: 22%; bottom: 24%; height: 20%; }
+.slot[data-part="windows"].is-filled { background: #cfe0e6; border-color: var(--ink-2); }
+.slot[data-part="windows"].has-light { background: #F6DFA0; box-shadow: 0 0 26px rgba(246, 223, 160, .95); }
+
+.slot[data-part="roof"] { left: 6%; right: 6%; bottom: 63%; height: 20%; }
+.slot[data-part="roof"].is-filled {
+  background: var(--brand-500);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border: 0;
+}
+
+.slot[data-part="light"] { right: 18%; width: 8%; bottom: 63%; height: 16%; }
+.slot[data-part="light"].is-filled { background: var(--muted); border-radius: 3px 3px 0 0; }
+
+.slot[data-part="garden"] { right: 2%; width: 10%; bottom: 13%; height: 22%; }
+.slot[data-part="garden"].is-filled { background: var(--ok); border-radius: 50% 50% 20% 20%; }
+
+/* Итог всегда виден в момент постановки блока — иначе теряется весь смысл. */
+.total {
+  position: sticky; bottom: 0; z-index: 21;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-3); padding: var(--gap-4);
+  box-shadow: var(--shadow-2);
+}
+.total__row { display: flex; justify-content: space-between; gap: var(--gap-4); padding: var(--gap-2) 0; }
+.total__row + .total__row { border-top: 1px solid var(--line-soft); }
+.total__label { color: var(--muted); font-size: var(--step--1); }
+.total__value { font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em; font-size: var(--step-1); white-space: nowrap; }
+.total__note { font-size: var(--step--2); color: var(--muted); margin-top: var(--gap-3); }
+
+/* Склад блоков. */
+.shelf { display: grid; gap: var(--gap-3); }
+.shelf__group { display: grid; gap: var(--gap-2); }
+.shelf__head { font-size: var(--step--1); color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+
+.block {
+  /* touch-action: none только на самих блоках. Повесить его на контейнер —
+     значит убить прокрутку всей страницы. */
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  position: relative;
+  display: grid; grid-template-columns: auto 1fr auto; gap: var(--gap-3); align-items: center;
+  padding: var(--gap-4);
+  min-height: 56px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  cursor: grab;
+  transition: border-color .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
+}
+.block:hover { border-color: var(--brand-300); }
+.block.is-selected { border-color: var(--brand-500); background: var(--brand-50); }
+.block.is-required { cursor: default; opacity: .85; }
+
+.block__grip { width: 18px; color: var(--muted-2); line-height: 1; letter-spacing: 2px; }
+.block__title { font-weight: 600; }
+.block__price { font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
+.block__more {
+  grid-column: 1 / -1; font-size: var(--step--1); color: var(--ink-2);
+  border-top: 1px solid var(--line-soft); padding-top: var(--gap-3); margin-top: var(--gap-2);
+}
+.block__more[hidden] { display: none; }
+
+/* Блок в руке: приподнят над пальцем на 56px, иначе человек тащит то,
+   чего не видит. Позиционирование только трансформом — layout не трогаем. */
+.block--dragging {
+  position: fixed; left: 0; top: 0; z-index: 60;
+  width: var(--drag-width, 260px);
+  pointer-events: none;
+  box-shadow: var(--shadow-lift);
+  border-color: var(--brand-500);
+  transform: translate3d(0, 0, 0) scale(1.05);
+}
+.block--ghost { opacity: .35; }
+
+.house__hint {
+  position: absolute; inset-inline: 0; top: var(--gap-3);
+  text-align: center; font-size: var(--step--2); color: var(--muted);
+  pointer-events: none;
+}
+
+.warnings { display: grid; gap: var(--gap-3); margin-top: var(--gap-4); }
+.warning {
+  background: var(--warn-bg); color: var(--warn);
+  border-radius: var(--radius-2); padding: var(--gap-3) var(--gap-4);
+  font-size: var(--step--1);
+}
+.warning strong { display: block; }
+
+.presets { display: flex; flex-wrap: wrap; gap: var(--gap-2); }
+.preset {
+  font: inherit; font-size: var(--step--1); cursor: pointer;
+  padding: var(--gap-2) var(--gap-4); min-height: 44px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill);
+  color: var(--ink);
+}
+.preset.is-active { background: var(--brand-500); border-color: var(--brand-500); color: #fff; }
+
+/* --- Куки ----------------------------------------------------------------- */
+
+.cookies {
+  position: fixed; z-index: 50; left: var(--gap-4); right: var(--gap-4); bottom: var(--gap-4);
+  display: grid; gap: var(--gap-4);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-3); padding: var(--gap-5);
+  box-shadow: var(--shadow-2);
+  max-width: 620px; margin-inline: auto;
+  font-size: var(--step--1);
+}
+.cookies__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); }
+.cookies__actions .btn { flex: 1 1 200px; }
+.cookies__link { margin: 0; }
+
+/* --- Подвал --------------------------------------------------------------- */
+
+.footer { background: var(--paper-alt); border-top: 1px solid var(--line); padding: var(--gap-7) 0 var(--gap-6); margin-top: var(--gap-8); }
+.footer__inner { display: grid; gap: var(--gap-6); grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.footer__col a { display: block; color: var(--ink-2); text-decoration: none; padding: var(--gap-1) 0; font-size: var(--step--1); }
+.footer__col a:hover { color: var(--brand-500); }
+.footer__name { font-family: var(--font-display); font-weight: 800; font-size: var(--step-1); letter-spacing: -.03em; margin-bottom: var(--gap-1); }
+.footer__head { font-size: var(--step--2); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: var(--gap-3); }
+.footer__muted { color: var(--muted); font-size: var(--step--1); margin-bottom: var(--gap-1); }
+
+/* --- КП, договор, счёт ---------------------------------------------------- */
+
+.doc { max-width: 78ch; }
+.doc h2 { margin-top: var(--gap-6); }
+.doc ul { padding-left: 1.1em; }
+
+.clause { padding: var(--gap-4) 0; border-bottom: 1px solid var(--line-soft); }
+.clause.is-important { border-left: 3px solid var(--brand-500); padding-left: var(--gap-4); background: var(--brand-50); border-radius: 0 var(--radius-2) var(--radius-2) 0; }
+.clause__num { font-weight: 700; color: var(--brand-500); }
+.clause__plain { background: var(--surface-2); border-radius: var(--radius-2); padding: var(--gap-4); margin-top: var(--gap-3); color: var(--ink-2); }
+.clause__plain[hidden] { display: none; }
+.clause__toggle { background: none; border: 0; color: var(--brand-500); font: inherit; font-size: var(--step--1); cursor: pointer; padding: var(--gap-2) 0; text-decoration: underline; }
+
+.summary-lines { display: grid; gap: var(--gap-2); }
+.summary-line { display: flex; justify-content: space-between; gap: var(--gap-4); padding: var(--gap-2) 0; border-bottom: 1px solid var(--line-soft); }

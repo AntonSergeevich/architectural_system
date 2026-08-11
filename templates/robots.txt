@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /cabinet/
+Disallow: /pay/
+Disallow: /kp/
+Disallow: /dogovor/
+Allow: /
+
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml

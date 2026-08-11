@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Дизайн-система: токены.
+   Единственный файл, который нужно тронуть, чтобы перекрасить весь сайт.
+
+   Направление взято с референсов, которые прислала Дарья: тёплая бумага
+   вместо белого, один насыщенный терракотовый акцент, крупная типографика
+   как главный элемент. Сайт — первый образец её вкуса, который видит
+   заказчик, и он же фильтр: человек, которому нужно «как у всех», уйдёт
+   с главной. Это задумано.
+   ========================================================================== */
+
+:root {
+  /* --- Акцент: терракота ------------------------------------------------ */
+  --brand-50:  #FBF0EE;
+  --brand-100: #F5DCD7;
+  --brand-200: #E8B7AE;
+  --brand-300: #D98D80;
+  --brand-400: #C66352;
+  --brand-500: #B23A2B;   /* основной */
+  --brand-600: #952E22;
+  --brand-700: #74241B;
+  --brand-800: #521913;
+  --brand-900: #33100C;
+
+  /* --- Нейтральные: тёплая бумага --------------------------------------- */
+  --paper:      #FAF6F0;
+  --paper-alt:  #F3ECE2;
+  --sand:       #E9DFD1;
+  --line:       #DED2C2;
+  --line-soft:  #EDE4D8;
+  --surface:    #FFFFFF;
+  --surface-2:  #FCF9F5;
+
+  --ink:        #23201D;
+  --ink-2:      #4A443E;
+  --muted:      #7A7166;
+  --muted-2:    #A2988B;
+
+  /* --- Статусы ---------------------------------------------------------- */
+  --ok-bg:   #E6F1E8;  --ok:   #2F6B44;
+  --warn-bg: #FBF0DA;  --warn: #8A6209;
+  --err-bg:  #FAE7E4;  --err:  #A32A1C;
+  --info-bg: #EAF0F4;  --info: #3C5A6B;
+
+  /* --- Типографика ------------------------------------------------------
+     Гротеск для интерфейса, он же для крупных заголовков — но с сильно
+     сжатым трекингом: именно это даёт «плакатный» вид с референсов. */
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --step--2: clamp(0.72rem, 0.70rem + 0.06vw, 0.76rem);
+  --step--1: clamp(0.84rem, 0.82rem + 0.10vw, 0.90rem);
+  --step-0:  clamp(1.00rem, 0.97rem + 0.14vw, 1.08rem);
+  --step-1:  clamp(1.18rem, 1.12rem + 0.28vw, 1.38rem);
+  --step-2:  clamp(1.42rem, 1.30rem + 0.55vw, 1.85rem);
+  --step-3:  clamp(1.72rem, 1.48rem + 1.05vw, 2.60rem);
+  --step-4:  clamp(2.10rem, 1.62rem + 2.10vw, 3.80rem);
+  --step-5:  clamp(2.70rem, 1.50rem + 5.60vw, 7.50rem);
+
+  /* --- Ритм -------------------------------------------------------------- */
+  --gap-1: 0.25rem;
+  --gap-2: 0.5rem;
+  --gap-3: 0.75rem;
+  --gap-4: 1rem;
+  --gap-5: 1.5rem;
+  --gap-6: 2rem;
+  --gap-7: 3rem;
+  --gap-8: 4.5rem;
+  --gap-9: 7rem;
+
+  --wrap: 1180px;
+  --wrap-narrow: 760px;
+
+  --radius-1: 4px;
+  --radius-2: 10px;
+  --radius-3: 18px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(35, 32, 29, .06), 0 2px 8px rgba(35, 32, 29, .05);
+  --shadow-2: 0 6px 24px rgba(35, 32, 29, .10);
+  --shadow-lift: 0 18px 42px rgba(35, 32, 29, .22);
+
+  --ease: cubic-bezier(.22, .61, .36, 1);
+}
+
+/* Тёмная тема собрана отдельно, а не инверсией: инвертированная тёплая
+   бумага даёт грязный зелёный, а терракота на чёрном требует своей
+   светлоты, иначе выглядит бурой. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #17150F;
+    --paper-alt:  #1E1B15;
+    --sand:       #2A251D;
+    --line:       #3A332A;
+    --line-soft:  #2C271F;
+    --surface:    #1C1913;
+    --surface-2:  #232019;
+
+    --ink:        #F2ECE2;
+    --ink-2:      #D6CDBF;
+    --muted:      #A2988B;
+    --muted-2:    #7A7166;
+
+    --brand-500:  #D96A55;
+    --brand-600:  #C4543F;
+    --brand-100:  #3B211A;
+    --brand-50:   #2A1712;
+
+    --ok-bg:   #1B2A20;  --ok:   #7CC79A;
+    --warn-bg: #2C2413;  --warn: #E2BC63;
+    --err-bg:  #2E1A16;  --err:  #E58A78;
+    --info-bg: #1A2228;  --info: #8FB4C7;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 8px rgba(0, 0, 0, .30);
+    --shadow-2: 0 6px 24px rgba(0, 0, 0, .45);
+    --shadow-lift: 0 18px 42px rgba(0, 0, 0, .60);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #17150F;
+  --paper-alt:  #1E1B15;
+  --sand:       #2A251D;
+  --line:       #3A332A;
+  --line-soft:  #2C271F;
+  --surface:    #1C1913;
+  --surface-2:  #232019;
+
+  --ink:        #F2ECE2;
+  --ink-2:      #D6CDBF;
+  --muted:      #A2988B;
+  --muted-2:    #7A7166;
+
+  --brand-500:  #D96A55;
+  --brand-600:  #C4543F;
+  --brand-100:  #3B211A;
+  --brand-50:   #2A1712;
+}

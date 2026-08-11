@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Мой проект{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>{{ project }}</h1>
+    <p class="lead">
+      {{ project.get_status_display }}{% if project.starts_at %} · старт {{ project.starts_at|date:"d.m.Y" }}{% endif %}
+      · готово {{ project.progress }}%
+    </p>
+
+    <div class="steps" style="margin-top: var(--gap-6)">
+      {% for stage in stages %}
+        <div class="step">
+          <div class="step__num">{{ stage.number }}</div>
+          <div>
+            <h3>{{ stage.title }}</h3>
+            <p class="card__muted">
+              {{ stage.get_status_display }}
+              {% if stage.waiting_on == 'client' %} · <strong>ждём вас</strong>{% endif %}
+            </p>
+
+            {% if stage.files.exists %}
+              <ul>
+                {% for file in stage.files.all %}
+                  <li><a href="{{ file.file.url }}">{{ file.title|default:file.file.name }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if stage.revisions.exists %}
+              <p class="card__muted"><strong>Правки</strong></p>
+              <ul>
+                {% for revision in stage.revisions.all %}
+                  <li>{{ revision.text }}
+                    <span class="card__muted">— {{ revision.get_status_display }}</span>
+                    {% if revision.answer %}<br><span class="card__muted">Ответ: {{ revision.answer }}</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if stage.status == 'review' %}
+              <form method="post" action="{% url 'cabinet:approve_stage' stage.pk %}" style="margin-top: var(--gap-3)">
+                {% csrf_token %}
+                <button class="btn" type="submit">Согласовать этап</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="margin-top: var(--gap-6)">
+      <h2>Оставить правку</h2>
+      <p class="card__muted">
+        Правки принимаются здесь, а не в мессенджере: так ничего не теряется
+        и всё видно нам обоим.
+      </p>
+      <form method="post" action="{% url 'cabinet:add_revision' %}">
+        {% csrf_token %}
+        <div class="field">
+          <label for="stage">Этап</label>
+          <select id="stage" name="stage">
+            {% for stage in stages %}<option value="{{ stage.pk }}">{{ stage.number }}. {{ stage.title }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="room">Помещение</label>
+          <input type="text" id="room" name="room" placeholder="гостиная">
+        </div>
+        <div class="field">
+          <label for="text">Что поменять</label>
+          <textarea id="text" name="text" required></textarea>
+        </div>
+        <button class="btn" type="submit">Отправить правку</button>
+      </form>
+    </div>
+
+    {% if contracts %}
+      <h2 style="margin-top: var(--gap-7)">Договоры</h2>
+      <div class="summary-lines">
+        {% for contract in contracts %}
+          <div class="summary-line">
+            <a href="{{ contract.get_absolute_url }}">{{ contract }}</a>
+            <span class="card__muted">{{ contract.get_status_display }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if invoices %}
+      <h2 style="margin-top: var(--gap-7)">Счета</h2>
+      <div class="summary-lines">
+        {% for invoice in invoices %}
+          <div class="summary-line">
+            <a href="{{ invoice.get_absolute_url }}">{{ invoice.title }}</a>
+            <span>{{ invoice.amount|money }} · {{ invoice.get_status_display }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

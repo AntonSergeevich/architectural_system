@@ -1,0 +1,153 @@
+/* Сброс, типографика, базовые элементы. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;   /* горизонтальной прокрутки не бывает никогда */
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 var(--gap-4);
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--step-4); }
+h2 { font-size: var(--step-3); }
+h3 { font-size: var(--step-2); }
+h4 { font-size: var(--step-1); }
+
+p { margin: 0 0 var(--gap-4); }
+p:last-child { margin-bottom: 0; }
+
+a { color: var(--brand-500); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--brand-600); }
+
+img { max-width: 100%; height: auto; display: block; }
+
+ul, ol { margin: 0 0 var(--gap-4); padding-left: 1.2em; }
+li { margin-bottom: var(--gap-2); }
+
+hr { border: 0; border-top: 1px solid var(--line); margin: var(--gap-7) 0; }
+
+/* --- Служебное ------------------------------------------------------------ */
+
+.wrap { width: min(100% - 2.5rem, var(--wrap)); margin-inline: auto; }
+.wrap--narrow { width: min(100% - 2.5rem, var(--wrap-narrow)); margin-inline: auto; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--brand-500); color: #fff; padding: var(--gap-3) var(--gap-4);
+}
+.skip:focus { left: 0; }
+
+:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+
+/* --- Кнопки --------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--gap-2);
+  font: inherit; font-weight: 600;
+  /* 48px по высоте — минимальная цель для пальца. Меньше делать нельзя:
+     основной трафик здесь мобильный. */
+  min-height: 48px;
+  padding: var(--gap-3) var(--gap-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--brand-500); color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .18s var(--ease), transform .18s var(--ease);
+}
+.btn:hover { background: var(--brand-600); color: #fff; }
+.btn:active { transform: translateY(1px); }
+
+.btn--ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn--ghost:hover { background: var(--paper-alt); color: var(--ink); border-color: var(--muted-2); }
+
+.btn--big { font-size: var(--step-1); padding: var(--gap-4) var(--gap-6); }
+.btn--block { width: 100%; }
+
+/* --- Формы ---------------------------------------------------------------- */
+
+label { display: block; font-weight: 600; margin-bottom: var(--gap-2); }
+
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"],
+input[type="password"], input[type="date"], input[type="datetime-local"],
+select, textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--gap-3) var(--gap-4);
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+textarea { min-height: 120px; resize: vertical; }
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--brand-500);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-100);
+}
+
+.field { margin-bottom: var(--gap-5); }
+.field__hint { font-size: var(--step--1); color: var(--muted); margin-top: var(--gap-2); }
+.field__error { font-size: var(--step--1); color: var(--err); margin-top: var(--gap-2); }
+
+.check { display: flex; gap: var(--gap-3); align-items: flex-start; }
+.check input { width: 22px; height: 22px; min-height: 0; flex: none; margin-top: 2px; }
+.check label { font-weight: 400; margin: 0; }
+
+/* Ловушка для ботов: человек этого поля не видит и не заполнит. */
+input[name="website"] { position: absolute; left: -9999px; }
+
+/* --- Сообщения ------------------------------------------------------------ */
+
+.messages { margin-top: var(--gap-5); }
+.message {
+  padding: var(--gap-3) var(--gap-4);
+  border-radius: var(--radius-2);
+  background: var(--info-bg); color: var(--info);
+}
+.message--success { background: var(--ok-bg); color: var(--ok); }
+.message--error { background: var(--err-bg); color: var(--err); }
+.message--warning { background: var(--warn-bg); color: var(--warn); }
+
+/* --- Таблицы -------------------------------------------------------------- */
+
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: var(--gap-3); text-align: left; border-bottom: 1px solid var(--line-soft); }
+th { font-size: var(--step--1); color: var(--muted); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

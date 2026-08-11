@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Написать мне — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Контакты</p>
+    <h1>Расскажите про объект</h1>
+    <p class="lead">
+      Эти вопросы я всё равно задам на созвоне. Если ответить на них сейчас,
+      к разговору я приду подготовленной — и мы потратим его на интерьер,
+      а не на сбор вводных.
+    </p>
+    <p><a href="tel:{{ site.phone }}">{{ site.phone }}</a>{% if site.email %} · <a href="mailto:{{ site.email }}">{{ site.email }}</a>{% endif %}</p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <p class="message message--error">{{ form.non_field_errors|join:" " }}</p>
+      {% endif %}
+
+      {% for field in form %}
+        {% if field.name == 'website' %}{{ field }}
+        {% elif field.name == 'quote_token' %}{{ field }}
+        {% elif field.name == 'personal_data_consent' %}
+          <div class="field check">
+            {{ field }}
+            <label for="{{ field.id_for_label }}">
+              Согласен на <a href="{% url 'public:legal' 'consent' %}" target="_blank">обработку персональных данных</a>
+              и с <a href="{% url 'public:legal' 'privacy' %}" target="_blank">политикой конфиденциальности</a>
+            </label>
+          </div>
+          {% if field.errors %}<p class="field__error">{{ field.errors|join:" " }}</p>{% endif %}
+        {% elif field.field.widget.input_type == 'checkbox' %}
+          <div class="field check">
+            {{ field }}<label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          </div>
+        {% else %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="field__hint">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="field__error">{{ field.errors|join:" " }}</p>{% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <button class="btn btn--big btn--block" type="submit">Отправить заявку</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

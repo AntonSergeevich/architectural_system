@@ -1,0 +1,19 @@
+{% if show_cookie_banner %}
+<div class="cookies" data-cookies role="dialog" aria-live="polite" aria-label="Файлы cookie">
+  <div class="cookies__text">
+    <p><strong>Сайт использует файлы cookie.</strong>
+      Необходимые — чтобы работали формы и запоминался ваш выбор. Аналитические —
+      только с вашего согласия.</p>
+    <p class="cookies__link">
+      <a href="{% url 'public:legal' 'cookies' %}">Подробнее</a>
+    </p>
+  </div>
+
+  <form class="cookies__actions" method="post" action="{% url 'public:cookie_consent' %}" data-cookie-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button class="btn btn--ghost" type="submit" name="choice" value="necessary">Только необходимые</button>
+    <button class="btn" type="submit" name="choice" value="all">Принять все</button>
+  </form>
+</div>
+{% endif %}

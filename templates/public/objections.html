@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Вопросы и возражения — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Честно</p>
+    <h1>Вопросы, которые задают чаще всего</h1>
+  </div>
+</section>
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <div class="accordion">
+      {% for item in objections %}
+        <div class="accordion__item {% if forloop.first %}is-open{% endif %}">
+          <button class="accordion__head" type="button">{{ item.question }}</button>
+          <div class="accordion__body">{{ item.answer|richtext }}</div>
+        </div>
+      {% empty %}
+        <p>Пока пусто.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

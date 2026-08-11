@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load richtext %}
+{% block title %}Обо мне — {{ site.owner_name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="wrap split">
+    <div class="portrait">
+      {% if site.owner_photo %}<img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">{% endif %}
+    </div>
+    <div>
+      <p class="eyebrow">Обо мне</p>
+      <h1>{{ site.owner_name }}</h1>
+      <p class="lead">{{ site.owner_title }}. {{ site.city }} и удалённая работа.</p>
+      {% if site.owner_about %}
+        <div class="lead" style="margin-top: var(--gap-5)">{{ site.owner_about|richtext }}</div>
+      {% else %}
+        <p class="lead" style="margin-top: var(--gap-5)">
+          Я выбираю специалистов по человеку: по подаче, по стилистике, по тому,
+          на одной ли мы волне. Механически выполненная услуга и работа с тем,
+          с кем совпадаешь в ценностях, — это два разных результата.
+          Думаю, ко мне приходят по той же причине.
+        </p>
+      {% endif %}
+      <p class="lead">
+        Мои люди — те, кто не сомневается. Кто знает, чего хочет, и не сверяет
+        каждое решение с роднёй. Кто умеет доверять: заплатил — и ждёт результат,
+        а не выжимает контроль по мелочам. И кто открыт к тому, чтобы дом
+        получился про них, а не про чужой референс.
+      </p>
+      <div class="hero__actions">
+        <a class="btn" href="{% url 'public:constructor' %}">Собрать проект</a>
+        <a class="btn btn--ghost" href="{% url 'public:contacts' %}">Написать мне</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap wrap--narrow">
+    <h2>Как я работаю</h2>
+    <div class="note">{{ site.regulations|richtext }}</div>
+    <p style="margin-top: var(--gap-5)"><a href="{% url 'public:how' %}">Все восемь этапов и сроки →</a></p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% load richtext %}
+<div class="accordion__item">
+  <button class="accordion__head" type="button">
+    {{ module.title }}
+    <span class="block__price">
+      {% if module.unit == 'custom' %}по расчёту
+      {% elif module.unit == 'sqm' %}{{ module.price|money }}/м²
+      {% elif module.unit == 'month' %}{{ module.price|money }}/мес
+      {% elif module.unit == 'stage' %}{{ module.price|money }}/этап
+      {% elif module.unit == 'visit' %}{{ module.price|money }}/выезд
+      {% else %}{{ module.price|money }}{% endif %}
+    </span>
+  </button>
+  <div class="accordion__body">
+    {% if module.description %}<p>{{ module.description }}</p>{% endif %}
+    {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
+    {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days }} рабочих дней</p>{% endif %}
+    {% if module.not_included %}<p><strong>Что не входит:</strong> {{ module.not_included }}</p>{% endif %}
+    {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning }}</p>{% endif %}
+  </div>
+</div>

@@ -1,0 +1,153 @@
+"""Публичный сайт: страницы открываются, заявка сохраняется, куки пишутся."""
+
+from decimal import Decimal
+
+from django.core.management import call_command
+from django.test import TestCase
+from django.urls import reverse
+
+from apps.catalog.models import ServiceModule
+from apps.crm.models import Lead
+
+from .models import CookieConsent, LegalDocument, PersonalDataConsent
+
+
+class PublicPagesTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_pages_open(self):
+        for name in [
+            "public:home", "public:about", "public:services", "public:constructor",
+            "public:how", "public:objections", "public:portfolio", "public:contacts",
+            "public:articles",
+        ]:
+            with self.subTest(page=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+    def test_legal_documents_published(self):
+        for kind in ["privacy", "consent", "cookies", "offer"]:
+            with self.subTest(kind=kind):
+                response = self.client.get(reverse("public:legal", args=[kind]))
+                self.assertEqual(response.status_code, 200)
+
+    def test_constructor_starts_with_assembled_house(self):
+        """Стартовое состояние — «Под ключ»: клиент разбирает, а не собирает."""
+        response = self.client.get(reverse("public:constructor"))
+        self.assertContains(response, "Соберите свой дом")
+        self.assertGreater(response.context["calc"].design_total, 0)
+        self.assertGreater(response.context["calc"].realization_total, 0)
+
+    def test_constructor_works_without_javascript(self):
+        modules = ServiceModule.objects.filter(is_active=True, unit="sqm")[:2]
+        response = self.client.post(
+            reverse("public:constructor"),
+            {"area": "80", "rooms": 3, "modules": [m.pk for m in modules]},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(response.context["calc"].design_total, 0)
+
+    def test_calculate_api(self):
+        module = ServiceModule.objects.filter(is_active=True, unit="sqm").first()
+        response = self.client.post(
+            reverse("public:calculate"), {"area": "100", "rooms": 2, "modules": [module.pk]}
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("design_total", payload["calc"])
+
+    def test_saved_quote_gets_its_own_link(self):
+        """Именно ссылка заменяет PDF: один адрес, всё внутри."""
+        module = ServiceModule.objects.filter(is_active=True, unit="sqm").first()
+        response = self.client.post(
+            reverse("public:save_quote"), {"area": "70", "rooms": 2, "modules": [module.pk]}
+        )
+        self.assertEqual(response.status_code, 200)
+        url = response.json()["url"]
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+
+class LeadTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def _payload(self, **extra):
+        data = {
+            "name": "Мария",
+            "phone": "8 913 000 00 01",
+            "area": "84",
+            "rooms": 3,
+            "message": "хочу яркий интерьер",
+            "personal_data_consent": "on",
+        }
+        data.update(extra)
+        return data
+
+    def test_lead_created_with_next_action(self):
+        """Заявка без даты следующего шага — это и есть потерянная заявка."""
+        response = self.client.post(reverse("public:contacts"), self._payload())
+        self.assertRedirects(response, reverse("public:thanks"))
+
+        lead = Lead.objects.get()
+        self.assertEqual(lead.client.phone, "+79130000001")
+        self.assertTrue(lead.next_action)
+        self.assertIsNotNone(lead.next_action_at)
+        self.assertEqual(lead.estate.area, Decimal("84"))
+
+    def test_consent_is_recorded_with_document_version(self):
+        self.client.post(reverse("public:contacts"), self._payload())
+        consent = PersonalDataConsent.objects.get()
+        version = LegalDocument.objects.get(kind="consent").version
+        self.assertEqual(consent.document_version, version)
+
+    def test_consent_is_required(self):
+        response = self.client.post(
+            reverse("public:contacts"), self._payload(personal_data_consent="")
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Lead.objects.exists())
+
+    def test_contact_required(self):
+        response = self.client.post(
+            reverse("public:contacts"), self._payload(phone="", email="", messenger="")
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Lead.objects.exists())
+
+    def test_honeypot_blocks_bots(self):
+        response = self.client.post(reverse("public:contacts"), self._payload(website="spam"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Lead.objects.exists())
+
+
+class CookieTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_legal", verbosity=0)
+
+    def test_banner_shown_until_choice_made(self):
+        response = self.client.get(reverse("public:home"))
+        self.assertTrue(response.context["show_cookie_banner"])
+
+    def test_choice_is_logged_and_stored_in_cookie(self):
+        """Согласие нужно доказывать, а доказать можно только записанное."""
+        response = self.client.post(
+            reverse("public:cookie_consent"), {"choice": "necessary"}, follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.cookies["cookie_consent"].value, "necessary")
+
+        record = CookieConsent.objects.get()
+        self.assertEqual(record.choice, "necessary")
+        self.assertFalse(record.analytics)
+        self.assertEqual(record.policy_version, LegalDocument.objects.get(kind="cookies").version)
+
+    def test_unknown_choice_rejected(self):
+        response = self.client.post(reverse("public:cookie_consent"), {"choice": "everything"})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(CookieConsent.objects.exists())

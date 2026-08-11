@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Проекты{% endblock %}
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap">
+    {% include "cabinet/_nav.html" %}
+    <h1>Проекты</h1>
+
+    <div class="{% if wip_exceeded %}note note--warn{% else %}note{% endif %}">
+      <p><strong>Загрузка: {{ wip_used }} из {{ wip_limit }}</strong></p>
+      {% if wip_exceeded %}
+        <p>Проектов в работе больше предела. Именно отсюда берётся выгорание:
+          когда параллельно висят пять проектов и каждый звонит «мне надо было
+          вчера», творчества не остаётся ни у кого. Новые лучше ставить в очередь.</p>
+      {% else %}
+        <p>Новый проект получает дату старта, а не дату сдачи.</p>
+      {% endif %}
+    </div>
+
+    <div class="grid grid--2" style="margin-top: var(--gap-6)">
+      {% for project in projects %}
+        <a class="card" href="{% url 'cabinet:project_detail' project.pk %}">
+          <p class="card__title">{{ project }}</p>
+          <p class="card__muted">
+            {{ project.get_status_display }} · этап {{ project.current_stage.number|default:"—" }}
+            · готово {{ project.progress }}%
+            {% if project.open_revisions %} · правок: {{ project.open_revisions }}{% endif %}
+          </p>
+        </a>
+      {% empty %}
+        <p>Проектов пока нет.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
