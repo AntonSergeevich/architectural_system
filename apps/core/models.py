@@ -18,7 +18,7 @@ class SiteSettings(models.Model):
     owner_about = models.TextField("Текст о себе", blank=True)
 
     phone = models.CharField("Телефон", max_length=32, default="+7 (913) 032-29-08")
-    email = models.EmailField("Email", blank=True)
+    email = models.EmailField("Email", blank=True, default="dark-ost@ya.ru")
     telegram = models.CharField("Telegram", max_length=64, blank=True)
     whatsapp = models.CharField("WhatsApp", max_length=64, blank=True)
     city = models.CharField("Город", max_length=80, default="Красноярск")

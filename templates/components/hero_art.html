@@ -52,11 +52,49 @@
     <path class="art__line" style="--i:25" d="M292 272 H326 V290 Q326 302 309 302 Q292 302 292 290 Z"/>
     <path class="art__line" style="--i:26" d="M326 276 Q340 278 339 288 Q338 297 327 297"/>
     <path class="art__line art__line--soft" style="--i:27" d="M286 306 H332"/>
+
+    {% comment %}
+      Лицо. Ради него весь рисунок и держится: без него на диване сидит
+      фигура, а с ним — человек, которому в этой комнате хорошо. Ровно то,
+      что обещает заголовок.
+    {% endcomment %}
+    <g class="art__face">
+      <path class="art__line" style="--i:28" d="M256 208 q4 -6 8 0"/>
+      <path class="art__line" style="--i:28" d="M275 207 q4 -6 8 0"/>
+      <path class="art__line" style="--i:29" d="M263 219 q6 7 12 -1"/>
+      <path class="art__line art__line--soft" style="--i:30" d="M252 216 q2 3 0 6"/>
+      <path class="art__line art__line--soft" style="--i:30" d="M287 214 q2 3 0 6"/>
+    </g>
+
+    {% comment %}
+      Кот у горшка с растением. Он ничего не объясняет и не продаёт —
+      он просто мурлычет, и от этого комната становится обжитой.
+      Звук поднимается так же, как пар над чашкой: это единственные две
+      вещи на рисунке, которые не стоят на месте.
+    {% endcomment %}
+    <g class="art__cat">
+      <path class="art__line" style="--i:29" d="M46 401 C39 410 39 418 41 424 H71 C73 418 73 410 66 401"/>
+      <path class="art__line" style="--i:29" d="M56 379 a11 11 0 1 1 -0.1 0 Z"/>
+      <path class="art__line" style="--i:30" d="M48 383 L45 370 L55.5 379.5"/>
+      <path class="art__line" style="--i:30" d="M64 383 L67 370 L56.5 379.5"/>
+      <path class="art__line" style="--i:31" d="M71 424 C83 424 86 411 78 405 C74 402 70 405 71 409"/>
+      <path class="art__line art__line--soft" style="--i:31" d="M50 424 V413 M62 424 V413"/>
+      <path class="art__line" style="--i:32" d="M51 385 q1.5 2 3 0 M59 385 q1.5 2 3 0"/>
+      <path class="art__line" style="--i:32" d="M53.5 390 h5 l-2.5 2.5 Z"/>
+      <path class="art__line" style="--i:32" d="M56 392.5 v1.5 q-3 3 -5.5 0 M56 394 q3 3 5.5 0"/>
+      <path class="art__line art__line--soft" style="--i:33" d="M44 388 H34 M44 393 H35 M68 388 H78 M68 393 H77"/>
+    </g>
   </g>
 
   <g class="art__steam" stroke-width="1.4">
     <path class="art__vapor" style="--v:0" d="M302 262 q-9 -16 0 -28 q9 -13 0 -24"/>
     <path class="art__vapor" style="--v:1" d="M314 264 q-7 -13 0 -22 q7 -10 0 -18"/>
     <path class="art__vapor" style="--v:2" d="M291 264 q-6 -11 0 -18 q6 -9 0 -15"/>
+  </g>
+
+  <g class="art__purrs" stroke="none" fill="currentColor" aria-hidden="true">
+    <text class="art__purr" style="--p:0" x="24" y="356" font-size="13">мрр-мррр</text>
+    <text class="art__purr" style="--p:1" x="36" y="330" font-size="11">мррр</text>
+    <text class="art__purr" style="--p:2" x="48" y="308" font-size="10">мр</text>
   </g>
 </svg>

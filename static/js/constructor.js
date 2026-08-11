@@ -72,6 +72,7 @@
     syncInputs();
     paintShelf();
     paintHouse();
+    if (on && mod.housePart) flash(mod.housePart);
     announce(mod, on);
     recalc();
   }
@@ -92,11 +93,50 @@
 
   function paintShelf() {
     shelf.querySelectorAll('[data-module]').forEach(function (el) {
+      paintVariants(el);
       var mod = moduleOf(el);
       var on = selected.has(mod.id) || mod.required;
       el.classList.toggle('is-selected', on);
       el.setAttribute('aria-pressed', String(on));
     });
+  }
+
+  /* Блок-группа: крыша, окна, стены. Место в доме одно, форматов
+     несколько — поэтому и блок один, с переключателем внутри. Активный
+     вариант — тот, что лежит в доме; если в доме пусто, остаётся
+     выбранный руками. */
+  function paintVariants(el) {
+    var chips = el.querySelectorAll('[data-variant]');
+    if (!chips.length) return;
+
+    var placed = null;
+    chips.forEach(function (chip) {
+      if (selected.has(Number(chip.dataset.variant))) placed = chip;
+    });
+    if (placed) el.dataset.module = placed.dataset.variant;
+
+    var activeId = Number(el.dataset.module);
+    chips.forEach(function (chip) {
+      var isActive = Number(chip.dataset.variant) === activeId;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-pressed', String(isActive));
+    });
+
+    var label = el.querySelector('[data-group-price]');
+    var source = el.querySelector('[data-variant="' + activeId + '"] .variant__price');
+    if (label && source) label.textContent = source.textContent.trim();
+  }
+
+  function flash(part) {
+    // Вспышка в момент постановки. Без неё блок просто «оказывается»
+    // в доме: на телефоне палец закрывает пол-экрана, а на стенах
+    // изменение и вовсе можно не заметить.
+    var slot = house.querySelector('.slot[data-part="' + part + '"]');
+    if (!slot || reduceMotion) return;
+    slot.classList.remove('is-just-placed');
+    void slot.offsetWidth; // перезапуск анимации
+    slot.classList.add('is-just-placed');
+    setTimeout(function () { slot.classList.remove('is-just-placed'); }, 800);
   }
 
   function paintHouse() {
@@ -209,11 +249,31 @@
   shelf.addEventListener('keydown', function (e) {
     var el = e.target.closest('[data-module]');
     if (!el) return;
+    // Внутри блока есть свои кнопки: переключатель формата и «подробнее».
+    // Enter на них — это они, а не блок.
+    if (e.target.closest('[data-variant]') || e.target.closest('[data-expand]')) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       var mod = moduleOf(el);
       if (!mod.required) select(mod.id, !selected.has(mod.id));
     }
+  });
+
+  // Переключатель формата внутри блока-группы. Если блок уже лежит
+  // в доме — заменяем прямо там: место одно, значит и менять нечего,
+  // кроме содержимого.
+  shelf.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-variant]');
+    if (!chip) return;
+    var card = chip.closest('[data-module]');
+    if (!card) return;
+
+    var id = Number(chip.dataset.variant);
+    var wasPlaced = selected.has(Number(card.dataset.module));
+    card.dataset.module = id;
+
+    if (wasPlaced) select(id, true);  // select сам снимет соседа по группе
+    else paintShelf();
   });
 
   root.querySelectorAll('[data-expand]').forEach(function (btn) {
@@ -264,7 +324,9 @@
   function onPointerDown(e) {
     if (e.button !== undefined && e.button !== 0) return;
     var el = e.target.closest('[data-module]');
-    if (!el || e.target.closest('[data-expand]')) return;
+    if (!el) return;
+    // Переключатель формата и «подробнее» — это нажатия, а не захват.
+    if (e.target.closest('[data-expand]') || e.target.closest('[data-variant]')) return;
     var mod = moduleOf(el);
     if (mod.required) return;
 

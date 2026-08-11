@@ -1,0 +1,3 @@
+{% load richtext %}{% comment %} Цена одной строкой. Ноль — это не «бесплатно
+и потому подозрительно», а «уже посчитано в другом блоке»: так и пишем.
+{% endcomment %}{% if module.unit == 'custom' %}по расчёту{% elif not module.price %}входит в проект{% elif module.unit == 'sqm' %}{{ module.price|money }}/м²{% elif module.unit == 'month' %}{{ module.price|money }}/мес{% elif module.unit == 'stage' %}{{ module.price|money }}/этап{% elif module.unit == 'visit' %}{{ module.price|money }}/выезд{% elif module.unit == 'hours' %}{{ module.price|money }} за {{ module.included_units|floatformat:"-1" }} ч{% else %}{{ module.price|money }}{% endif %}

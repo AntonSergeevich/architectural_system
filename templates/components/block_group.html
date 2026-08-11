@@ -1,0 +1,64 @@
+{% load richtext %}
+{% comment %}
+Группа взаимоисключающих вариантов — ОДИН блок с переключателем формата.
+
+Раньше их было три отдельных блока, и выходила путаница: берёшь «выезды» —
+подсвечивается крыша, берёшь «надзор» — снова та же крыша. И главное,
+непонятно, как убрать один конкретный блок, если крыша в доме одна.
+
+Место в доме одно — значит и блок один. Формат выбирается переключателем
+внутри блока, а на дом уезжает то, что выбрано.
+{% endcomment %}
+<div class="block block--group {% if section.active.pk in selected_ids %}is-selected{% endif %}"
+     data-module="{{ section.active.pk }}"
+     data-group="{{ section.group.pk }}"
+     role="button" tabindex="0"
+     aria-pressed="{% if section.active.pk in selected_ids %}true{% else %}false{% endif %}">
+
+  <span class="block__grip" aria-hidden="true">⋮⋮</span>
+
+  <span class="block__title">{{ section.group.title }}</span>
+
+  {% comment %} Цена активного варианта: на складе её закрывают строки
+     переключателя, а вот в руке, когда блок несут к дому, кроме названия
+     и цены ничего и не нужно. {% endcomment %}
+  <span class="block__price" data-group-price>{% with module=section.active %}{% include "components/module_price.html" %}{% endwith %}</span>
+
+  <div class="block__variants" role="group" aria-label="Формат: {{ section.group.title }}">
+    {% for module in section.modules %}
+      <button class="variant {% if module.pk == section.active.pk %}is-active{% endif %}"
+              type="button" data-variant="{{ module.pk }}"
+              aria-pressed="{% if module.pk == section.active.pk %}true{% else %}false{% endif %}">
+        <span class="variant__mark" aria-hidden="true"></span>
+        <span class="variant__title">{{ module.label }}</span>
+        <span class="variant__price">{% include "components/module_price.html" %}</span>
+      </button>
+
+      {% comment %} Галочки — источник правды для формы без JavaScript. {% endcomment %}
+      <label class="block__check visually-hidden" for="module-{{ module.pk }}">{{ module.title }}</label>
+      <input class="block__check visually-hidden" type="checkbox" name="modules" id="module-{{ module.pk }}"
+             value="{{ module.pk }}" {% if module.pk in selected_ids %}checked{% endif %}>
+    {% endfor %}
+  </div>
+
+  <p class="block__hint">
+    Место в доме одно — «{{ section.group.get_house_part_display|lower }}».
+    Выберите формат и перетащите блок на дом.
+  </p>
+
+  <button class="clause__toggle" type="button" data-expand="more-group-{{ section.group.pk }}">Чем отличаются</button>
+
+  <div class="block__more" id="more-group-{{ section.group.pk }}" hidden>
+    {% for module in section.modules %}
+      <p><strong>{{ module.label }}.</strong>
+        {% if module.description %}{{ module.description }}{% endif %}
+        {% if module.unit == 'hours' and module.extra_unit_price %}
+          Дальше +{{ module.extra_unit_price|money }} за каждый следующий час.
+        {% endif %}
+      </p>
+    {% endfor %}
+    {% with module=section.modules.0 %}
+      {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning }}</p>{% endif %}
+    {% endwith %}
+  </div>
+</div>

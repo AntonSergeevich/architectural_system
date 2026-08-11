@@ -4,7 +4,7 @@
 # условиях: заново их не сделать.
 set -euo pipefail
 
-ROOT="/srv/daarch"
+ROOT="/srv/dades"
 DEST="/srv/backups"
 KEEP_DAYS=30
 STAMP="$(date +%Y-%m-%d_%H-%M)"

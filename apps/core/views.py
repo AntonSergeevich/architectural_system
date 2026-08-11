@@ -1,5 +1,6 @@
 """Публичный сайт."""
 
+import logging
 from datetime import timedelta
 from decimal import Decimal
 
@@ -22,6 +23,7 @@ from apps.catalog.pricing import calculate, default_complexity, default_preset
 from apps.contracts.models import ClauseQuestion, Contract, ContractAck
 from apps.crm.models import Client, Lead, Property, Quote, QuoteItem
 
+from . import notify
 from .forms import CalculatorForm, LeadForm
 from .models import (
     Article,
@@ -35,6 +37,8 @@ from .models import (
 )
 from .utils import working_deadline
 
+logger = logging.getLogger(__name__)
+
 CONSENT_COOKIE_AGE = 60 * 60 * 24 * 180  # полгода — типовой срок для куки-согласия
 
 
@@ -46,13 +50,17 @@ def _client_ip(request):
 
 
 def _shelf_sections(modules):
-    """Блоки склада: одиночные и группы «выберите один вариант».
+    """Блоки склада: одиночные и группы взаимоисключающих вариантов.
 
-    Крыша, окна и стены — это по нескольку взаимоисключающих блоков.
-    Если показать их вперемешку с остальными, человек кладёт «выезды»,
-    видит крышу, кладёт «надзор» — снова крышу, и логика выглядит
-    сломанной. Заголовок группы объясняет это раньше, чем возникнет
-    вопрос.
+    Крыша, окна и стены — это по нескольку взаимоисключающих модулей.
+    Раньше они лежали на складе отдельными блоками, и получалась
+    путаница: берёшь «выезды» — подсвечивается крыша, берёшь «надзор» —
+    снова та же крыша. А как убрать потом один конкретный блок, если
+    крыша одна, было непонятно вовсе.
+
+    Поэтому группа приезжает на склад ОДНИМ блоком с переключателем
+    формата. Место в доме одно — значит и блок один: что положили,
+    то и убирают.
     """
     sections = []
     by_group = {}
@@ -62,11 +70,26 @@ def _shelf_sections(modules):
             continue
         section = by_group.get(module.group_id)
         if section is None:
-            section = {"group": module.group, "modules": []}
+            section = {"group": module.group, "modules": [], "active": module}
             by_group[module.group_id] = section
             sections.append(section)
         section["modules"].append(module)
     return sections
+
+
+def _mark_active_variants(context, selected_ids):
+    """Какой вариант в группе показан выбранным.
+
+    Тот, что лежит в доме. Если в доме пусто — первый: блок должен
+    что-то означать ещё до того, как его понесли.
+    """
+    chosen = set(selected_ids)
+    for key in ("design_sections", "realization_sections", "extra_sections"):
+        for section in context.get(key, []):
+            if not section.get("group"):
+                continue
+            picked = [m for m in section["modules"] if m.pk in chosen]
+            section["active"] = picked[0] if picked else section["modules"][0]
 
 
 def _catalog_context():
@@ -249,6 +272,9 @@ def constructor(request):
         settings=pricing,
     )
 
+    selected_ids = [line.module.pk for line in calc.lines]
+    _mark_active_variants(context, selected_ids)
+
     context.update(
         {
             "preset": preset,
@@ -257,7 +283,7 @@ def constructor(request):
             "rooms": rooms,
             "complexity": complexity,
             "months": calc.months,
-            "selected_ids": [line.module.pk for line in calc.lines],
+            "selected_ids": selected_ids,
             # Отдаём словарём и печатаем через |json_script: он экранирует
             # содержимое так, что текст из базы не может закрыть тег script.
             "catalog_data": {
@@ -407,6 +433,15 @@ def _save_lead(request, data):
     token = data.get("quote_token")
     if token:
         Quote.objects.filter(token=token, client__isnull=True).update(client=client, lead=lead)
+
+    # Уведомление в Telegram. Оно НЕ имеет права уронить заявку: заявка
+    # уже в базе, и упавший мессенджер не должен превращаться в ошибку
+    # у человека, который только что заполнил форму.
+    try:
+        notify.new_lead(lead)
+    except Exception:  # noqa: BLE001 — здесь важно поймать вообще всё
+        logger.exception("Не удалось отправить уведомление о заявке %s", lead.pk)
+
     return lead
 
 

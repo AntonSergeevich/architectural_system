@@ -78,6 +78,10 @@
 
 @media (max-width: 900px) {
   .burger { display: block; }
+  /* Меню уезжает в выпадающую панель, и его margin-left: auto перестаёт
+     работать — тема с бургером оказывались прижаты к логотипу посреди
+     шапки. Прижимаем вправо их самих. */
+  .header__tools { margin-left: auto; }
   .nav {
     position: fixed; inset: 68px 0 auto 0;
     flex-direction: column; align-items: stretch; gap: 0;
@@ -219,9 +223,26 @@
   100% { opacity: 0; transform: translateY(-26px) scaleY(1.15); }
 }
 
+/* Мурчание кота — второе живое место на рисунке. Поднимается так же,
+   как пар над чашкой, только вбок: звук идёт от кота, а не из него. */
+.art__purr {
+  opacity: 0;
+  fill: var(--brand-500);
+  font-family: var(--font-display); font-weight: 700;
+  animation: purr 4.2s ease-in-out infinite;
+  animation-delay: calc(2.4s + var(--p) * 1.4s);
+}
+@keyframes purr {
+  0%   { opacity: 0; transform: translate(0, 8px); }
+  20%  { opacity: .7; }
+  65%  { opacity: .35; }
+  100% { opacity: 0; transform: translate(14px, -14px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .js .art__line { stroke-dashoffset: 0; animation: none; }
   .art__vapor { opacity: .4; animation: none; }
+  .art__purr { opacity: .45; animation: none; }
 }
 
 /* --- Цифры ---------------------------------------------------------------- */
@@ -317,10 +338,24 @@
    внутри неё, и колонки внешнего контейнера до них просто не доходили —
    форма занимала одну колонку, а внутри всё вставало друг под друга. */
 .constructor { display: block; }
-.constructor__form { display: grid; gap: var(--gap-5); }
+
+/* На узком экране колонок нет, и это не «то же самое в одну колонку».
+   Сетка в один столбец давала каждому блоку свою строку, а липкий
+   элемент прилипает только внутри своей строки — то есть дом уезжал
+   за экран ровно тогда, когда человек добирался до склада блоков.
+   Тащить становилось некуда: блок в руке, а дома не видно.
+
+   Поэтому здесь flex-колонка: липкий дом держится за всю форму
+   целиком и остаётся сверху, пока склад прокручивается под ним.
+   Пояснения к цене при этом уходят в самый низ — они не должны стоять
+   между домом и блоками. */
+.constructor__form { display: flex; flex-direction: column; gap: var(--gap-5); }
+.constructor__left, .constructor__right { display: contents; }
+.total__notes { order: 5; }
 
 @media (min-width: 1000px) {
   .constructor__form {
+    display: grid;
     grid-template-columns: minmax(360px, 44%) 1fr;
     /* Колонки НЕ выравниваем по верху: при align-items: start левая
        колонка получает высоту своего содержимого, и липкий дом
@@ -329,11 +364,11 @@
        и тащить их некуда. Растянутая колонка чинит это целиком. */
     align-items: stretch;
   }
+  /* Колонок ровно две, и обе — прямые дети формы. Любой лишний блок
+     на этом уровне уехал бы в чужую колонку и развалил раскладку. */
+  .constructor__left, .constructor__right { display: block; min-width: 0; }
+  .total__notes { order: 0; }
 }
-
-/* Колонок ровно две, и обе — прямые дети формы. Любой лишний блок
-   на этом уровне уехал бы в чужую колонку и развалил раскладку. */
-.constructor__left, .constructor__right { min-width: 0; }
 
 /* Дом «прилипает» и остаётся перед глазами, пока справа прокручивается
    склад блоков. Иначе тащить нечего: блок и цель не помещаются на экран
@@ -350,7 +385,15 @@
   .house-panel { max-height: calc(100dvh - 84px); overflow: visible; }
 }
 @media (max-width: 999px) {
-  .house-panel { box-shadow: 0 12px 20px -18px rgba(35, 32, 29, .8); }
+  /* Дом закреплён сверху, склад прокручивается под ним. Тащить недалеко:
+     палец не идёт через весь экран — на телефоне это важнее любой
+     анимации. */
+  .house-panel {
+    box-shadow: 0 12px 20px -18px rgba(35, 32, 29, .8);
+    padding-top: var(--gap-2);
+    margin-inline: calc(var(--gap-3) * -1);
+    padding-inline: var(--gap-3);
+  }
 }
 
 .house {
@@ -366,14 +409,7 @@
 }
 @media (min-width: 1000px) { .house { max-height: none; aspect-ratio: 4 / 3; } }
 
-@media (max-width: 999px) {
-  /* Компактнее: панель с домом и итогом должна умещаться в экран,
-     иначе тащить блок некуда — цель уезжает за край. */
-  .total { padding: var(--gap-3); }
-  .total__row { padding: var(--gap-1) 0; }
-  .total__value { font-size: var(--step-0); }
-  .total__row--grand .total__value { font-size: var(--step-1); }
-}
+@media (max-width: 999px) { .house { max-height: 24dvh; } }
 
 /* Каждый элемент дома — свой слот. Пустой слот рисуется пунктиром:
    это и есть «правило честного отказа». Текст можно пролистать, дыру нельзя. */
@@ -394,7 +430,47 @@
   border: 1.5px dashed color-mix(in srgb, var(--muted-2) 70%, transparent);
   color: var(--muted);
 }
-.slot.is-filled { border: 2px solid transparent; }
+/* Положенный блок должен читаться как нарисованный от руки, а не как
+   залитый прямоугольник. Ровная заливка на маленьком доме терялась:
+   человек доносил стены и не понимал, изменилось что-нибудь или нет.
+   Поэтому у каждой части своя штриховка и свой контур — и короткая
+   анимация появления, чтобы момент постановки было видно. */
+.slot.is-filled {
+  border: 0;
+  box-shadow: inset 0 0 0 2px var(--ink-2);
+  animation: part-in .34s var(--ease) both;
+}
+@keyframes part-in {
+  from { transform: scale(.88); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Только что положенный блок отбивается кольцом: на телефоне палец
+   закрывает пол-дома, и без вспышки постановка проходит незамеченной. */
+.slot.is-just-placed { animation: part-in .34s var(--ease) both, part-ring .7s var(--ease); }
+@keyframes part-ring {
+  0%   { outline: 3px solid var(--brand-500); outline-offset: 6px; }
+  100% { outline: 3px solid transparent; outline-offset: 2px; }
+}
+
+/* Убрать блок — нажать на него в доме. Крестик показывает, что часть
+   дома вообще можно трогать: без него вопрос «а как убрать обратно»
+   остаётся без ответа. */
+.slot.is-filled { cursor: pointer; }
+.slot.is-filled::after {
+  content: '×';
+  position: absolute; top: 2px; right: 4px;
+  font-size: var(--step-0); line-height: 1; font-weight: 700;
+  color: var(--paper);
+  text-shadow: 0 0 4px rgba(35, 32, 29, .55);
+  opacity: 0; transition: opacity .18s var(--ease);
+}
+.slot.is-filled:hover::after, .slot.is-filled:focus-visible::after { opacity: 1; }
+.house.is-receiving .slot.is-filled::after { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slot.is-filled, .slot.is-just-placed { animation: none; }
+}
 /* Куда можно положить — видно с момента, как блок взяли в руку,
    а не когда его уже поднесли. Иначе человек тащит наугад и решает,
    что перетаскивание не работает. */
@@ -422,13 +498,33 @@
 .house.is-receiving .house__hint { color: var(--brand-500); font-weight: 600; }
 
 .slot[data-part="foundation"] { left: 6%; right: 6%; bottom: 4%; height: 9%; }
-.slot[data-part="foundation"].is-filled { background: var(--ink-2); }
+.slot[data-part="foundation"].is-filled {
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 13px, color-mix(in srgb, var(--paper) 45%, transparent) 13px 15px),
+    var(--ink-2);
+}
 
+/* Стены — кирпичная кладка: вертикальные швы и ряды. Именно на стенах
+   ровная заливка читалась хуже всего, а кладка видна сразу. */
 .slot[data-part="walls"] { left: 12%; right: 12%; bottom: 13%; height: 38%; }
-.slot[data-part="walls"].is-filled { background: var(--sand); }
+.slot[data-part="walls"].is-filled {
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 26px, color-mix(in srgb, var(--ink) 22%, transparent) 26px 28px),
+    repeating-linear-gradient(0deg,
+      transparent 0 13px, color-mix(in srgb, var(--ink) 22%, transparent) 13px 15px),
+    var(--sand);
+}
 
+/* Фасад — штриховка по диагонали: так рисуют эскиз от руки. */
 .slot[data-part="facade"] { left: 12%; right: 12%; bottom: 51%; height: 12%; }
-.slot[data-part="facade"].is-filled { background: var(--brand-200); }
+.slot[data-part="facade"].is-filled {
+  background:
+    repeating-linear-gradient(-45deg,
+      transparent 0 5px, color-mix(in srgb, var(--brand-600) 45%, transparent) 5px 7px),
+    var(--brand-200);
+}
 
 .slot[data-part="finish"] { left: 12%; width: 7%; bottom: 13%; height: 38%; }
 .slot[data-part="finish"].is-filled {
@@ -436,16 +532,35 @@
     0deg, var(--brand-300), var(--brand-300) 5px, var(--brand-200) 5px, var(--brand-200) 10px);
 }
 
+/* Окна — переплёт крестом: без него светлый прямоугольник на стене
+   ничего не обозначает. */
 .slot[data-part="windows"] { left: 33%; width: 17%; bottom: 25%; height: 15%; }
-.slot[data-part="windows"].is-filled { background: #cfe0e6; border-color: var(--ink-2); }
-.slot[data-part="windows"].has-light { background: #F6DFA0; box-shadow: 0 0 26px rgba(246, 223, 160, .95); }
+.slot[data-part="windows"].is-filled {
+  background:
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 2px 100% no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 100% 2px no-repeat,
+    #cfe0e6;
+}
+.slot[data-part="windows"].has-light {
+  background:
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 2px 100% no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) center / 100% 2px no-repeat,
+    #F6DFA0;
+  box-shadow: inset 0 0 0 2px var(--ink-2), 0 0 26px rgba(246, 223, 160, .95);
+}
 
+/* Крыша — черепица штрихами по скату. Контур внутрь тут не нарисуешь:
+   его срежет clip-path, поэтому линии делают всю работу. */
 .slot[data-part="roof"] { left: 6%; right: 6%; bottom: 63%; height: 20%; }
 .slot[data-part="roof"].is-filled {
-  background: var(--brand-500);
+  background:
+    repeating-linear-gradient(90deg,
+      transparent 0 14px, color-mix(in srgb, var(--ink) 28%, transparent) 14px 16px),
+    var(--brand-500);
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  border: 0;
+  box-shadow: none;
 }
+.slot[data-part="roof"].is-filled::after { right: 8%; top: 46%; }
 
 /* Труба: стоит на скате, а не висит сбоку. */
 .slot[data-part="light"] { right: 22%; width: 6%; bottom: 66%; height: 14%; }
@@ -477,6 +592,23 @@
 .total__note { font-size: var(--step--2); color: var(--muted); margin-top: var(--gap-3); }
 .total__row--grand { border-top: 2px solid var(--ink); margin-top: var(--gap-2); }
 .total__row--grand .total__value { color: var(--brand-500); font-size: var(--step-2); }
+
+/* Закреплённая панель обязана оставить место складу. Дом с итогом
+   во весь экран — это дом, к которому нечего нести: блоки под ним
+   просто не помещаются. Поэтому на телефоне итог ужимается до предела,
+   а подписи-уточнения уходят вниз, в пояснения под складом.
+   Стоять этот блок обязан ПОСЛЕ обычных правил .total: при равной
+   силе побеждает последний, и написанный выше он бы просто не работал. */
+@media (max-width: 999px) {
+  .house__note { margin-top: var(--gap-1); }
+  .total { padding: var(--gap-2) var(--gap-3); margin-top: var(--gap-2); }
+  .total__row { padding: 2px 0; gap: var(--gap-3); }
+  .total__label { font-size: var(--step--2); }
+  .total__label .card__muted { display: none; }
+  .total__value { font-size: var(--step--1); }
+  .total__row--grand { margin-top: var(--gap-1); }
+  .total__row--grand .total__value { font-size: var(--step-1); }
+}
 
 /* Склад блоков. */
 .shelf { display: grid; gap: var(--gap-3); }
@@ -514,13 +646,82 @@
 .block.is-required { cursor: default; opacity: .85; }
 
 .block__grip { width: 18px; color: var(--muted-2); line-height: 1; letter-spacing: 2px; }
-.block__title { font-weight: 600; }
+.block__title { font-weight: 600; min-width: 0; }
 .block__price { font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
+
+/* На узком экране цена в третьей колонке не переносится и не сжимается —
+   и весь склад уезжал за правый край экрана вместе с домом. Поэтому
+   на телефоне цена встаёт под названием отдельной строкой. */
+@media (max-width: 560px) {
+  .block { grid-template-columns: auto 1fr; }
+  .block__price { grid-column: 2; white-space: normal; }
+}
+
+/* --- Группа вариантов: один блок вместо трёх --------------------------- */
+
+.block--group { align-items: start; }
+/* Цена активного варианта нужна только в руке: на складе её показывают
+   строки переключателя. */
+.block--group > .block__price { display: none; }
+
+.block__variants {
+  grid-column: 1 / -1;
+  display: grid; gap: var(--gap-2);
+  margin-top: var(--gap-2);
+}
+
+.variant {
+  font: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 18px 1fr auto; gap: var(--gap-3);
+  align-items: center;
+  min-height: 44px; padding: var(--gap-2) var(--gap-3);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-2); color: var(--ink-2);
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+.variant:hover { border-color: var(--brand-300); }
+.variant__mark {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--muted-2); flex: none;
+}
+.variant.is-active { border-color: var(--brand-500); background: var(--brand-50); color: var(--ink); }
+.variant.is-active .variant__mark {
+  border-color: var(--brand-500);
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 9px var(--brand-500);
+}
+.variant__title { font-size: var(--step--1); font-weight: 600; }
+.variant__price { font-size: var(--step--2); color: var(--muted); }
+@media (max-width: 560px) {
+  .variant { grid-template-columns: 18px 1fr; }
+  .variant__price { grid-column: 2; }
+}
+
+.block__hint {
+  grid-column: 1 / -1;
+  font-size: var(--step--2); color: var(--muted);
+  margin-top: var(--gap-2);
+}
+
+/* Без JavaScript перетаскивания нет, и галочки перестают быть скрытыми:
+   иначе обещание «страница работает без JS» пустое — отмечать было бы
+   нечего, а кнопка «Пересчитать» ничего бы не считала. */
+.no-js .block__check {
+  position: static; width: auto; height: auto; overflow: visible;
+  clip: auto; clip-path: none; white-space: normal;
+  grid-column: 1 / -1; font-size: var(--step--1); color: var(--ink-2);
+}
+.no-js .block__check[type="checkbox"] { width: 22px; height: 22px; }
+.no-js .block { cursor: default; }
 .block__more {
   grid-column: 1 / -1; font-size: var(--step--1); color: var(--ink-2);
   border-top: 1px solid var(--line-soft); padding-top: var(--gap-3); margin-top: var(--gap-2);
 }
 .block__more[hidden] { display: none; }
+
+/* «Подробнее» — отдельной строкой во всю ширину. Иначе кнопка встаёт
+   в первую колонку сетки и растягивает её на свою ширину: название
+   блока отъезжает от края и висит посреди карточки. */
+.block > .clause__toggle { grid-column: 1 / -1; justify-self: start; }
 
 /* Блок в руке: приподнят над пальцем на 56px, иначе человек тащит то,
    чего не видит. Позиционирование только трансформом — layout не трогаем. */
@@ -534,12 +735,23 @@
   border-color: var(--brand-500);
   transform: translate3d(0, 0, 0) scale(1.05);
 }
+/* В руке от блока нужны название и цена. Переключатель формата
+   и пояснения делают карточку в полэкрана — она закрывает ровно тот дом,
+   к которому её несут. */
+.block--dragging .block__variants,
+.block--dragging .block__hint,
+.block--dragging .clause__toggle { display: none; }
+.block--dragging.block--group > .block__price { display: inline; }
 .block--ghost { opacity: .35; }
 
 .house__hint {
   position: absolute; inset-inline: 0; top: var(--gap-3);
   text-align: center; font-size: var(--step--2); color: var(--muted);
   pointer-events: none;
+}
+.house__note {
+  text-align: center; font-size: var(--step--2); color: var(--muted);
+  margin-top: var(--gap-2);
 }
 
 .warnings { display: grid; gap: var(--gap-3); margin-top: var(--gap-4); }

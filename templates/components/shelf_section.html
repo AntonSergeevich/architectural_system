@@ -1,13 +1,5 @@
 {% if section.group %}
-  <div class="shelf__choice">
-    <p class="shelf__choice-head">
-      {{ section.group.title }}
-      <span class="card__muted">— выберите один вариант</span>
-    </p>
-    <div class="shelf__group">
-      {% for module in section.modules %}{% include "components/block.html" %}{% endfor %}
-    </div>
-  </div>
+  {% include "components/block_group.html" %}
 {% else %}
   <div class="shelf__group">
     {% for module in section.modules %}{% include "components/block.html" %}{% endfor %}

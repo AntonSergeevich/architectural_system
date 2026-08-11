@@ -104,7 +104,7 @@ def _postgres_settings():
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": name,
-            "USER": env("POSTGRES_USER", "darya"),
+            "USER": env("POSTGRES_USER", "dades"),
             "PASSWORD": env("POSTGRES_PASSWORD", ""),
             "HOST": env("POSTGRES_HOST", "localhost"),
             "PORT": env("POSTGRES_PORT", "5432"),
@@ -227,6 +227,20 @@ GETPLATINUM_VAT = env("GETPLATINUM_VAT", "none")
 # Пока адрес и ключ не заданы, приём оплат выключен: кнопка не
 # показывается, счёт отмечается оплаченным вручную.
 PAYMENTS_ENABLED = bool(GETPLATINUM_API_URL and GETPLATINUM_API_KEY)
+
+# --- Уведомления: Telegram --------------------------------------------------
+# Бот @daarch_bot пишет Дарье о новых заявках: почту она смотрит раз в день,
+# а заявка без быстрого ответа уходит к тому, кто ответил первым.
+#
+# Токен — это пароль от бота: по нему можно писать от её имени. Поэтому он
+# живёт только в переменных окружения (.env на сервере, права 600) и никогда
+# в репозитории.
+#
+# TELEGRAM_CHAT_ID — адресат, а не бот. Узнать свой: написать боту любое
+# сообщение и открыть https://api.telegram.org/bot<ТОКЕН>/getUpdates —
+# в ответе будет message.chat.id. Пока поля пустые, уведомления не шлются.
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID", "")
 
 # --- Регламент -------------------------------------------------------------
 # Часы работы. Из них считается обещанный срок ответа: не календарные сутки,

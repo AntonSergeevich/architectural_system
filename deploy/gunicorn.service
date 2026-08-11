@@ -1,20 +1,20 @@
-# Копировать в /etc/systemd/system/darya.service
-#   sudo systemctl daemon-reload && sudo systemctl enable --now darya
+# Копировать в /etc/systemd/system/dades.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now dades
 [Unit]
-Description=Gunicorn для daarch.ru
+Description=Gunicorn для da-des.ru
 After=network.target postgresql.service
 
 [Service]
 Type=notify
-User=daarch
+User=dades
 Group=www-data
-WorkingDirectory=/srv/daarch
-EnvironmentFile=/srv/daarch/.env
-RuntimeDirectory=daarch
+WorkingDirectory=/srv/dades
+EnvironmentFile=/srv/dades/.env
+RuntimeDirectory=dades
 # Сокет вместо порта: nginx и приложение на одной машине, лишний сетевой
 # стек между ними не нужен, а права на файл сокета проверяются ядром.
-ExecStart=/srv/daarch/.venv/bin/gunicorn config.wsgi:application \
-    --bind unix:/run/daarch/gunicorn.sock \
+ExecStart=/srv/dades/.venv/bin/gunicorn config.wsgi:application \
+    --bind unix:/run/dades/gunicorn.sock \
     --workers 3 \
     --timeout 60 \
     --access-logfile - \

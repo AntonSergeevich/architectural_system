@@ -1,6 +1,7 @@
 """Публичный сайт: страницы открываются, заявка сохраняется, куки пишутся."""
 
 from decimal import Decimal
+from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
@@ -9,7 +10,7 @@ from django.urls import reverse
 from apps.catalog.models import ServiceModule
 from apps.crm.models import Lead
 
-from . import views
+from . import notify, views
 from .models import CookieConsent, LegalDocument, PersonalDataConsent
 
 
@@ -221,6 +222,85 @@ class LeadTests(TestCase):
         response = self.client.post(reverse("public:contacts"), self._payload(website="spam"))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Lead.objects.exists())
+
+
+class ShelfTests(TestCase):
+    """Группа взаимоисключающих услуг — один блок, а не несколько.
+
+    Место в доме одно: крыша одна, окна одни. Три отдельных блока
+    на складе означали, что человек кладёт «выезды», видит крышу,
+    кладёт «надзор» — снова ту же крышу, а как убрать конкретный
+    блок, не понимает вовсе.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_group_is_one_draggable_block(self):
+        response = self.client.get(reverse("public:constructor"))
+        sections = response.context["realization_sections"]
+        roof = [s for s in sections if s["group"] and s["group"].house_part == "roof"]
+        self.assertEqual(len(roof), 1, "крыша должна быть одной секцией")
+        self.assertGreater(len(roof[0]["modules"]), 1, "форматов надзора несколько")
+        self.assertIn(roof[0]["active"], roof[0]["modules"])
+
+    def test_one_house_part_never_has_two_draggable_blocks(self):
+        """Иначе на один слот в доме претендуют две карточки склада.
+
+        Обязательные модули не в счёт: их не перетаскивают и не снимают,
+        фундамент уложен изначально.
+        """
+        response = self.client.get(reverse("public:constructor"))
+        parts = []
+        for key in ("design_sections", "realization_sections", "extra_sections"):
+            for section in response.context[key]:
+                module = section.get("active") or section["modules"][0]
+                if module.house_part and not module.is_required:
+                    parts.append(module.house_part)
+        self.assertEqual(len(parts), len(set(parts)), f"на один элемент дома два блока: {parts}")
+
+    def test_every_module_keeps_its_checkbox(self):
+        """Без JavaScript расчёт делает форма, значит галочки нужны все."""
+        body = self.client.get(reverse("public:constructor")).content.decode()
+        for module in ServiceModule.objects.filter(is_active=True):
+            self.assertIn(f'value="{module.pk}"', body)
+
+
+class TelegramNotifyTests(TestCase):
+    """Уведомление не имеет права уронить заявку."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_disabled_without_settings(self):
+        with self.settings(TELEGRAM_BOT_TOKEN="", TELEGRAM_CHAT_ID=""):
+            self.assertFalse(notify.enabled())
+            self.assertFalse(notify.send("привет"))
+
+    def test_lead_is_saved_even_if_telegram_falls(self):
+        def boom(_lead):
+            raise RuntimeError("телеграм лёг")
+
+        with mock.patch.object(views.notify, "new_lead", boom):
+            response = self.client.post(
+                reverse("public:contacts"),
+                {
+                    "name": "Мария",
+                    "phone": "8 913 000 00 02",
+                    "area": "60",
+                    "rooms": 2,
+                    "personal_data_consent": "on",
+                },
+            )
+        self.assertRedirects(response, reverse("public:thanks"))
+        self.assertTrue(Lead.objects.exists())
+
+    def test_message_escapes_user_text(self):
+        self.assertEqual(notify.escape("<b>Вася</b>"), "&lt;b&gt;Вася&lt;/b&gt;")
 
 
 class CookieTests(TestCase):

@@ -11,20 +11,14 @@
     {% if module.is_required %}<span class="card__muted"> · входит всегда</span>{% endif %}
   </span>
 
-  <span class="block__price">
-    {% if module.unit == 'custom' %}по расчёту
-    {% elif module.unit == 'sqm' %}{{ module.price|money }}/м²
-    {% elif module.unit == 'month' %}{{ module.price|money }}/мес
-    {% elif module.unit == 'stage' %}{{ module.price|money }}/этап
-    {% elif module.unit == 'visit' %}{{ module.price|money }}/выезд
-    {% elif module.unit == 'hours' %}{{ module.price|money }} за {{ module.included_units|floatformat:"-1" }} ч, далее +{{ module.extra_unit_price|money }}/ч
-    {% else %}{{ module.price|money }}{% endif %}
-  </span>
+  <span class="block__price">{% include "components/module_price.html" %}</span>
 
   {% comment %} Галочка — источник правды для формы: она же уходит на сервер при
-     выключенном JavaScript, и она же делает блок доступным с клавиатуры. {% endcomment %}
-  <label class="visually-hidden" for="module-{{ module.pk }}">{{ module.title }}</label>
-  <input class="visually-hidden" type="checkbox" name="modules" id="module-{{ module.pk }}"
+     выключенном JavaScript, и она же делает блок доступным с клавиатуры.
+     Без JS она перестаёт быть скрытой — иначе обещание «работает без
+     JavaScript» пустое: отмечать было бы нечего. {% endcomment %}
+  <label class="block__check visually-hidden" for="module-{{ module.pk }}">{{ module.title }}</label>
+  <input class="block__check visually-hidden" type="checkbox" name="modules" id="module-{{ module.pk }}"
          value="{{ module.pk }}"
          {% if module.pk in selected_ids %}checked{% endif %}
          {% if module.is_required %}disabled{% endif %}>
@@ -33,6 +27,9 @@
 
   <div class="block__more" id="more-{{ module.pk }}" hidden>
     {% if module.description %}<p>{{ module.description }}</p>{% endif %}
+    {% if module.unit == 'hours' and module.extra_unit_price %}
+      <p><strong>Дальше:</strong> +{{ module.extra_unit_price|money }} за каждый следующий час</p>
+    {% endif %}
     {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
     {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days }} рабочих дней</p>{% endif %}
     {% if module.not_included %}<p><strong>Не входит:</strong> {{ module.not_included }}</p>{% endif %}

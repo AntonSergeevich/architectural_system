@@ -1,6 +1,6 @@
 # Установка на BEGET VPS
 
-Пошагово, с нуля. Домен: **daarch.ru**. Сервер: **155.212.209.229**.
+Пошагово, с нуля. Домен: **da-des.ru**. Сервер: **155.212.209.229**.
 
 ---
 
@@ -13,7 +13,7 @@
 www   A   155.212.209.229
 ```
 
-Проверить: `dig +short daarch.ru`. Обновление занимает от минут до суток —
+Проверить: `dig +short da-des.ru`. Обновление занимает от минут до суток —
 дальше можно идти, пока оно идёт.
 
 ---
@@ -23,17 +23,17 @@ www   A   155.212.209.229
 ```bash
 ssh root@155.212.209.229
 
-adduser daarch
-usermod -aG sudo daarch
+adduser dades
+usermod -aG sudo dades
 apt update && apt upgrade -y
 apt install -y python3-venv python3-dev build-essential \
                postgresql postgresql-contrib nginx certbot python3-certbot-nginx git
 ```
 
-Дальше всё — от пользователя `daarch`:
+Дальше всё — от пользователя `dades`:
 
 ```bash
-su - daarch
+su - dades
 ```
 
 ---
@@ -45,14 +45,14 @@ sudo -u postgres psql
 ```
 
 ```sql
-CREATE DATABASE daarch;
-CREATE USER daarch WITH PASSWORD 'придумайте-длинный-пароль';
-ALTER ROLE daarch SET client_encoding TO 'utf8';
-ALTER ROLE daarch SET default_transaction_isolation TO 'read committed';
-ALTER ROLE daarch SET timezone TO 'Asia/Krasnoyarsk';
-GRANT ALL PRIVILEGES ON DATABASE daarch TO daarch;
-\c daarch
-GRANT ALL ON SCHEMA public TO daarch;
+CREATE DATABASE dades;
+CREATE USER dades WITH PASSWORD 'придумайте-длинный-пароль';
+ALTER ROLE dades SET client_encoding TO 'utf8';
+ALTER ROLE dades SET default_transaction_isolation TO 'read committed';
+ALTER ROLE dades SET timezone TO 'Asia/Krasnoyarsk';
+GRANT ALL PRIVILEGES ON DATABASE dades TO dades;
+\c dades
+GRANT ALL ON SCHEMA public TO dades;
 \q
 ```
 
@@ -65,9 +65,9 @@ GRANT ALL ON SCHEMA public TO daarch;
 ## 4. Код
 
 ```bash
-sudo mkdir -p /srv/daarch && sudo chown daarch:daarch /srv/daarch
-git clone https://github.com/AntonSergeevich/architectural_system.git /srv/daarch
-cd /srv/daarch
+sudo mkdir -p /srv/dades && sudo chown dades:dades /srv/dades
+git clone https://github.com/AntonSergeevich/architectural_system.git /srv/dades
+cd /srv/dades
 
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -88,13 +88,32 @@ nano .env
 |---|---|
 | `DJANGO_SECRET_KEY` | Длинная случайная строка. Сгенерировать: `python3 -c "import secrets;print(secrets.token_urlsafe(64))"` |
 | `DJANGO_DEBUG` | `0` |
-| `DJANGO_ALLOWED_HOSTS` | `daarch.ru,www.daarch.ru` |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://daarch.ru,https://www.daarch.ru` |
-| `SITE_URL` | `https://daarch.ru` |
+| `DJANGO_ALLOWED_HOSTS` | `da-des.ru,www.da-des.ru` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://da-des.ru,https://www.da-des.ru` |
+| `SITE_URL` | `https://da-des.ru` |
 | `POSTGRES_*` | **Снять комментарии** с этих пяти строк и подставить то, что задали в пункте 3. По умолчанию они закомментированы: без них проект работает на SQLite, и это правильно для локальной разработки, но не для сервера |
-| `EMAIL_*` | Почта для уведомлений |
+| `EMAIL_*` | Почта Дарьи `dark-ost@ya.ru`. Пароль — **не** пароль от почты, а пароль приложения: Яндекс ID → Безопасность → Пароли приложений → Почта |
+| `TELEGRAM_BOT_TOKEN` | Токен бота `@daarch_bot` от @BotFather |
+| `TELEGRAM_CHAT_ID` | Кому бот пишет — как узнать, ниже |
 
 Закрыть файл от чужих глаз: `chmod 600 .env`.
+
+**Про токен бота.** Это пароль от бота: у кого он есть, тот пишет от имени
+Дарьи. Поэтому токен живёт только здесь, в `.env` на сервере, и никогда
+в репозитории. Токен, попавший в git, считается скомпрометированным:
+его отзывают у @BotFather и выпускают новый — даже если коммит потом
+удалили, история остаётся у всех, кто успел склонировать.
+
+**Как узнать `TELEGRAM_CHAT_ID`.** Бот не может написать первым — это
+ограничение Telegram, а не настройки. Поэтому:
+
+1. Дарья открывает `@daarch_bot` и отправляет ему любое сообщение.
+2. В браузере открыть `https://api.telegram.org/bot<ТОКЕН>/getUpdates`.
+3. Взять из ответа `message.chat.id` — это и есть значение.
+
+Проверить, что всё сошлось: `.venv/bin/python manage.py telegram_test` —
+в Telegram должно прийти сообщение «Проверка связи». Пока переменные
+пустые, уведомления просто не отправляются, всё остальное работает.
 
 ```bash
 .venv/bin/python manage.py migrate
@@ -109,20 +128,20 @@ nano .env
 ## 6. Gunicorn
 
 ```bash
-sudo cp deploy/gunicorn.service /etc/systemd/system/daarch.service
+sudo cp deploy/gunicorn.service /etc/systemd/system/dades.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now daarch
-systemctl status daarch
+sudo systemctl enable --now dades
+systemctl status dades
 ```
 
-Если не поднялся — журнал: `sudo journalctl -u daarch -n 50 --no-pager`.
+Если не поднялся — журнал: `sudo journalctl -u dades -n 50 --no-pager`.
 
 ---
 
 ## 7. Nginx и HTTPS
 
 ```bash
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/daarch
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/dades
 ```
 
 **Сначала поднимаем только 80-й порт** — блоки с `listen 443` временно
@@ -130,11 +149,11 @@ sudo cp deploy/nginx.conf /etc/nginx/sites-available/daarch
 
 ```bash
 sudo mkdir -p /var/www/certbot
-sudo ln -s /etc/nginx/sites-available/daarch /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/dades /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
-sudo certbot --nginx -d daarch.ru -d www.daarch.ru
+sudo certbot --nginx -d da-des.ru -d www.da-des.ru
 ```
 
 После сертификата раскомментировать блоки 443 и ещё раз
@@ -143,8 +162,8 @@ sudo certbot --nginx -d daarch.ru -d www.daarch.ru
 Права на статику:
 
 ```bash
-sudo chmod o+x /srv /srv/daarch
-sudo chown -R daarch:www-data /srv/daarch/staticfiles /srv/daarch/media
+sudo chmod o+x /srv /srv/dades
+sudo chown -R dades:www-data /srv/dades/staticfiles /srv/dades/media
 ```
 
 ---
@@ -152,16 +171,37 @@ sudo chown -R daarch:www-data /srv/daarch/staticfiles /srv/daarch/media
 ## 8. Регулярные задачи
 
 ```bash
-crontab -u daarch /srv/daarch/deploy/crontab
-crontab -u daarch -l
-sudo mkdir -p /srv/backups && sudo chown daarch:daarch /srv/backups
+crontab -u dades /srv/dades/deploy/crontab
+crontab -u dades -l
+sudo mkdir -p /srv/backups && sudo chown dades:dades /srv/backups
 ```
 
-Проверить бэкап руками: `/srv/daarch/deploy/backup.sh`.
+Проверить бэкап руками: `/srv/dades/deploy/backup.sh`.
 
 ---
 
-## 9. Приём оплат: GetPlatinum
+## 9. Контент: фото, тексты, регламент
+
+Всё, что видно на сайте, правится Дарьей без программиста. Вход:
+`https://da-des.ru/admin/`, логин и пароль — те, что задали
+в `createsuperuser`.
+
+| Что | Где | Куда попадает |
+|---|---|---|
+| **Фото Дарьи** | Настройки сайта → **Фото** | Первый экран блока «Обо мне» на главной и страница «Обо мне» |
+| Текст о себе, телефон, почта, Telegram | Настройки сайта | Шапка, подвал, контакты, договоры |
+| Регламент | Настройки сайта → Регламент | Публикуется дословно и подтверждается в договоре |
+| Цены | Каталог → Модули услуг | Конструктор, мини-расчёт на главной, КП |
+| Работы | Портфолио → Объекты и фотографии | Раздел «Работы» |
+| Тексты документов и договоров | Юридические документы, Шаблоны договоров | Правовые страницы и договоры |
+
+Фото загружается обычной кнопкой «Выберите файл» и попадает
+в `/srv/dades/media/site/`. Если картинка не открывается — права
+на каталог: `sudo chown -R dades:www-data /srv/dades/media`.
+
+---
+
+## 10. Приём оплат: GetPlatinum
 
 Пока реквизиты не заданы, приём оплат **выключен**: кнопка не показывается,
 счёт помечается оплаченным вручную в кабинете. Это сделано намеренно —
@@ -186,12 +226,12 @@ GETPLATINUM_VAT=none
 `0` означает другое — ставку 0 %, и ошибка здесь ведёт к проблемам
 с налоговым учётом.
 
-4. `sudo systemctl restart daarch`
+4. `sudo systemctl restart dades`
 5. Выставить счёт на небольшую сумму и оплатить его по-настоящему.
 
 **Адрес для уведомлений мы передаём сами** в каждом запросе
 (`notificationUrl`), настраивать его в их кабинете не нужно. Он такой:
-`https://daarch.ru/pay/getplatinum/callback/`
+`https://da-des.ru/pay/getplatinum/callback/`
 
 **Что важно знать про их коллбэк.** Он приходит ровно один раз: если
 ответить не 200, повторной попытки не будет и платёж потеряется.
@@ -206,11 +246,11 @@ GETPLATINUM_VAT=none
 
 ---
 
-## 10. Обновление
+## 11. Обновление
 
 ```bash
-ssh daarch@155.212.209.229
-cd /srv/daarch && ./deploy/deploy.sh
+ssh dades@155.212.209.229
+cd /srv/dades && ./deploy/deploy.sh
 ```
 
 Скрипт сам делает бэкап, тянет изменения, ставит зависимости, применяет
@@ -223,26 +263,26 @@ cd /srv/daarch && ./deploy/deploy.sh
 
 | Симптом | Куда смотреть |
 |---|---|
-| 502 Bad Gateway | `sudo journalctl -u daarch -n 50` — приложение упало или не стартовало |
+| 502 Bad Gateway | `sudo journalctl -u dades -n 50` — приложение упало или не стартовало |
 | 400 Bad Request | `DJANGO_ALLOWED_HOSTS` не содержит домен |
 | CSRF verification failed | `DJANGO_CSRF_TRUSTED_ORIGINS` без `https://` или без домена |
-| Нет стилей | Не выполнен `collectstatic` либо нет прав: `sudo chmod o+x /srv /srv/daarch` |
+| Нет стилей | Не выполнен `collectstatic` либо нет прав: `sudo chmod o+x /srv /srv/dades` |
 | Письма не уходят | Порт и режим шифрования: 465 — SSL, 587 — STARTTLS. Проверить `EMAIL_HOST_PASSWORD` — для Яндекса нужен пароль приложения |
-| Оплата не отмечается | `sudo journalctl -u daarch \| grep GetPlatinum`. Если в журнале «подпись не сошлась» — система уже сверилась через `/status`, счёт закроется сам либо по крону `sync_payments` |
-| Миграции падают на правах | `GRANT ALL ON SCHEMA public TO daarch;` из пункта 3 |
+| Оплата не отмечается | `sudo journalctl -u dades \| grep GetPlatinum`. Если в журнале «подпись не сошлась» — система уже сверилась через `/status`, счёт закроется сам либо по крону `sync_payments` |
+| Миграции падают на правах | `GRANT ALL ON SCHEMA public TO dades;` из пункта 3 |
 
 Откат на предыдущую версию:
 
 ```bash
-cd /srv/daarch
+cd /srv/dades
 git log --oneline -5
 git checkout <хеш>
 .venv/bin/python manage.py migrate
-sudo systemctl restart daarch
+sudo systemctl restart dades
 ```
 
 Восстановление базы из копии:
 
 ```bash
-gunzip -c /srv/backups/db_ГГГГ-ММ-ДД_ЧЧ-ММ.sql.gz | psql -U daarch daarch
+gunzip -c /srv/backups/db_ГГГГ-ММ-ДД_ЧЧ-ММ.sql.gz | psql -U dades dades
 ```
