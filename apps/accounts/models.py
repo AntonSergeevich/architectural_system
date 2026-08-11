@@ -1,5 +1,7 @@
 """Пользователи и роли."""
 
+import secrets
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
@@ -89,6 +91,72 @@ class User(AbstractUser):
 
     def get_short_name(self):
         return self.full_name.split(" ")[0] if self.full_name else str(self)
+
+
+class TelegramAccount(models.Model):
+    """Привязка Telegram к аккаунту кабинета.
+
+    Уведомления — дело добровольное. Заказчик, которому важно знать
+    о каждом шаге, нажимает кнопку и получает сообщения в мессенджер,
+    которым и так пользуется каждый день. Тому, кому это не нужно,
+    ничего не приходит — и это тоже осознанный выбор, а не забытая
+    настройка.
+
+    Привязка идёт через код: кабинет выдаёт ссылку `t.me/бот?start=КОД`,
+    бот присылает нам этот код вместе с chat_id. Так мы узнаём chat_id,
+    не спрашивая его у человека — спрашивать бесполезно, никто не знает
+    своего chat_id.
+    """
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="telegram", verbose_name="Пользователь"
+    )
+    chat_id = models.CharField("Chat ID", max_length=32, blank=True, db_index=True)
+    username = models.CharField("Ник в Telegram", max_length=64, blank=True)
+    link_code = models.CharField("Код привязки", max_length=24, unique=True)
+    linked_at = models.DateTimeField("Привязан", null=True, blank=True)
+
+    # Что присылать. Разное по смыслу: «этап поменялся» — это раз в неделю,
+    # «новое сообщение» — это может быть десять раз за вечер.
+    notify_stages = models.BooleanField("Смена этапа", default=True)
+    notify_tasks = models.BooleanField("Новые задачи для меня", default=True)
+    notify_messages = models.BooleanField("Сообщения", default=True)
+    notify_money = models.BooleanField("Деньги и договоры", default=True)
+
+    class Meta:
+        verbose_name = "Telegram"
+        verbose_name_plural = "Telegram"
+
+    def __str__(self):
+        return f"{self.user} → {self.username or self.chat_id or 'не привязан'}"
+
+    @property
+    def is_linked(self):
+        return bool(self.chat_id)
+
+    def wants(self, kind):
+        return {
+            "stage": self.notify_stages,
+            "task": self.notify_tasks,
+            "message": self.notify_messages,
+            "money": self.notify_money,
+        }.get(kind, True)
+
+    @classmethod
+    def for_user(cls, user):
+        """Привязка пользователя; код заводится сразу, до всякой привязки."""
+        account, _ = cls.objects.get_or_create(
+            user=user, defaults={"link_code": secrets.token_urlsafe(9)}
+        )
+        return account
+
+    def unlink(self):
+        self.chat_id = ""
+        self.username = ""
+        self.linked_at = None
+        # Код меняем: старая ссылка не должна работать после отвязки.
+        self.link_code = secrets.token_urlsafe(9)
+        self.save(update_fields=["chat_id", "username", "linked_at", "link_code"])
 
 
 class LoginCode(models.Model):

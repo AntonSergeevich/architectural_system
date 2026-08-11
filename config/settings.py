@@ -241,6 +241,12 @@ PAYMENTS_ENABLED = bool(GETPLATINUM_API_URL and GETPLATINUM_API_KEY)
 # в ответе будет message.chat.id. Пока поля пустые, уведомления не шлются.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID", "")
+# Имя бота без «@» — из него собирается ссылка привязки в кабинете.
+TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", "daarch_bot")
+# Секрет в адресе вебхука. Адрес знает только Telegram, но адрес
+# без секрета — это открытая дверь: постучаться в неё может кто угодно
+# и прислать что угодно от имени бота.
+TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", "")
 
 # --- Регламент -------------------------------------------------------------
 # Часы работы. Из них считается обещанный срок ответа: не календарные сутки,

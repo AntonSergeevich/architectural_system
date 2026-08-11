@@ -18,6 +18,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.contracts.models import Contract
+from apps.core import notify
 from apps.core.forms import RevisionForm
 from apps.core.models import SiteSettings
 from apps.core.utils import working_deadline
@@ -80,6 +81,7 @@ def project(request):
             "invoices": obj.invoices.all(),
             "is_owner_view": False,
             "section": "my_project",
+            **services.telegram_context(request.user),
         },
     )
 
@@ -112,6 +114,7 @@ def contract_sign(request, pk):
         f"Подписанный договор «{contract}» загружен.",
         stage=contract.stage,
     )
+    notify.safe(notify.contract_signed, contract)
     messages.success(request, "Договор подписан и сохранён. Спасибо.")
     return redirect("cabinet:my_project")
 
@@ -143,6 +146,7 @@ def budget_decide(request, pk):
         ("Согласовано: " if accepted else "Отклонено: ") + change.title,
         stage=change.stage,
     )
+    notify.safe(notify.budget_decided, change)
     messages.success(
         request,
         "Изменение согласовано, сумма проекта обновлена."

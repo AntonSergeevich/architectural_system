@@ -17,6 +17,10 @@
       </div>
       <button class="btn btn--block" type="submit">Войти</button>
     </form>
+    <p class="note" style="margin-top: var(--gap-5)">
+      <a href="{% url 'accounts:password_reset' %}">Забыли пароль?</a>
+      Пришлю ссылку на ту почту, которой вы входите.
+    </p>
   </div>
 </section>
 {% endblock %}

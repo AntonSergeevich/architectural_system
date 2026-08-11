@@ -1,0 +1,74 @@
+{% comment %}
+  Подключение уведомлений.
+
+  Кнопка, а не инструкция: «узнайте свой chat_id и введите его» —
+  это гарантия нуля подключений. Ссылка открывает бота с кодом,
+  бот сам присылает нам chat_id.
+
+  Уведомления добровольные: не нажал — ничего не приходит. Кабинет
+  при этом работает одинаково, бот только избавляет от необходимости
+  в него заглядывать.
+{% endcomment %}
+<section class="panel" id="telegram">
+  <header class="panel__head">
+    <h2>Уведомления</h2>
+  </header>
+
+  {% if telegram.is_linked %}
+    <p class="tg-status">
+      <span class="badge badge--ok">подключено</span>
+      {% if telegram.username %}<span class="muted">@{{ telegram.username }}</span>{% endif %}
+    </p>
+    <p class="muted">Отметьте, о чём присылать. Остальное просто не придёт.</p>
+
+    <form class="tg-prefs" method="post" action="{% url 'cabinet:telegram_prefs' %}">
+      {% csrf_token %}
+      <label class="tg-pref">
+        <input type="checkbox" name="notify_stages" {% if telegram.notify_stages %}checked{% endif %}>
+        <span>Проект перешёл на следующий этап</span>
+      </label>
+      <label class="tg-pref">
+        <input type="checkbox" name="notify_tasks" {% if telegram.notify_tasks %}checked{% endif %}>
+        <span>Появилась задача для меня</span>
+      </label>
+      <label class="tg-pref">
+        <input type="checkbox" name="notify_messages" {% if telegram.notify_messages %}checked{% endif %}>
+        <span>Новое сообщение в переписке</span>
+      </label>
+      <label class="tg-pref">
+        <input type="checkbox" name="notify_money" {% if telegram.notify_money %}checked{% endif %}>
+        <span>Деньги и договоры</span>
+      </label>
+      <div class="tg-actions">
+        <button class="btn" type="submit">Сохранить</button>
+        <button class="btn btn--ghost" type="submit" name="unlink" value="1">Отключить</button>
+      </div>
+    </form>
+  {% else %}
+    <p class="muted">
+      {% if is_owner_view %}
+        Буду присылать сюда новые заявки, сообщения заказчиков и их решения
+        по смете.
+      {% else %}
+        Нажмите — и я буду присылать в Telegram, когда проект переходит
+        на следующий этап, когда от вас что-то нужно и когда приходит
+        новое сообщение. Ничего спрашивать не придётся.
+      {% endif %}
+    </p>
+
+    {% if telegram_link %}
+      <a class="btn tg-connect" href="{{ telegram_link }}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M21.9 4.3 18.8 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.4-4.9 8.9-8c.4-.3-.1-.5-.6-.2L7 12.1 2.4 10.7c-1-.3-1-1 .2-1.5l18-6.9c.8-.3 1.5.2 1.3 2z"/>
+        </svg>
+        Подключить Telegram
+      </a>
+      <p class="muted tg-hint">
+        Откроется бот {{ telegram_bot }}. Нажмите в нём «Запустить» —
+        и всё, больше ничего делать не нужно.
+      </p>
+    {% else %}
+      <p class="muted">Бот пока не настроен на сервере.</p>
+    {% endif %}
+  {% endif %}
+</section>

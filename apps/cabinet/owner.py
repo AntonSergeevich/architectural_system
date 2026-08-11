@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from apps.billing.models import Invoice
 from apps.catalog.models import ComplexityFactor, PriceHistory, PricingSettings, ServiceModule
 from apps.contracts.models import Contract, ContractClause, ContractTemplate
+from apps.core import notify
 from apps.core.models import SiteSettings
 from apps.crm.models import Client, Lead
 from apps.projects.models import (
@@ -326,6 +327,7 @@ def project_detail(request, pk):
             "signed_contracts": [c for c in project.contracts.all() if c.is_signed],
             "open_contracts": [c for c in project.contracts.all() if not c.is_signed],
             "is_owner_view": True,
+            **services.telegram_context(request.user),
         },
     )
 
@@ -335,6 +337,16 @@ def project_detail(request, pk):
 
 def _project_or_404(pk):
     return get_object_or_404(services.project_queryset(), pk=pk)
+
+
+def _tell_about_task(task):
+    """О задаче сообщаем только тому, кому её поставили.
+
+    Уведомление «Дарья поставила себе задачу» заказчику не нужно —
+    это шум, из-за которого перестают читать и нужное.
+    """
+    if task.who in {StageTask.Owner.CLIENT, StageTask.Owner.BOTH}:
+        notify.safe(notify.task_for_client, task)
 
 
 @login_required
@@ -348,7 +360,8 @@ def task_add(request, pk):
     preset_id = request.POST.get("preset")
     if preset_id:
         preset = get_object_or_404(TaskPreset, pk=preset_id)
-        StageTask.objects.create(stage=stage, title=preset.title, who=preset.who)
+        task = StageTask.objects.create(stage=stage, title=preset.title, who=preset.who)
+        _tell_about_task(task)
         messages.success(request, "Задача добавлена.")
         return redirect("cabinet:project_detail", pk=pk)
 
@@ -357,6 +370,7 @@ def task_add(request, pk):
         task = form.save(commit=False)
         task.stage = stage
         task.save()
+        _tell_about_task(task)
         messages.success(request, "Задача добавлена.")
     else:
         messages.error(request, "Напишите, что нужно сделать.")
@@ -426,6 +440,8 @@ def stage_update(request, pk):
     if "note" in request.POST:
         stage.note = request.POST["note"]
     stage.save()
+    if status in dict(Stage.Status.choices):
+        notify.safe(notify.stage_changed, stage)
     messages.success(request, f"Этап «{stage.title}» обновлён.")
     return redirect("cabinet:project_detail", pk=pk)
 
@@ -484,6 +500,7 @@ def budget_add(request, pk):
         change = form.save(commit=False)
         change.project = project
         change.save()
+        notify.safe(notify.budget_change, change)
         messages.success(
             request, "Изменение отправлено заказчику. В сумму проекта оно войдёт после согласования."
         )
@@ -514,6 +531,7 @@ def contract_add(request, pk):
         status=Contract.Status.SENT,
         sent_at=timezone.now(),
     )
+    notify.safe(notify.contract_sent, contract)
     messages.success(request, f"Договор «{contract}» отправлен заказчику в кабинет.")
     return redirect("cabinet:project_detail", pk=pk)
 
@@ -531,11 +549,43 @@ def message_send(request, pk):
         stage = None
         if request.POST.get("stage"):
             stage = Stage.objects.filter(pk=request.POST["stage"], project=project).first()
-        services.post_message(project, request.user, form.cleaned_data["text"], files, stage)
+        message = services.post_message(project, request.user, form.cleaned_data["text"], files, stage)
+        notify.safe(notify.new_message, message)
 
     if request.user.is_owner:
         return redirect(reverse("cabinet:project_detail", args=[project.pk]) + "#chat")
     return redirect(reverse("cabinet:my_project") + "#chat")
+
+
+@login_required
+@require_POST
+def telegram_prefs(request):
+    """Настройки уведомлений. Общие для обеих сторон.
+
+    Отключение — такое же право, как подключение: бот, от которого
+    нельзя отписаться, перестаёт быть помощником.
+    """
+    from apps.accounts.models import TelegramAccount
+
+    account = TelegramAccount.for_user(request.user)
+
+    if request.POST.get("unlink"):
+        account.unlink()
+        messages.success(request, "Telegram отключён. Всё то же самое видно в кабинете.")
+    else:
+        account.notify_stages = "notify_stages" in request.POST
+        account.notify_tasks = "notify_tasks" in request.POST
+        account.notify_messages = "notify_messages" in request.POST
+        account.notify_money = "notify_money" in request.POST
+        account.save(
+            update_fields=["notify_stages", "notify_tasks", "notify_messages", "notify_money"]
+        )
+        messages.success(request, "Настройки уведомлений сохранены.")
+
+    back = request.POST.get("back") or (
+        reverse("cabinet:dashboard") if request.user.is_owner else reverse("cabinet:my_project")
+    )
+    return redirect(f"{back}#telegram")
 
 
 def _visible_project(request, pk):

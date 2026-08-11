@@ -5,6 +5,7 @@
 в двух местах значит однажды получить две разные истории одного проекта.
 """
 
+from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
@@ -86,6 +87,28 @@ def unread_count(project, user):
         .filter(~Q(author_is_owner=is_owner))
         .count()
     )
+
+
+def telegram_context(user):
+    """Данные панели «Уведомления».
+
+    Код привязки заводится заранее, до всякого нажатия: ссылка должна
+    существовать в момент, когда человек решил её нажать, а не после
+    отдельного «сгенерировать код».
+    """
+    from apps.accounts.models import TelegramAccount
+
+    account = TelegramAccount.for_user(user)
+    bot = getattr(settings, "TELEGRAM_BOT_USERNAME", "")
+    return {
+        "telegram": account,
+        "telegram_bot": f"@{bot}" if bot else "",
+        "telegram_link": (
+            f"https://t.me/{bot}?start={account.link_code}"
+            if bot and settings.TELEGRAM_BOT_TOKEN and not account.is_linked
+            else ""
+        ),
+    }
 
 
 def project_queryset():

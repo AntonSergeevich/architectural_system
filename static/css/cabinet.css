@@ -439,6 +439,28 @@
 .chat__attach:hover span { border-color: var(--brand-400); color: var(--brand-500); }
 .chat__picked { margin: 0; }
 
+/* --- Уведомления в Telegram ------------------------------------------------
+   Кнопка, а не инструкция: «узнайте свой chat_id» — это ноль подключений. */
+
+.tg-status { display: flex; gap: var(--gap-2); align-items: center; margin-bottom: var(--gap-3); }
+.tg-connect {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  margin-top: var(--gap-3);
+}
+.tg-hint { margin-top: var(--gap-3); }
+
+.tg-prefs { display: grid; gap: var(--gap-2); margin-top: var(--gap-3); }
+.tg-pref {
+  display: flex; gap: var(--gap-3); align-items: center;
+  padding: var(--gap-2) var(--gap-3);
+  border: 1px solid var(--line-soft); border-radius: var(--radius-2);
+  font-size: var(--step--1); cursor: pointer;
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+.tg-pref:hover { border-color: var(--brand-300); background: var(--surface-2); }
+.tg-pref input { width: 20px; height: 20px; flex: none; }
+.tg-actions { display: flex; flex-wrap: wrap; gap: var(--gap-2); margin-top: var(--gap-2); }
+
 /* --- Поля ------------------------------------------------------------------ */
 
 .field--error input, .field--error select, .field--error textarea { border-color: var(--err); }
