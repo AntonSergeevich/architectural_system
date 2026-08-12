@@ -1,0 +1,37 @@
+{% comment %}
+  Ссылки на соцсети.
+
+  Интерьер смотрят глазами, и половина заказчиков приходит из ленты,
+  а не с сайта. Ссылка на Instagram публикуется с пометкой: Meta признана
+  в России экстремистской организацией, и упоминание без пометки —
+  нарушение. Пометка стоит рядом со ссылкой, а не спрятана в подвал:
+  прятать её и значит нарушать.
+{% endcomment %}
+{% if site.instagram or site.vk or site.pinterest or site.dzen or site.telegram %}
+  <div class="socials">
+    {% if site.telegram %}
+      <a class="social" href="https://t.me/{{ site.telegram|cut:'@' }}" target="_blank" rel="noopener">Telegram</a>
+    {% endif %}
+    {% if site.vk %}
+      <a class="social" href="{{ site.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
+    {% endif %}
+    {% if site.instagram %}
+      <a class="social" href="{{ site.instagram }}" target="_blank" rel="noopener">
+        Instagram<span class="social__mark">*</span>
+      </a>
+    {% endif %}
+    {% if site.pinterest %}
+      <a class="social" href="{{ site.pinterest }}" target="_blank" rel="noopener">Pinterest</a>
+    {% endif %}
+    {% if site.dzen %}
+      <a class="social" href="{{ site.dzen }}" target="_blank" rel="noopener">Дзен</a>
+    {% endif %}
+  </div>
+
+  {% if site.instagram %}
+    <p class="socials__note">
+      * Instagram принадлежит компании Meta, признанной в России
+      экстремистской организацией и запрещённой на территории РФ.
+    </p>
+  {% endif %}
+{% endif %}

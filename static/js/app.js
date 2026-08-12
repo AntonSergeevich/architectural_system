@@ -107,6 +107,84 @@
     });
   });
 
+  // --- Просмотр картинок ---------------------------------------------------
+  // Один просмотрщик на весь сайт: и мозаика объекта, и переписка в кабинете
+  // открывают кадр одинаково. Фото открывается поверх страницы, а не новой
+  // вкладкой: посмотреть и вернуться должно быть одним движением.
+  //
+  // Без JavaScript ссылка остаётся ссылкой на файл — кадр всё равно
+  // откроется, просто отдельной страницей.
+
+  function lightbox(links, index) {
+    var box = document.createElement('div');
+    var many = links.length > 1;
+    box.className = 'lightbox';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.innerHTML =
+      '<button class="lightbox__close" type="button" aria-label="Закрыть">×</button>' +
+      (many ? '<button class="lightbox__nav lightbox__nav--prev" type="button" aria-label="Предыдущий кадр">‹</button>' : '') +
+      (many ? '<button class="lightbox__nav lightbox__nav--next" type="button" aria-label="Следующий кадр">›</button>' : '') +
+      '<figure class="lightbox__figure"><img alt=""><figcaption></figcaption>' +
+      (many ? '<span class="lightbox__count"></span>' : '') +
+      '</figure>';
+
+    var img = box.querySelector('img');
+    var caption = box.querySelector('figcaption');
+    var count = box.querySelector('.lightbox__count');
+
+    function show(i) {
+      index = (i + links.length) % links.length;
+      var link = links[index];
+      var text = link.dataset.lightbox || '';
+      img.src = link.getAttribute('href');
+      img.alt = text;
+      caption.textContent = text;
+      box.setAttribute('aria-label', text || 'Просмотр изображения');
+      if (count) count.textContent = (index + 1) + ' из ' + links.length;
+    }
+
+    function close() {
+      box.classList.remove('is-open');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(function () { box.remove(); }, reduce ? 0 : 180);
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+      if (many && e.key === 'ArrowRight') show(index + 1);
+      if (many && e.key === 'ArrowLeft') show(index - 1);
+    }
+
+    box.addEventListener('click', function (e) {
+      if (e.target.closest('.lightbox__nav--next')) return show(index + 1);
+      if (e.target.closest('.lightbox__nav--prev')) return show(index - 1);
+      // Клик мимо картинки — тоже закрытие: так ведёт себя любой просмотрщик.
+      if (e.target === box || e.target.closest('.lightbox__close')) close();
+    });
+    document.addEventListener('keydown', onKey);
+
+    show(index);
+    document.body.appendChild(box);
+    requestAnimationFrame(function () { box.classList.add('is-open'); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('[data-lightbox]');
+    if (!link) return;
+    e.preventDefault();
+    // Листаем в пределах одной галереи: кадры объекта — это набор,
+    // а картинка из переписки — сама по себе. Набор помечен именем,
+    // потому что обложка и мозаика лежат в разных секциях страницы.
+    var name = link.dataset.gallery;
+    var links = name
+      ? Array.prototype.slice.call(
+          document.querySelectorAll('[data-lightbox][data-gallery="' + name + '"]')
+        )
+      : [link];
+    lightbox(links, Math.max(links.indexOf(link), 0));
+  });
+
   // --- Куки ---------------------------------------------------------------
   // Форма и без JS работает обычным POST с редиректом. Здесь только убираем
   // перезагрузку страницы, если скрипты доступны.

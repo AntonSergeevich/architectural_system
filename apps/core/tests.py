@@ -377,3 +377,90 @@ class FilterTests(TestCase):
         for number, expected in cases.items():
             with self.subTest(number=number):
                 self.assertEqual(workdays(number), expected)
+
+
+class PortfolioObjectTests(TestCase):
+    """Страница объекта: обложка, мозаика, видеоотзыв."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .models import PortfolioPhoto, PortfolioProject
+
+        cls.project = PortfolioProject.objects.create(
+            title="Квартира на Мира", city="Красноярск", year=2025, is_published=True
+        )
+        cls.first = PortfolioPhoto.objects.create(
+            project=cls.project, image="portfolio/1.jpg", order=1, caption="Гостиная"
+        )
+        cls.chosen = PortfolioPhoto.objects.create(
+            project=cls.project, image="portfolio/2.jpg", order=2, is_cover=True, caption="Кухня"
+        )
+        cls.wide = PortfolioPhoto.objects.create(
+            project=cls.project, image="portfolio/3.jpg", order=3, is_wide=True
+        )
+
+    def test_cover_is_the_chosen_photo_not_the_first_one(self):
+        """Порядок кадров задаётся под рассказ, обложка — под первый взгляд."""
+        self.assertEqual(self.project.cover, self.chosen)
+        self.assertEqual(self.project.gallery[0], self.chosen)
+        self.assertEqual(len(self.project.gallery), 3)
+
+    def test_without_a_chosen_cover_the_first_photo_is_used(self):
+        self.chosen.is_cover = False
+        self.chosen.save(update_fields=["is_cover"])
+        self.assertEqual(self.project.cover, self.first)
+
+    def test_page_shows_mosaic_and_zoom(self):
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn("mosaic", body)
+        self.assertIn('data-lightbox', body)
+        self.assertIn("mosaic__item--wide", body)
+
+    def test_client_block_hidden_without_consent(self):
+        """Ни имени, ни слов, ни видео — пока заказчик не разрешил."""
+        self.project.client_name = "Мария"
+        self.project.client_quote = "Всё понравилось"
+        self.project.save()
+        body = self.client.get(self.project.get_absolute_url()).content.decode()
+        self.assertNotIn("Всё понравилось", body)
+
+        self.project.client_consent = True
+        self.project.save(update_fields=["client_consent"])
+        body = self.client.get(self.project.get_absolute_url()).content.decode()
+        self.assertIn("Всё понравилось", body)
+
+
+class PressAndSocialsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_press_section_appears_only_when_there_is_press(self):
+        from .models import PressMention
+
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertNotIn("Обо мне пишут", body)
+
+        PressMention.objects.create(outlet="Красивые дома", title="Квартира с характером")
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn("Обо мне пишут", body)
+        self.assertIn("Квартира с характером", body)
+
+    def test_instagram_is_published_with_the_legal_notice(self):
+        """Упоминание Instagram без пометки — нарушение, а не мелочь."""
+        from .models import SiteSettings
+
+        site = SiteSettings.get()
+        site.instagram = "https://instagram.com/example"
+        site.save()
+
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn("instagram.com/example", body)
+        self.assertIn("экстремистской организацией", body)
+
+    def test_no_notice_when_there_is_no_instagram(self):
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertNotIn("экстремистской организацией", body)

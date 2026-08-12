@@ -32,6 +32,7 @@ from .models import (
     Objection,
     PersonalDataConsent,
     PortfolioProject,
+    PressMention,
     SiteSettings,
     StageNorm,
 )
@@ -158,6 +159,12 @@ def _hero_pricing():
     }
 
 
+def _press():
+    """Публикации в прессе. Пустой список — раздел не показывается вовсе:
+    пустая «Пресса» говорит громче, чем её отсутствие."""
+    return PressMention.objects.filter(is_published=True)
+
+
 def home(request):
     published = PortfolioProject.objects.filter(is_published=True)
     return render(
@@ -169,12 +176,13 @@ def home(request):
             "objections": Objection.objects.filter(is_published=True)[:3],
             "hero_pricing": _hero_pricing(),
             "stage_count": StageNorm.objects.count(),
+            "press": _press(),
         },
     )
 
 
 def about(request):
-    return render(request, "public/about.html", {})
+    return render(request, "public/about.html", {"press": _press()})
 
 
 def services(request):

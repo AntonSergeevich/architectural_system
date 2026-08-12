@@ -23,6 +23,16 @@ class SiteSettings(models.Model):
     whatsapp = models.CharField("WhatsApp", max_length=64, blank=True)
     city = models.CharField("Город", max_length=80, default="Красноярск")
 
+    # --- Соцсети -----------------------------------------------------------
+    # Интерьер смотрят глазами, и половина заказчиков приходит из ленты,
+    # а не с сайта. Ссылка на Instagram публикуется с обязательной
+    # пометкой: Meta признана в России экстремистской организацией,
+    # и упоминание без пометки — нарушение.
+    instagram = models.URLField("Instagram", blank=True)
+    vk = models.URLField("ВКонтакте", blank=True)
+    pinterest = models.URLField("Pinterest", blank=True)
+    dzen = models.URLField("Дзен", blank=True)
+
     legal_name = models.CharField(
         "Юридическое имя", max_length=200, default="Самозанятый"
     )
@@ -188,10 +198,20 @@ class PortfolioProject(models.Model):
     client_name = models.CharField("Имя заказчика", max_length=150, blank=True)
     client_quote = models.TextField("Слова заказчика", blank=True)
     client_photo = models.ImageField("Фото заказчика", upload_to="portfolio/clients/", blank=True)
+
+    # Видеоотзыв снять труднее, чем взять текстом, но стоит он несопоставимо
+    # больше: живой голос заказчика в кадре закрывает вопрос «а это точно
+    # не выдумано» целиком.
+    client_video = models.FileField(
+        "Видеоотзыв",
+        upload_to="portfolio/video/",
+        blank=True,
+        help_text="Файл MP4. Показывается только при согласии заказчика",
+    )
     client_consent = models.BooleanField(
         "Заказчик разрешил публикацию",
         default=False,
-        help_text="Без галочки имя, фото и слова заказчика на сайт не выводятся",
+        help_text="Без галочки имя, фото, видео и слова заказчика на сайт не выводятся",
     )
 
     is_published = models.BooleanField("Опубликован", default=False)
@@ -221,11 +241,29 @@ class PortfolioProject(models.Model):
 
     @property
     def show_client(self):
-        return self.client_consent and (self.client_name or self.client_quote)
+        return self.client_consent and (self.client_name or self.client_quote or self.client_video)
 
     @property
     def cover(self):
-        return self.photos.first()
+        """Главный кадр объекта.
+
+        Первым по порядку почти никогда не оказывается тот, которым объект
+        стоит показывать: порядок задаётся под рассказ, а обложка — под
+        первый взгляд. Поэтому обложка отмечается галочкой, и только если
+        её нет, берётся первый кадр.
+        """
+        photos = list(self.photos.all())
+        for photo in photos:
+            if photo.is_cover:
+                return photo
+        return photos[0] if photos else None
+
+    @property
+    def gallery(self):
+        """Кадры мозаики: обложка первой, остальные в своём порядке."""
+        photos = list(self.photos.all())
+        cover = self.cover
+        return ([cover] if cover else []) + [p for p in photos if p != cover]
 
 
 class PortfolioPhoto(models.Model):
@@ -235,6 +273,14 @@ class PortfolioPhoto(models.Model):
     image = models.ImageField("Фото", upload_to="portfolio/")
     caption = models.CharField("Подпись", max_length=200, blank=True)
     is_before = models.BooleanField("Кадр «до»", default=False)
+    is_cover = models.BooleanField(
+        "Главное фото", default=False, help_text="Показывается в списке работ и первым на странице"
+    )
+    # Мозаика не должна резать панорамы до квадрата: широкий кадр занимает
+    # два столбца и остаётся собой.
+    is_wide = models.BooleanField(
+        "Широкий кадр", default=False, help_text="Занимает в мозаике двойную ширину"
+    )
     order = models.PositiveSmallIntegerField("Порядок", default=100)
 
     class Meta:
@@ -287,6 +333,33 @@ class Article(models.Model):
 
     def get_absolute_url(self):
         return reverse("public:article", args=[self.slug])
+
+
+class PressMention(models.Model):
+    """Публикация о Дарье или её объектах.
+
+    Чужой голос убеждает не так, как свой: «журнал написал» и «я о себе
+    написала» — разные утверждения. Раздел живёт отдельно от отзывов
+    именно поэтому, а не ради красоты.
+    """
+
+    outlet = models.CharField("Издание", max_length=150)
+    title = models.CharField("Заголовок публикации", max_length=250)
+    url = models.URLField("Ссылка", blank=True)
+    date = models.DateField("Дата", default=timezone.localdate)
+    quote = models.TextField("Цитата", blank=True, help_text="Фрагмент, который стоит показать")
+    logo = models.ImageField("Логотип издания", upload_to="press/", blank=True)
+    cover = models.ImageField("Обложка или разворот", upload_to="press/", blank=True)
+    is_published = models.BooleanField("Опубликовано", default=True)
+    order = models.PositiveSmallIntegerField("Порядок", default=100)
+
+    class Meta:
+        verbose_name = "Публикация в прессе"
+        verbose_name_plural = "Пресса"
+        ordering = ["order", "-date"]
+
+    def __str__(self):
+        return f"{self.outlet}: {self.title}"
 
 
 class StageNorm(models.Model):

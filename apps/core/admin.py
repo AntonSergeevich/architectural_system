@@ -8,6 +8,7 @@ from .models import (
     PersonalDataConsent,
     PortfolioPhoto,
     PortfolioProject,
+    PressMention,
     SiteSettings,
     StageNorm,
 )
@@ -18,6 +19,14 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     fieldsets = (
         ("О себе", {"fields": ("owner_name", "owner_title", "owner_photo", "owner_about")}),
         ("Контакты", {"fields": ("phone", "email", "telegram", "whatsapp", "city")}),
+        (
+            "Соцсети",
+            {
+                "fields": ("instagram", "vk", "pinterest", "dzen"),
+                "description": "Ссылка на Instagram публикуется с пометкой о том, "
+                "что Meta признана в России экстремистской организацией",
+            },
+        ),
         ("Реквизиты", {"fields": ("legal_name", "inn")}),
         (
             "Регламент",
@@ -52,6 +61,7 @@ class LegalDocumentAdmin(admin.ModelAdmin):
 class PortfolioPhotoInline(admin.TabularInline):
     model = PortfolioPhoto
     extra = 3
+    fields = ("image", "caption", "is_cover", "is_wide", "is_before", "order")
 
 
 @admin.register(PortfolioProject)
@@ -68,12 +78,25 @@ class PortfolioProjectAdmin(admin.ModelAdmin):
         (
             "Заказчик",
             {
-                "fields": ("client_name", "client_quote", "client_photo", "client_consent"),
+                "fields": (
+                    "client_name",
+                    "client_quote",
+                    "client_photo",
+                    "client_video",
+                    "client_consent",
+                ),
                 "description": "Без галочки согласия ничего из этого на сайт не выводится",
             },
         ),
         ("Публикация", {"fields": ("is_published", "is_featured", "order")}),
     )
+
+
+@admin.register(PressMention)
+class PressMentionAdmin(admin.ModelAdmin):
+    list_display = ("outlet", "title", "date", "is_published", "order")
+    list_editable = ("is_published", "order")
+    list_filter = ("outlet",)
 
 
 @admin.register(Objection)

@@ -395,48 +395,6 @@
     });
   });
 
-  // --- Просмотр картинок ----------------------------------------------------
-  // Фото открывается поверх переписки, а не новой вкладкой: посмотреть
-  // присланное и вернуться к разговору должно быть одним движением.
-
-  function lightbox(src, caption) {
-    var box = document.createElement('div');
-    box.className = 'lightbox';
-    box.setAttribute('role', 'dialog');
-    box.setAttribute('aria-modal', 'true');
-    box.setAttribute('aria-label', caption || 'Просмотр изображения');
-    box.innerHTML =
-      '<button class="lightbox__close" type="button" aria-label="Закрыть">×</button>' +
-      '<figure class="lightbox__figure"><img alt=""><figcaption></figcaption></figure>';
-
-    box.querySelector('img').src = src;
-    box.querySelector('img').alt = caption || '';
-    box.querySelector('figcaption').textContent = caption || '';
-
-    function close() {
-      box.classList.remove('is-open');
-      document.removeEventListener('keydown', onKey);
-      setTimeout(function () { box.remove(); }, reduceMotion ? 0 : 180);
-    }
-    function onKey(e) { if (e.key === 'Escape') close(); }
-
-    box.addEventListener('click', function (e) {
-      // Клик мимо картинки — тоже закрытие: так ведёт себя любой просмотрщик.
-      if (e.target === box || e.target.closest('.lightbox__close')) close();
-    });
-    document.addEventListener('keydown', onKey);
-
-    document.body.appendChild(box);
-    requestAnimationFrame(function () { box.classList.add('is-open'); });
-  }
-
-  document.addEventListener('click', function (e) {
-    var link = e.target.closest('[data-lightbox]');
-    if (!link) return;
-    e.preventDefault();
-    lightbox(link.getAttribute('href'), link.dataset.lightbox);
-  });
-
   // --- Копирование доступа -------------------------------------------------
   // Логин и пароль Дарья передаёт заказчику, и делать это выделением мышью
   // по буквам — верный способ ошибиться в одном символе.

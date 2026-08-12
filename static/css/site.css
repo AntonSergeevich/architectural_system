@@ -315,6 +315,167 @@
 .work__title { font-weight: 700; font-size: var(--step-1); }
 .work__meta { color: var(--muted); font-size: var(--step--1); }
 
+/* --- Объект: обложка, факты, мозаика --------------------------------------
+   Объект смотрят глазами. Ровная сетка одинаковых плиток превращает восемь
+   разных комнат в каталог плитки, поэтому кадры разной величины: обложка
+   во всю ширину, дальше мозаика, где широкие кадры занимают два столбца. */
+
+.object__title { font-size: var(--step-4); letter-spacing: -.04em; }
+
+.object__cover {
+  position: relative; display: block;
+  border-radius: var(--radius-3); overflow: hidden;
+  background: var(--sand); aspect-ratio: 16/9;
+}
+.object__cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease); }
+.object__cover:hover img { transform: scale(1.02); }
+
+/* Подсказка «нажми, откроется больше». Появляется по наведению; на
+   тач-экране её нет вовсе — там и наведения нет, палец пробует сам. */
+.object__zoom {
+  position: absolute; right: var(--gap-4); bottom: var(--gap-4);
+  background: rgba(12, 10, 8, .72); color: #fff;
+  font-size: var(--step--2); letter-spacing: .04em;
+  padding: var(--gap-2) var(--gap-3); border-radius: var(--radius-pill);
+  opacity: 0; transform: translateY(4px);
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+a:hover > .object__zoom, a:focus-visible > .object__zoom { opacity: 1; transform: none; }
+
+.specs {
+  display: grid; gap: var(--gap-4) var(--gap-6);
+  grid-template-columns: repeat(auto-fit, minmax(150px, auto));
+  justify-content: start;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: var(--gap-5) 0; margin: 0;
+}
+.spec dt { font-size: var(--step--2); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.spec dd { margin: var(--gap-1) 0 0; font-size: var(--step-1); font-weight: 700; letter-spacing: -.02em; }
+
+.mosaic {
+  display: grid; gap: var(--gap-4);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-flow: dense;
+}
+.mosaic__item { margin: 0; display: grid; gap: var(--gap-2); }
+.mosaic__item a {
+  position: relative; display: block;
+  border-radius: var(--radius-3); overflow: hidden;
+  background: var(--sand); aspect-ratio: 4/3;
+  cursor: zoom-in;
+}
+.mosaic__item img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s var(--ease); }
+.mosaic__item a:hover img { transform: scale(1.03); }
+.mosaic__item figcaption { color: var(--muted); font-size: var(--step--1); }
+/* Панораму нельзя резать до квадрата: она вся про ширину. */
+@media (min-width: 700px) {
+  .mosaic__item--wide { grid-column: span 2; }
+  .mosaic__item--wide a { aspect-ratio: 16/9; }
+}
+.mosaic__tag {
+  position: absolute; top: var(--gap-3); left: var(--gap-3);
+  background: var(--paper); color: var(--ink-2);
+  font-size: var(--step--2); text-transform: uppercase; letter-spacing: .1em;
+  padding: 2px var(--gap-3); border-radius: var(--radius-pill);
+}
+
+/* --- Отзыв заказчика ------------------------------------------------------ */
+
+.review {
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-3); padding: var(--gap-6);
+  display: grid; gap: var(--gap-4);
+}
+.review__video { width: 100%; border-radius: var(--radius-2); background: #000; }
+.review__text {
+  margin: 0; font-family: var(--font-display); font-size: var(--step-1);
+  line-height: 1.45; letter-spacing: -.02em;
+}
+.review__who { display: flex; align-items: center; gap: var(--gap-3); color: var(--muted); font-size: var(--step--1); }
+.review__face { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+
+/* --- Пресса ---------------------------------------------------------------
+   Чужой голос убеждает не так, как свой: «журнал написал» и «я о себе
+   написала» — разные утверждения, и стоять они должны отдельно. */
+
+.press { display: grid; gap: var(--gap-5); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.press__item {
+  display: grid; gap: var(--gap-3); align-content: start;
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-3); padding: var(--gap-5);
+  text-decoration: none; color: inherit;
+  transition: border-color .2s var(--ease), transform .2s var(--ease);
+}
+a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px); }
+.press__logo { height: 28px; width: auto; max-width: 60%; object-fit: contain; }
+.press__outlet { font-size: var(--step--2); text-transform: uppercase; letter-spacing: .12em; color: var(--brand-500); }
+.press__title { font-weight: 700; font-size: var(--step-0); }
+.press__quote { color: var(--ink-2); font-size: var(--step--1); }
+.press__date { color: var(--muted); font-size: var(--step--2); }
+
+/* --- Соцсети --------------------------------------------------------------
+   Пометка про Meta — не мелкий шрифт ради приличия, а требование закона:
+   упоминание Instagram без неё считается нарушением. */
+
+.socials { display: flex; flex-wrap: wrap; gap: var(--gap-2); }
+.social {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  font-size: var(--step--1); color: var(--ink-2); text-decoration: none;
+  border: 1px solid var(--line); border-radius: var(--radius-pill);
+  padding: var(--gap-2) var(--gap-4); min-height: 40px;
+  transition: border-color .18s var(--ease), color .18s var(--ease);
+}
+.social:hover { border-color: var(--brand-300); color: var(--brand-500); }
+.social__mark { color: var(--muted-2); font-size: var(--step--2); }
+.socials__note { color: var(--muted-2); font-size: var(--step--2); margin-top: var(--gap-3); max-width: 64ch; }
+
+/* --- Просмотр картинки ----------------------------------------------------
+   Одна на весь сайт: и переписка в кабинете, и мозаика объекта открывают
+   кадр одинаково — человек не должен заново понимать, как это работает. */
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center;
+  padding: var(--gap-5);
+  background: rgba(12, 10, 8, .88);
+  opacity: 0; transition: opacity .18s var(--ease);
+  cursor: zoom-out;
+}
+.lightbox.is-open { opacity: 1; }
+.lightbox__figure { margin: 0; display: grid; gap: var(--gap-3); justify-items: center; }
+.lightbox img {
+  max-width: min(1100px, 92vw); max-height: 82vh;
+  border-radius: var(--radius-2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  cursor: default;
+}
+.lightbox figcaption { color: rgba(255, 255, 255, .75); font-size: var(--step--1); }
+.lightbox__close {
+  position: absolute; top: var(--gap-4); right: var(--gap-5);
+  width: 44px; height: 44px; cursor: pointer;
+  background: none; border: 0; color: #fff;
+  font-size: var(--step-2); line-height: 1;
+}
+.lightbox__close:hover { color: var(--brand-300); }
+
+/* Листание внутри просмотра: в мозаике кадров десяток, и закрывать окно
+   ради следующего — то же самое, что не иметь просмотра вовсе. */
+.lightbox__nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255, 255, 255, .1); border: 0; color: #fff;
+  font-size: var(--step-2); line-height: 1; cursor: pointer;
+}
+.lightbox__nav:hover { background: rgba(255, 255, 255, .2); }
+.lightbox__nav--prev { left: var(--gap-4); }
+.lightbox__nav--next { right: var(--gap-4); }
+.lightbox__count { color: rgba(255, 255, 255, .55); font-size: var(--step--2); }
+@media (max-width: 640px) {
+  .lightbox__nav { width: 44px; height: 44px; }
+  .lightbox__nav--prev { left: 2px; }
+  .lightbox__nav--next { right: 2px; }
+}
+
 /* --- Услуги и вопросы ----------------------------------------------------- */
 
 .accordion { border-top: 1px solid var(--line); }
