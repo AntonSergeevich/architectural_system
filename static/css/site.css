@@ -595,7 +595,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 }
 @media (min-width: 1000px) { .house { max-width: none; } }
 
-@media (max-width: 999px) { .house { max-width: calc(24dvh * 4 / 3); } }
+@media (max-width: 999px) { .house { max-width: calc(28dvh * 4 / 3); } }
 
 /* Каждая часть комнаты — свой слот. Пустой слот рисуется пунктиром:
    это и есть «правило честного отказа». Текст можно пролистать, дыру нельзя. */
@@ -1035,16 +1035,20 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .block--dragging.block--group > .block__price { display: inline; }
 .block--ghost { opacity: .35; }
 
-/* Подсказка ушла вниз: наверху теперь плоскость потолка, и текст
-   ложился прямо на неё. */
+/* Подсказка появляется, только когда блок уже в руке: тогда она отвечает
+   на живой вопрос «куда его». Постоянная надпись поверх комнаты — это
+   строка, которую перестают читать через два экрана, и она закрывает
+   ровно то, ради чего человек сюда пришёл. */
 .house__hint {
   position: absolute; inset-inline: 0; bottom: var(--gap-2);
   width: fit-content; margin-inline: auto;
   padding: 2px var(--gap-3); border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
   text-align: center; font-size: var(--step--2); color: var(--muted);
   pointer-events: none;
+  opacity: 0; transition: opacity .2s var(--ease);
 }
+.house.is-receiving .house__hint { opacity: 1; }
 .house__note {
   text-align: center; font-size: var(--step--2); color: var(--muted);
   margin-top: var(--gap-2);

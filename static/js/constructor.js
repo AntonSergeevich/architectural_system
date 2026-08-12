@@ -412,7 +412,7 @@
     // должен видеть, куда нести, ещё до того как понесёт.
     house.classList.add('is-receiving');
     if (mod.housePart) {
-      // У блока дома одно законное место — его и подсвечиваем.
+      // У блока комнаты одно законное место — его и подсвечиваем.
       drag.slots.forEach(function (slot) {
         if (accepts(slot, mod)) slot.el.classList.add('is-available');
       });
