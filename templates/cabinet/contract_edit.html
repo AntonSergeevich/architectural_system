@@ -1,9 +1,7 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% block title %}{{ template.title }}{% endblock %}
 {% block cabinet %}
-<section class="section section--tight">
-  <div class="wrap wrap--narrow">
-    {% include "cabinet/_nav.html" %}
+<div class="cabnarrow">
     <h1>{{ template.title }}</h1>
     <p class="lead">
       Расшифровка «на человеческом языке» — это то, что коллеги проговаривают
@@ -47,4 +45,5 @@
 
       <button class="btn" type="submit">Сохранить</button>
     </form>
+</div>
 {% endblock %}

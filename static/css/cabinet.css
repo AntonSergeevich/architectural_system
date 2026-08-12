@@ -29,7 +29,16 @@
   transition: background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
 }
 .cabnav__item:hover { background: var(--surface-2); border-color: var(--line); color: var(--ink); }
-.cabnav__item.is-active { background: var(--brand-500); border-color: var(--brand-500); color: #fff; }
+
+/* Где я сейчас — тонкой линией под пунктом, а не заливкой. Залитая
+   пилюля читается как кнопка, то есть как «нажми сюда», хотя это
+   единственное место, куда нажимать не нужно: ты уже здесь. */
+.cabnav__item.is-active {
+  color: var(--ink); font-weight: 600;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 var(--brand-500);
+}
+.cabnav__item.is-active:hover { background: none; border-color: transparent; }
 .cabnav__item--minor { color: var(--muted); margin-left: var(--gap-2); }
 .cabnav__exit { margin-left: auto; }
 .cabnav__exit button {

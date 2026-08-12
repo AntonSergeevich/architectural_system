@@ -4,11 +4,11 @@
 
 
     <nav class="nav" id="nav">
-      <a href="{% url 'public:about' %}">Обо мне</a>
-      <a href="{% url 'public:services' %}">Услуги</a>
-      <a href="{% url 'public:portfolio' %}">Работы</a>
-      <a href="{% url 'public:how' %}">Как я работаю</a>
-      <a href="{% url 'public:objections' %}">Вопросы</a>
+      <a href="{% url 'public:about' %}"{% if request.resolver_match.url_name == 'about' %} class="is-here" aria-current="page"{% endif %}>Обо мне</a>
+      <a href="{% url 'public:services' %}"{% if request.resolver_match.url_name == 'services' %} class="is-here" aria-current="page"{% endif %}>Услуги</a>
+      <a href="{% url 'public:portfolio' %}"{% if request.resolver_match.url_name == 'portfolio' %} class="is-here" aria-current="page"{% endif %}>Работы</a>
+      <a href="{% url 'public:how' %}"{% if request.resolver_match.url_name == 'how' %} class="is-here" aria-current="page"{% endif %}>Как я работаю</a>
+      <a href="{% url 'public:objections' %}"{% if request.resolver_match.url_name == 'objections' %} class="is-here" aria-current="page"{% endif %}>Вопросы</a>
       <a class="nav__cta" href="{% url 'public:constructor' %}">Собрать проект</a>
       {% comment %}
         Вход виден всегда, а не только вошедшим. Доступ в кабинет получает

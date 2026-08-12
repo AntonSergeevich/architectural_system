@@ -40,15 +40,22 @@
         <div class="quick__ask">
           <label class="quick__label" for="quick-area">У меня квартира</label>
           <span class="quick__field">
+            {% comment %}
+              Тридцать метров по умолчанию, а не средняя площадь заказа.
+              Первое число, которое видит человек, задаёт тон всему
+              разговору: с 84 м² на экране сразу стоит сумма, от которой
+              половина закрывает вкладку, не дочитав, из чего она
+              складывается. Свою площадь всё равно введут.
+            {% endcomment %}
             <input class="quick__input" id="quick-area" type="number"
-                   min="1" max="10000" step="1" value="84" inputmode="numeric">
+                   min="1" max="10000" step="1" value="{{ hero_pricing.default_area }}" inputmode="numeric">
             <span class="quick__unit">м²</span>
           </span>
         </div>
 
         <div class="quick__answer">
           <span class="quick__caption">Полный проект</span>
-          <strong class="quick__price" data-quick-price>≈ 412 000 ₽</strong>
+          <strong class="quick__price" data-quick-price>≈ {{ hero_pricing.default_price|money }}</strong>
         </div>
 
         <a class="btn btn--big" href="{% url 'public:constructor' %}" data-quick-link>

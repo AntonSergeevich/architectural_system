@@ -47,6 +47,12 @@ class CabinetTestCase(TestCase):
         services.create_stages(cls.project)
         cls.stage = cls.project.stages.order_by("number").first()
 
+        from apps.contracts.models import ContractTemplate
+        from apps.crm.models import Lead
+
+        cls.lead = Lead.objects.create(client=cls.customer, source="сайт")
+        cls.contract = ContractTemplate.objects.first()
+
     def login_owner(self):
         self.client.login(email="darya@example.com", password="owner-pass-123")
 
@@ -92,6 +98,47 @@ class AccessTests(CabinetTestCase):
             with self.subTest(page=name):
                 response = self.client.get(reverse(name, args=args))
                 self.assertEqual(response.status_code, 200)
+
+    def test_every_owner_page_opens(self):
+        """Все экраны Дарьи, без исключений.
+
+        Список страниц собирается из маршрутов, а не пишется руками:
+        рукописный список неизбежно отстаёт от кода — именно так две
+        страницы уехали на боевой сервер с «Server Error (500)»
+        из-за шаблона, удалённого при переезде на общую рамку.
+        """
+        from django.urls import get_resolver
+
+        self.login_owner()
+        skip = {"home", "my_project"}  # редиректы и кабинет заказчика
+        args_for = {
+            "lead_detail": [self.lead.pk],
+            "client_detail": [self.customer.pk],
+            "project_detail": [self.project.pk],
+            "contract_edit": [self.contract.pk],
+        }
+
+        checked = 0
+        for pattern in get_resolver().url_patterns:
+            if getattr(pattern, "namespace", None) != "cabinet":
+                continue
+            for route in pattern.url_patterns:
+                name = route.name
+                if name in skip or not name:
+                    continue
+                # POST-обработчики проверяются своими тестами.
+                if name in args_for or not route.pattern.converters:
+                    args = args_for.get(name, [])
+                    url = reverse(f"cabinet:{name}", args=args)
+                    with self.subTest(page=name):
+                        response = self.client.get(url)
+                        self.assertIn(
+                            response.status_code,
+                            (200, 302, 405),
+                            f"{name} ({url}) ответил {response.status_code}",
+                        )
+                    checked += 1
+        self.assertGreater(checked, 8, "проверено подозрительно мало страниц")
 
     def test_client_project_page_opens(self):
         self.login_client()

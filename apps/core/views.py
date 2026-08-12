@@ -133,12 +133,28 @@ def _hero_pricing():
         (m.price for m in modules if m.unit == "sqm"), Decimal("0")
     )
     fixed = sum((m.price for m in modules if m.unit == "fixed"), Decimal("0"))
+
+    # Площадь по умолчанию — маленькая намеренно. Первое число, которое
+    # видит человек, задаёт тон разговору: с площади «как у среднего
+    # заказа» на экране сразу стоит сумма, от которой половина закрывает
+    # вкладку, не дочитав, из чего она складывается. Свою площадь всё
+    # равно введут — а первым впечатлением будет посильная цифра.
+    default_area = Decimal("30")
+    if pricing.small_area_enabled and default_area <= pricing.small_area_threshold:
+        default_price = pricing.small_area_price
+    else:
+        default_price = per_sqm * default_area + fixed
+
     return {
         "per_sqm": int(per_sqm),
         "fixed": int(fixed),
         "small_enabled": pricing.small_area_enabled,
         "small_threshold": float(pricing.small_area_threshold),
         "small_price": int(pricing.small_area_price),
+        "default_area": int(default_area),
+        # Это число видит тот, у кого не выполнился JavaScript. Оно обязано
+        # совпадать с тем, что посчитает скрипт, иначе цена «прыгает».
+        "default_price": int(default_price),
     }
 
 

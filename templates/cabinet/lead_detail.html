@@ -1,9 +1,7 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% block title %}{{ lead.client.name }}{% endblock %}
 {% block cabinet %}
-<section class="section section--tight">
-  <div class="wrap wrap--narrow">
-    {% include "cabinet/_nav.html" %}
+<div class="cabnarrow">
     <h1>{{ lead.client.name }}</h1>
     <p class="lead">
       {% if lead.client.phone %}<a href="tel:{{ lead.client.phone }}">{{ lead.client.phone }}</a>{% endif %}
@@ -67,4 +65,5 @@
       </div>
       <button class="btn" type="submit">Сохранить</button>
     </form>
+</div>
 {% endblock %}
