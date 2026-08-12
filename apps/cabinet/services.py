@@ -70,6 +70,32 @@ def post_message(project, user, text, files=(), stage=None):
     return message
 
 
+def message_json(message, viewer_is_owner):
+    """Сообщение для дорисовки в переписке без перезагрузки страницы.
+
+    `mine` считается на сервере, а не в браузере: «своё справа» зависит
+    от того, кто смотрит, и решать это в двух местах — верный способ
+    однажды показать заказчику его собственные сообщения слева.
+    """
+    return {
+        "id": message.pk,
+        "author": message.author_name,
+        "mine": message.author_is_owner == viewer_is_owner,
+        "text": message.text,
+        "at": timezone.localtime(message.created_at).strftime("%d.%m.%Y %H:%M"),
+        "stage": message.stage.title if message.stage else "",
+        "files": [
+            {
+                "url": file.file.url,
+                "name": file.name,
+                "size": file.human_size,
+                "image": file.is_image,
+            }
+            for file in message.files.all()
+        ],
+    }
+
+
 def mark_messages_read(project, user):
     """Отметить прочитанным то, что написала другая сторона."""
     is_owner = bool(getattr(user, "is_owner", False))

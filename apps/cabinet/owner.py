@@ -241,12 +241,26 @@ def client_access(request, pk):
         return redirect("cabinet:client_detail", pk=pk)
 
     user, password = form.save(client)
-    request.session["issued_password"] = {"email": user.email, "password": password}
-    messages.success(
-        request,
-        "Доступ выдан. Пароль показан ниже — он больше нигде не хранится "
-        "в открытом виде, передайте его заказчику сейчас.",
-    )
+
+    # Готовое сообщение, а не три поля для переписывания. Дарья отправляет
+    # доступ в мессенджер, и собирать текст руками — это лишняя минута
+    # и шанс перепутать символ в пароле.
+    login_url = request.build_absolute_uri(reverse("accounts:login"))
+    name = (user.full_name or client.name).split(" ")[0]
+    request.session["issued_password"] = {
+        "email": user.email,
+        "password": password,
+        "url": login_url,
+        "text": (
+            f"{name}, здравствуйте! Открыла вам личный кабинет по проекту.\n\n"
+            f"Вход: {login_url}\n"
+            f"Логин: {user.email}\n"
+            f"Пароль: {password}\n\n"
+            "В кабинете видно, на каком этапе проект, что нужно от вас, "
+            "договоры и вся переписка. Пароль можно поменять в любой момент — "
+            "на странице входа есть «Забыли пароль?»."
+        ),
+    }
     return redirect("cabinet:client_detail", pk=pk)
 
 
@@ -545,7 +559,11 @@ def message_send(request, pk):
     project = _visible_project(request, pk)
     files = request.FILES.getlist("files")
     form = MessageForm(request.POST, files_attached=bool(files))
+    ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     if not form.is_valid():
+        if ajax:
+            return JsonResponse({"ok": False, "error": "Напишите сообщение или приложите файл."}, status=400)
         messages.error(request, "Напишите сообщение или приложите файл.")
     else:
         stage = None
@@ -553,10 +571,44 @@ def message_send(request, pk):
             stage = Stage.objects.filter(pk=request.POST["stage"], project=project).first()
         message = services.post_message(project, request.user, form.cleaned_data["text"], files, stage)
         notify.safe(notify.new_message, message)
+        if ajax:
+            return JsonResponse(
+                {"ok": True, "messages": [services.message_json(message, request.user.is_owner)]}
+            )
 
     if request.user.is_owner:
         return redirect(reverse("cabinet:project_detail", args=[project.pk]) + "#chat")
     return redirect(reverse("cabinet:my_project") + "#chat")
+
+
+@login_required
+def messages_since(request, pk):
+    """Что написали, пока страница была открыта.
+
+    Заказчик и Дарья сидят в кабинете и ждут ответа — обновлять страницу
+    ради этого не должен никто. Опрос простой, раз в несколько секунд:
+    держать ради двух собеседников постоянное соединение — это отдельный
+    процесс, который надо запускать, сторожить и перезапускать.
+    """
+    project = _visible_project(request, pk)
+    after = request.GET.get("after")
+
+    qs = project.messages.prefetch_related("files").order_by("created_at")
+    if after and after.isdigit():
+        qs = qs.filter(pk__gt=int(after))
+    else:
+        qs = qs.none()
+
+    fresh = list(qs[:50])
+    if fresh:
+        services.mark_messages_read(project, request.user)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "messages": [services.message_json(m, request.user.is_owner) for m in fresh],
+        }
+    )
 
 
 @login_required

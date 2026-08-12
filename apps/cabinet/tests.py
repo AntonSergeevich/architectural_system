@@ -403,6 +403,56 @@ class ChatTests(CabinetTestCase):
         self.client.post(reverse("cabinet:message_send", args=[self.project.pk]), {"text": "   "})
         self.assertFalse(Message.objects.exists())
 
+    def test_own_messages_are_marked_as_mine_for_each_side(self):
+        """«Своё справа» считается на сервере — иначе стороны разойдутся.
+
+        Заказчик должен видеть свои реплики там же, где видит их в любом
+        мессенджере, и Дарья — свои.
+        """
+        from apps.cabinet import services
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:message_send", args=[self.project.pk]), {"text": "от Дарьи"}
+        )
+        message = Message.objects.get()
+
+        self.assertTrue(services.message_json(message, viewer_is_owner=True)["mine"])
+        self.assertFalse(services.message_json(message, viewer_is_owner=False)["mine"])
+
+    def test_new_messages_arrive_without_reloading(self):
+        """Обе стороны сидят и ждут ответа — обновлять страницу не должен никто."""
+        self.login_client()
+        self.client.post(
+            reverse("cabinet:message_send", args=[self.project.pk]), {"text": "первое"}
+        )
+        first = Message.objects.get().pk
+
+        self.login_owner()
+        url = reverse("cabinet:messages_since", args=[self.project.pk])
+        payload = self.client.get(f"{url}?after={first}").json()
+        self.assertEqual(payload["messages"], [])
+
+        self.login_client()
+        self.client.post(
+            reverse("cabinet:message_send", args=[self.project.pk]), {"text": "второе"}
+        )
+
+        self.login_owner()
+        payload = self.client.get(f"{url}?after={first}").json()
+        self.assertEqual(len(payload["messages"]), 1)
+        self.assertEqual(payload["messages"][0]["text"], "второе")
+        self.assertFalse(payload["messages"][0]["mine"])
+
+    def test_polling_someone_elses_project_is_refused(self):
+        other = Client.objects.create(name="Пётр", phone="+79130000009")
+        estate = Property.objects.create(client=other, area=Decimal("40"), rooms=1)
+        stranger = Project.objects.create(client=other, estate=estate)
+
+        self.login_client()
+        response = self.client.get(reverse("cabinet:messages_since", args=[stranger.pk]))
+        self.assertEqual(response.status_code, 404)
+
     def test_opening_the_project_marks_the_other_sides_messages_read(self):
         self.login_client()
         self.client.post(reverse("cabinet:message_send", args=[self.project.pk]), {"text": "вопрос"})

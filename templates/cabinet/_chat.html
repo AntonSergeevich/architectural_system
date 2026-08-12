@@ -3,11 +3,17 @@
   Переписка по проекту.
 
   Она здесь не для удобства — для доказательной базы. В мессенджере
-  «я вам присылала» не значит ничего: сообщение можно удалить, чат —
-  очистить, файл — потерять. Здесь сообщения не редактируются и
-  не удаляются ни одной из сторон, у каждого есть автор и время.
+  «я вам присылала» не значит ничего: сообщение удаляется, чат чистится,
+  файл теряется. Здесь сообщения не редактируются и не удаляются ни одной
+  из сторон, у каждого есть автор и время.
+
+  «Своё справа» считается на сервере: зависит от того, кто смотрит,
+  и решать это в двух местах — верный способ однажды показать заказчику
+  его собственные сообщения слева.
 {% endcomment %}
-<section class="panel" id="chat">
+<section class="panel" id="chat"
+         data-chat-panel
+         data-poll-url="{% url 'cabinet:messages_since' project.pk %}">
   <header class="panel__head">
     <h2>Переписка по проекту</h2>
     <span class="muted">Сообщения и файлы сохраняются навсегда</span>
@@ -15,7 +21,8 @@
 
   <div class="chat" data-chat>
     {% for message in messages_list %}
-      <div class="msg {% if message.author_is_owner %}msg--owner{% else %}msg--client{% endif %}">
+      <div class="msg {% if message.author_is_owner == is_owner_view %}msg--mine{% else %}msg--theirs{% endif %}"
+           data-message="{{ message.pk }}">
         <div class="msg__meta">
           <strong>{{ message.author_name|default:"—" }}</strong>
           <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"d.m.Y H:i" }}</time>
@@ -26,11 +33,20 @@
           <div class="msg__files">
             {% for file in message.files.all %}
               {% if file.is_image %}
-                <a class="msg__thumb" href="{{ file.file.url }}" target="_blank" rel="noopener">
+                {% comment %}
+                  Картинка открывается окном поверх переписки, а не новой
+                  вкладкой: посмотреть присланное фото и вернуться к разговору —
+                  одно движение, а не «закрыть вкладку и найти нужную».
+                {% endcomment %}
+                <a class="msg__thumb" href="{{ file.file.url }}" data-lightbox="{{ file.name }}">
                   <img src="{{ file.file.url }}" alt="{{ file.name }}" loading="lazy">
                 </a>
               {% else %}
-                <a class="msg__file" href="{{ file.file.url }}" download>
+                {% comment %}
+                  Документы — в соседнюю вкладку: PDF браузер показывает сам,
+                  и качать файл ради того, чтобы взглянуть, не нужно.
+                {% endcomment %}
+                <a class="msg__file" href="{{ file.file.url }}" target="_blank" rel="noopener">
                   <span class="msg__file-name">{{ file.name }}</span>
                   <span class="muted">{{ file.human_size }}</span>
                 </a>
@@ -40,7 +56,7 @@
         {% endif %}
       </div>
     {% empty %}
-      <p class="muted chat__empty">
+      <p class="muted chat__empty" data-chat-empty>
         Здесь пока пусто. Пишите сюда всё, что касается проекта:
         так ничего не потеряется и всё останется с датой.
       </p>
