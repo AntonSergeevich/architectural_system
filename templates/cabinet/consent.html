@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Прежде чем начать{% endblock %}
+
+{% comment %}
+  Первый вход заказчика.
+
+  Согласие на обработку данных на сайте даёт тот, кто заполняет форму.
+  Но заказчику доступ выдала Дарья — форму он не заполнял, логин получил
+  в мессенджере. А в кабинете лежат его телефон, адрес объекта, договоры
+  и переписка: ровно персональные данные. Поэтому спрашиваем здесь,
+  один раз, и записываем в тот же журнал, что и согласия с сайта.
+{% endcomment %}
+
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Первый вход</p>
+    <h1>Прежде чем открыть кабинет</h1>
+
+    <p class="lead">
+      В кабинете будут ваши контакты, адрес объекта, договоры и переписка
+      по проекту. Это персональные данные, и по закону мне нужно ваше
+      согласие на их обработку.
+    </p>
+
+    <p class="note">
+      Данные используются только для работы над вашим проектом. Никому
+      не передаются и не используются для рассылок.
+    </p>
+
+    {% comment %}
+      Две формы стоят рядом, а не одна внутри другой: вложенные <form>
+      браузер молча выбрасывает, и кнопка «Выйти» отправляла бы согласие.
+    {% endcomment %}
+    <form method="post" id="consent-form" class="card" style="margin-top: var(--gap-5)">
+      {% csrf_token %}
+      <div class="check">
+        <input type="checkbox" name="agree" id="agree" value="1" required>
+        <label for="agree">
+          Согласен на обработку персональных данных
+          {% if doc %}
+            — <a href="{{ doc.get_absolute_url }}" target="_blank" rel="noopener">читать документ</a>
+            <span class="muted">(редакция {{ doc.version }})</span>
+          {% endif %}
+        </label>
+      </div>
+    </form>
+
+    <div class="hero__actions">
+      <button class="btn btn--big" type="submit" form="consent-form">Открыть кабинет</button>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button class="btn btn--ghost" type="submit">Выйти</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

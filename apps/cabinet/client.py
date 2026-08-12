@@ -20,8 +20,9 @@ from django.views.decorators.http import require_POST
 from apps.contracts.models import Contract
 from apps.core import notify
 from apps.core.forms import RevisionForm
-from apps.core.models import SiteSettings
+from apps.core.models import LegalDocument, PersonalDataConsent, SiteSettings
 from apps.core.utils import working_deadline
+from apps.core.views import _client_ip
 from apps.projects.models import Approval, BudgetChange, Project, Revision, Stage
 
 from . import services
@@ -45,8 +46,53 @@ def _project_for(user):
     return project
 
 
+def _needs_consent(user):
+    """Заказчик, который ещё не давал согласия на обработку данных.
+
+    На сайте согласие даёт тот, кто заполняет форму. Но заказчик, которому
+    доступ выдала Дарья, форму не заполнял — он получил логин в мессенджере.
+    А в кабинете лежат его телефон, адрес объекта и переписка, то есть
+    ровно персональные данные.
+    """
+    return not user.is_owner and user.data_consent_at is None
+
+
+@login_required
+def consent(request):
+    """Согласие при первом входе. До него кабинет не открывается."""
+    # Дарью этот экран не касается: у неё нет «первого входа», данные её
+    # собственные. Поэтому не «мой проект», а общая точка входа кабинета.
+    if not _needs_consent(request.user):
+        return redirect("cabinet:home")
+
+    doc = LegalDocument.objects.filter(kind=LegalDocument.Kind.CONSENT).first()
+
+    if request.method == "POST":
+        if not request.POST.get("agree"):
+            messages.error(request, "Без согласия кабинет открыть не получится.")
+        else:
+            request.user.data_consent_at = timezone.now()
+            request.user.save(update_fields=["data_consent_at"])
+
+            # Пишем в тот же журнал, что и согласия с сайта: доказывать
+            # можно только записанное.
+            PersonalDataConsent.objects.create(
+                name=request.user.full_name or str(request.user),
+                contact=request.user.email or request.user.phone,
+                document_version=doc.version if doc else "",
+                source="первый вход в кабинет",
+                ip=_client_ip(request),
+            )
+            return redirect("cabinet:my_project")
+
+    return render(request, "cabinet/consent.html", {"doc": doc})
+
+
 @login_required
 def project(request):
+    if _needs_consent(request.user):
+        return redirect("cabinet:consent")
+
     obj = _project_for(request.user)
     services.mark_messages_read(obj, request.user)
 

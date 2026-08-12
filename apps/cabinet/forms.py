@@ -31,10 +31,10 @@ class ClientForm(forms.ModelForm):
 
     class Meta:
         model = Client
-        fields = ["name", "phone", "email", "messenger", "source", "notes"]
-        widgets = {
-            "notes": forms.Textarea(attrs={"rows": 3}),
-        }
+        # Заметки живут отдельной формой и отдельной панелью: они нужны
+        # чаще всего остального в карточке, а в общей форме их каждый раз
+        # перезаписывало бы устаревшее значение из соседней вкладки.
+        fields = ["name", "phone", "email", "messenger", "source"]
 
     def clean(self):
         data = super().clean()
@@ -44,6 +44,34 @@ class ClientForm(forms.ModelForm):
                 "Без почты не получится выдать доступ в кабинет."
             )
         return data
+
+
+class ClientNotesForm(forms.ModelForm):
+    """Заметки о заказчике — то, что Дарья держит в голове или в блокноте.
+
+    «Не звонить до десяти», «муж решает всё сам», «просил не трогать
+    старый паркет». Ничего из этого нельзя показывать заказчику, но
+    забывать тоже нельзя: половина конфликтов растёт ровно отсюда.
+    """
+
+    class Meta:
+        model = Client
+        fields = ["notes"]
+        widgets = {
+            "notes": forms.Textarea(
+                attrs={
+                    "rows": 8,
+                    "aria-label": "Заметки о заказчике",
+                    "placeholder": "Что важно помнить об этом заказчике: "
+                    "как с ним удобнее связываться, кто принимает решения, "
+                    "о чём договорились на словах.",
+                }
+            ),
+        }
+        # Подпись и подсказку берёт на себя заголовок панели: «Заметки —
+        # видите только вы». Повторять это ещё дважды вокруг поля незачем.
+        labels = {"notes": ""}
+        help_texts = {"notes": ""}
 
 
 class PropertyForm(forms.ModelForm):

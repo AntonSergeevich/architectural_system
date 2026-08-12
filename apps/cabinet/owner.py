@@ -32,6 +32,7 @@ from .forms import (
     AccessForm,
     BudgetChangeForm,
     ClientForm,
+    ClientNotesForm,
     ContractUploadForm,
     MessageForm,
     PaymentForm,
@@ -183,6 +184,7 @@ def client_detail(request, pk):
             "section": "clients",
             "client": client,
             "form": ClientForm(instance=client),
+            "notes_form": ClientNotesForm(instance=client),
             "estate_form": PropertyForm(),
             "access_form": AccessForm(initial={"email": client.email, "full_name": client.name}),
             "project_form": ProjectForm(client=client),
@@ -205,6 +207,23 @@ def client_edit(request, pk):
     else:
         messages.error(request, "Проверьте поля карточки.")
     return redirect("cabinet:client_detail", pk=pk)
+
+
+@login_required
+@owner_only
+@require_POST
+def client_notes(request, pk):
+    """Заметки — только для Дарьи, и сохраняются отдельно от карточки.
+
+    Отдельно, потому что дописывают их на ходу, между звонком и выездом,
+    и в этот момент не должно быть ни одного лишнего поля рядом.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    form = ClientNotesForm(request.POST, instance=client)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Заметка сохранена.")
+    return redirect(reverse("cabinet:client_detail", args=[pk]) + "#zametki")
 
 
 @login_required

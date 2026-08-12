@@ -11,6 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.contracts.models import Contract, ContractTemplate
@@ -29,7 +30,13 @@ class CabinetTestCase(TestCase):
             email="darya@example.com", password="owner-pass-123", role=Role.OWNER
         )
         cls.client_user = User.objects.create_user(
-            email="mariya@example.com", password="client-pass-123", full_name="Мария"
+            email="mariya@example.com",
+            password="client-pass-123",
+            full_name="Мария",
+            # Согласие на обработку данных заказчик даёт при первом входе.
+            # Здесь оно проставлено сразу: остальные тесты про другое,
+            # а экран согласия проверяется отдельно в ConsentTests.
+            data_consent_at=timezone.now(),
         )
         cls.customer = Client.objects.create(
             name="Мария", phone="+79130000001", email="mariya@example.com", user=cls.client_user
@@ -147,6 +154,68 @@ class AccessTests(CabinetTestCase):
         self.assertContains(response, "Квартира на Мира")
 
 
+class ConsentTests(CabinetTestCase):
+    """Согласие на обработку данных при первом входе заказчика.
+
+    Доступ выдала Дарья, форму на сайте заказчик не заполнял — а в кабинете
+    лежат его телефон, адрес объекта и переписка. Значит, спросить нужно
+    здесь, один раз, и записать в тот же журнал, что и согласия с сайта.
+    """
+
+    def setUp(self):
+        self.client_user.data_consent_at = None
+        self.client_user.save(update_fields=["data_consent_at"])
+
+    def test_cabinet_asks_before_it_opens(self):
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        self.assertRedirects(response, reverse("cabinet:consent"))
+
+    def test_agreement_is_written_down_and_cabinet_opens(self):
+        from apps.core.models import PersonalDataConsent
+
+        self.login_client()
+        response = self.client.post(reverse("cabinet:consent"), {"agree": "1"})
+        self.assertRedirects(response, reverse("cabinet:my_project"))
+
+        self.client_user.refresh_from_db()
+        self.assertIsNotNone(self.client_user.data_consent_at)
+
+        record = PersonalDataConsent.objects.latest("id")
+        self.assertEqual(record.name, "Мария")
+        self.assertIn("кабинет", record.source)
+        self.assertTrue(record.document_version)
+
+        self.assertEqual(self.client.get(reverse("cabinet:my_project")).status_code, 200)
+
+    def test_without_the_checkbox_nothing_is_recorded(self):
+        from apps.core.models import PersonalDataConsent
+
+        self.login_client()
+        response = self.client.post(reverse("cabinet:consent"), {})
+        self.assertEqual(response.status_code, 200)
+        self.client_user.refresh_from_db()
+        self.assertIsNone(self.client_user.data_consent_at)
+        self.assertFalse(PersonalDataConsent.objects.filter(name="Мария").exists())
+
+    def test_owner_is_never_asked(self):
+        """У Дарьи нет «первого входа»: это её собственные данные."""
+        self.login_owner()
+        self.assertEqual(self.client.get(reverse("cabinet:dashboard")).status_code, 200)
+        response = self.client.get(reverse("cabinet:consent"))
+        self.assertRedirects(
+            response, reverse("cabinet:home"), target_status_code=302
+        )
+
+    def test_page_has_one_form_per_button(self):
+        """Вложенный <form> браузер выбрасывает — кнопка «Выйти» тогда
+        отправляла бы согласие."""
+        self.login_client()
+        body = self.client.get(reverse("cabinet:consent")).content.decode()
+        self.assertEqual(body.count("<form"), body.count("</form>"))
+        self.assertIn('form="consent-form"', body)
+
+
 class TelegramPanelTests(CabinetTestCase):
     """Кнопка привязки должна быть на всех экранах, где стоит панель.
 
@@ -207,6 +276,50 @@ class ClientAccessIssueTests(CabinetTestCase):
         )
         project = Project.objects.get(title="Второй объект")
         self.assertEqual(project.stages.count(), 8)
+
+
+class ClientNotesTests(CabinetTestCase):
+    """Заметки о заказчике: сохраняются отдельно и не видны заказчику."""
+
+    def test_notes_are_saved_on_their_own(self):
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_notes", args=[self.customer.pk]),
+            {"notes": "Звонить после десяти. Решения принимает муж."},
+        )
+        self.customer.refresh_from_db()
+        self.assertIn("после десяти", self.customer.notes)
+
+    def test_saving_the_card_does_not_wipe_the_notes(self):
+        """Форма карточки заметок не касается — иначе их стирало бы
+        каждое сохранение телефона."""
+        self.customer.notes = "Не трогать старый паркет"
+        self.customer.save(update_fields=["notes"])
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_edit", args=[self.customer.pk]),
+            {"name": "Мария", "phone": "+79130000001", "email": "mariya@example.com"},
+        )
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.notes, "Не трогать старый паркет")
+
+    def test_client_never_sees_them(self):
+        self.customer.notes = "Торгуется, к цене возвращаться не будем"
+        self.customer.save(update_fields=["notes"])
+
+        self.login_client()
+        body = self.client.get(reverse("cabinet:my_project")).content.decode()
+        self.assertNotIn("Торгуется", body)
+
+        self.assertEqual(
+            self.client.post(
+                reverse("cabinet:client_notes", args=[self.customer.pk]), {"notes": "своё"}
+            ).status_code,
+            302,  # редирект на вход, а не сохранение
+        )
+        self.customer.refresh_from_db()
+        self.assertIn("Торгуется", self.customer.notes)
 
 
 class TaskTests(CabinetTestCase):

@@ -153,6 +153,18 @@
   margin-bottom: var(--gap-4);
 }
 .panel__head h2 { font-size: var(--step-1); letter-spacing: -.02em; }
+.panel__hint { font-size: var(--step--2); color: var(--muted); }
+
+/* Заметки о заказчике. Выглядят как записка на полях, а не как поле формы:
+   их видит только Дарья, и это должно быть понятно с одного взгляда —
+   иначе в них не станут писать то, ради чего они и заведены. */
+.panel--notes { background: var(--warn-bg); border-color: transparent; }
+.panel--notes .panel__hint { color: var(--warn); }
+.notes textarea {
+  background: var(--surface); border-color: var(--line-soft);
+  min-height: 9rem; resize: vertical;
+}
+.notes button { margin-top: var(--gap-3); }
 
 /* --- Плашки-ответы --------------------------------------------------------
    «От вас ждут» — единственное, что заказчик обязан увидеть сразу. */

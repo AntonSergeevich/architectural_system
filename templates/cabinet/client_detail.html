@@ -21,6 +21,24 @@
 
 <div class="cabgrid">
   <div class="cabgrid__main">
+    {% comment %}
+      Заметки стоят первыми и открыто, а не спрятаны в конце формы карточки:
+      именно их перечитывают перед звонком. «Муж решает всё сам», «не звонить
+      до десяти», «договорились на словах не трогать паркет» — из забытых
+      мелочей такого рода и вырастает половина конфликтов.
+    {% endcomment %}
+    <section class="panel panel--notes" id="zametki">
+      <header class="panel__head">
+        <h2>Заметки</h2>
+        <span class="panel__hint">видите только вы</span>
+      </header>
+      <form class="notes" method="post" action="{% url 'cabinet:client_notes' client.pk %}">
+        {% csrf_token %}
+        {% field notes_form.notes %}
+        <button class="btn btn--ghost" type="submit">Сохранить заметку</button>
+      </form>
+    </section>
+
     <section class="panel">
       <header class="panel__head">
         <h2>Проекты</h2>
@@ -129,7 +147,6 @@
         {% field form.email %}
         {% field form.messenger %}
         {% field form.source %}
-        {% field form.notes %}
         <button class="btn btn--ghost" type="submit">Сохранить</button>
       </form>
     </section>

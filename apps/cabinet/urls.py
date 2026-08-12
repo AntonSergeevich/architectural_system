@@ -15,6 +15,7 @@ urlpatterns = [
     path("zakazchiki/", owner_views.clients, name="clients"),
     path("zakazchiki/<int:pk>/", owner_views.client_detail, name="client_detail"),
     path("zakazchiki/<int:pk>/pravka/", owner_views.client_edit, name="client_edit"),
+    path("zakazchiki/<int:pk>/zametki/", owner_views.client_notes, name="client_notes"),
     path("zakazchiki/<int:pk>/obekt/", owner_views.client_estate, name="client_estate"),
     path("zakazchiki/<int:pk>/dostup/", owner_views.client_access, name="client_access"),
     path("zakazchiki/<int:pk>/proekt/", owner_views.client_project, name="client_project"),
@@ -40,6 +41,7 @@ urlpatterns = [
     path("uvedomleniya/", owner_views.telegram_prefs, name="telegram_prefs"),
     # --- Заказчик ------------------------------------------------------------
     path("moy-proekt/", client_views.project, name="my_project"),
+    path("moy-proekt/soglasie/", client_views.consent, name="consent"),
     path("moy-proekt/pravka/", client_views.add_revision, name="add_revision"),
     path("moy-proekt/soglasovat/<int:stage_id>/", client_views.approve_stage, name="approve_stage"),
     path("moy-proekt/dogovor/<int:pk>/", client_views.contract_sign, name="contract_sign"),

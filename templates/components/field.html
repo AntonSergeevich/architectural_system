@@ -1,5 +1,10 @@
 <div class="field {% if field.errors %}field--error{% endif %}">
-  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {% comment %}
+    Подпись бывает пустой намеренно: если заголовок панели уже говорит
+    то же самое, второй раз это только шум. Тогда вместо label поле
+    подписано атрибутом aria-label — для экранного диктора разницы нет.
+  {% endcomment %}
+  {% if field.label %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
   {{ field }}
   {% if field.help_text %}<p class="field__hint">{{ field.help_text }}</p>{% endif %}
   {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
