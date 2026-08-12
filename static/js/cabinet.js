@@ -56,6 +56,64 @@
     }
   }
 
+  // --- Этап раскрывается со шкалы -----------------------------------------
+  // Восемь карточек подряд повторяют то, что уже сказала шкала, и человек
+  // читает одно и то же дважды. Поэтому открыт один этап — тот, о котором
+  // спрашивают. Остальные не удалены и не спрятаны от поиска: они здесь же,
+  // просто свёрнуты, и без JavaScript открыты все.
+
+  function setupStages() {
+    var host = document.querySelector('[data-stages]');
+    if (!host) return;
+    var stages = host.querySelectorAll('[data-stage]');
+    if (stages.length < 2) return;
+
+    function open(id, scroll) {
+      var found = false;
+      stages.forEach(function (stage) {
+        var mine = stage.id === id;
+        stage.hidden = !mine;
+        if (mine) found = true;
+      });
+      // Незнакомый якорь не должен схлопывать всё: пусть лучше
+      // останется открытым текущий этап.
+      if (!found) return false;
+
+      document.querySelectorAll('[data-rail-link]').forEach(function (link) {
+        link.classList.toggle('is-open', link.dataset.railLink === id);
+      });
+
+      var stage = document.getElementById(id);
+      if (stage && !reduceMotion) {
+        stage.classList.remove('stage--in');
+        void stage.offsetWidth;  // перезапуск анимации
+        stage.classList.add('stage--in');
+      }
+      if (scroll && stage) {
+        // Шапка сайта липкая: без отступа на её высоту заголовок панели
+        // уезжает под неё, и кажется, что открылось что-то не то.
+        var header = document.querySelector('.header');
+        var offset = (header ? header.offsetHeight : 0) + 16;
+        var top = host.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+      return true;
+    }
+
+    var start = (location.hash || '').replace('#', '');
+    var current = host.querySelector('.stage--current') || stages[0];
+    if (!start || !open(start, false)) open(current.id, false);
+
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('[data-rail-link]');
+      if (!link) return;
+      if (!open(link.dataset.railLink, true)) return;
+      e.preventDefault();
+      // Адрес меняем без прыжка: ссылкой на этап можно поделиться.
+      if (history.replaceState) history.replaceState(null, '', '#' + link.dataset.railLink);
+    });
+  }
+
   // --- Полоса оплаты -------------------------------------------------------
 
   function paintMoney() {
@@ -442,5 +500,6 @@
   paintRail();
   paintMoney();
   setupChat();
+  setupStages();
   window.addEventListener('resize', paintRail);
 })();

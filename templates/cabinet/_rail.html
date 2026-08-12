@@ -4,6 +4,13 @@
   Заказчик заходит в кабинет с одним вопросом — «что происходит». Список
   этапов текстом на этот вопрос не отвечает: его надо прочитать целиком
   и сложить в голове. Стрелка отвечает мгновенно, ещё до чтения.
+
+  Над точкой — доля этапа в общем сроке. Без неё восемь равных шагов
+  читаются как восемь равных сроков, и после третьего этапа начинается
+  «мы застряли», хотя по времени пройдена ровно половина.
+
+  Нажатие на этап раскрывает его карточку ниже. Без JavaScript ссылка
+  остаётся ссылкой на якорь: карточки просто все открыты.
 {% endcomment %}
 <div class="rail" data-rail>
   <div class="rail__track" aria-hidden="true">
@@ -15,20 +22,31 @@
       <li class="rail__item
                  {% if stage.status == 'done' %}is-done{% endif %}
                  {% if current and stage.pk == current.pk %}is-current{% endif %}
-                 {% if stage.waiting_on == 'client' %}is-waiting{% endif %}"
+                 {% if stage.waiting_on == 'client' %}is-waiting{% endif %}
+                 {% if stage.waiting_contract %}has-contract{% endif %}"
           {% if current and stage.pk == current.pk %}data-rail-current{% endif %}>
-        <a class="rail__link" href="#stage-{{ stage.pk }}">
+        <a class="rail__link" href="#stage-{{ stage.pk }}" data-rail-link="stage-{{ stage.pk }}">
           <span class="rail__dot">
+            {% comment %}
+              Доля висит над точкой изнутри неё: точка — единственный
+              элемент шкалы со своей системой координат, и привязка
+              к ней не разъезжается ни при какой ширине экрана.
+            {% endcomment %}
+            <span class="rail__share" title="Доля этапа в общем сроке">{{ stage.share }}%</span>
             {% if stage.status == 'done' %}
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
                 <path d="M3 8.5 6.4 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.2"
                       stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             {% else %}{{ stage.number }}{% endif %}
+            {% if stage.waiting_contract %}
+              <span class="rail__flag" title="Договор ждёт подписи" aria-hidden="true"></span>
+            {% endif %}
           </span>
           <span class="rail__title">{{ stage.title }}</span>
           <span class="rail__meta">
-            {% if stage.waiting_on == 'client' %}ждём вас
+            {% if stage.waiting_contract %}договор
+            {% elif stage.waiting_on == 'client' %}ждём вас
             {% elif stage.status == 'done' %}готово
             {% elif stage.status == 'in_progress' %}в работе
             {% elif stage.status == 'review' %}на согласовании

@@ -242,12 +242,16 @@ def budget_decided(change):
 
 
 def contract_sent(contract):
-    """Договор отправлен заказчику."""
-    text = (
-        f"<b>{escape(contract.project)}</b>\n"
-        f"Договор на подпись: {escape(contract.template.title)}\n"
-        f"Скачать и подписать: {link(reverse('cabinet:my_project'))}#contracts"
-    )
+    """Договор отправлен заказчику.
+
+    Ссылка ведёт на сам этап, а не на общий список: договор подписывают
+    в контексте того, за что он, — и искать его отдельно человек не будет.
+    """
+    anchor = f"#stage-{contract.stage_id}" if contract.stage_id else "#contracts"
+    text = f"<b>{escape(contract.project)}</b>\nДоговор на подпись: {escape(contract.template.title)}"
+    if contract.stage_id:
+        text += f"\nЭтап: {escape(contract.stage.title)}"
+    text += f"\nСкачать и подписать: {link(reverse('cabinet:my_project'))}{anchor}"
     return to_user(_project_user(contract.project), text, kind="money")
 
 

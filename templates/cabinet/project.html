@@ -24,10 +24,10 @@
 
 <div class="cabgrid">
   <div class="cabgrid__main">
-    <section class="panel" id="stages">
+    <section class="panel" id="stages" data-stages>
       <header class="panel__head">
         <h2>Этапы и задачи</h2>
-        <span class="muted">Готово {{ project.progress }}%</span>
+        <span class="muted">Готово {{ project.progress }}% · этап открывается со шкалы</span>
       </header>
       {% for stage in stages %}
         {% include "cabinet/_stage.html" %}

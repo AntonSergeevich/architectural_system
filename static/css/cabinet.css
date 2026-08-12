@@ -75,14 +75,18 @@
 .rail {
   position: relative;
   margin-bottom: var(--gap-6);
-  padding: var(--gap-5) 0 var(--gap-4);
+  padding: var(--gap-6) 0 var(--gap-4);
   overflow-x: auto;
   scrollbar-width: thin;
 }
+/* Шкала — главный экран кабинета, а не подпись к нему: этап открывается
+   нажатием на неё, и промахиваться по ней пальцем нельзя. Отсюда точка
+   в 44px и запас сверху под долю срока.
+   22px — половина точки: линия проходит ровно через её центр. */
 .rail__track {
-  position: absolute; left: 0; right: 0; top: calc(var(--gap-5) + 17px);
+  position: absolute; left: 0; right: 0; top: calc(var(--gap-6) + 22px);
   height: 3px; background: var(--line); border-radius: 2px;
-  min-width: 720px;
+  min-width: 860px;
 }
 .rail__fill {
   display: block; height: 100%; width: 0;
@@ -101,9 +105,9 @@
 
 .rail__items {
   position: relative;
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(96px, 1fr);
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(108px, 1fr);
   gap: var(--gap-2); list-style: none; margin: 0; padding: 0;
-  min-width: 720px;
+  min-width: 860px;
 }
 .rail__link {
   display: grid; justify-items: center; gap: var(--gap-2);
@@ -111,12 +115,33 @@
   padding: 0 var(--gap-1);
 }
 .rail__dot {
+  position: relative;
   display: grid; place-items: center;
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   background: var(--paper); border: 2px solid var(--line);
-  color: var(--muted); font-weight: 700; font-size: var(--step--1);
+  color: var(--muted); font-weight: 700; font-size: var(--step-0);
   transition: transform .25s var(--ease), border-color .25s var(--ease),
               background .25s var(--ease), color .25s var(--ease);
+}
+
+/* Доля этапа в общем сроке — над точкой. «Обмеры» и «рабочая документация»
+   выглядят одинаковыми шагами, хотя это день и месяц; без доли третий этап
+   из восьми читается как «прошло меньше половины», и начинается разговор
+   «мы стоим». */
+.rail__share {
+  position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--step--2); color: var(--muted); font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Договор ждёт подписи — точка на кружке. Это единственное на шкале,
+   что требует действия прямо сейчас, и оно должно быть заметно
+   до чтения подписей. */
+.rail__flag {
+  position: absolute; top: -2px; right: -2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--warn); border: 2px solid var(--surface);
 }
 .rail__title { font-size: var(--step--1); font-weight: 600; color: var(--ink-2); line-height: 1.2; }
 .rail__meta { font-size: var(--step--2); color: var(--muted); }
@@ -129,7 +154,14 @@
 }
 .rail__item.is-current .rail__title { color: var(--ink); }
 .rail__item.is-waiting .rail__dot { border-color: var(--warn); color: var(--warn); }
+.rail__item.has-contract .rail__meta { color: var(--warn); }
 .rail__link:hover .rail__dot { border-color: var(--brand-400); }
+
+/* Какой этап сейчас раскрыт. Отличается от «текущего»: смотреть можно
+   любой, а идёт всегда один — и путать эти два состояния нельзя. */
+.rail__link.is-open .rail__dot { box-shadow: 0 0 0 4px var(--sand); }
+.rail__link.is-open .rail__title { color: var(--ink); text-decoration: underline; }
+.rail__item.is-current .rail__link.is-open .rail__dot { box-shadow: 0 0 0 6px var(--brand-50); }
 
 /* --- Раскладка ------------------------------------------------------------ */
 
@@ -242,6 +274,27 @@
 .stage__title h3 { font-size: var(--step-0); }
 .stage__status { display: flex; flex-wrap: wrap; gap: var(--gap-2); align-items: center; margin-top: var(--gap-1); }
 .stage__date { font-size: var(--step--2); color: var(--muted); }
+.stage__facts { margin-top: var(--gap-2); }
+
+/* Раскрытый этап — «облако» шкалы: он появляется на месте, а не подгружает
+   страницу, и это движение объясняет, откуда он взялся. */
+.stage--in { animation: stage-in .32s var(--ease) both; }
+@keyframes stage-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .stage--in { animation: none; } }
+
+/* Договор на этапе. Неподписанный подсвечен: пока он не вернулся,
+   всё остальное на этапе — разговоры. */
+.stage--contract { border-color: var(--warn); }
+.stage__contract {
+  background: var(--warn-bg); border-radius: var(--radius-2);
+  padding: var(--gap-4); margin-bottom: var(--gap-4);
+}
+.stage__contract .muted { color: var(--warn); opacity: .85; }
+.stage__contract.is-signed { background: var(--ok-bg); }
+.stage__contract.is-signed .muted { color: var(--ok); }
 .stage__sub {
   font-size: var(--step--2); text-transform: uppercase; letter-spacing: .1em;
   color: var(--muted); margin: var(--gap-4) 0 var(--gap-2);

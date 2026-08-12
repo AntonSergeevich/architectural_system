@@ -1,10 +1,11 @@
+{% load richtext %}
 {% comment %}
   Карточка этапа. Один шаблон на оба кабинета: данные под ними одни
   и те же, а два шаблона однажды разойдутся — и стороны увидят разное.
   Различает их `is_owner_view`.
 {% endcomment %}
-<article class="stage {% if current and stage.pk == current.pk %}stage--current{% endif %} {% if stage.status == 'done' %}stage--done{% endif %}"
-         id="stage-{{ stage.pk }}">
+<article class="stage {% if current and stage.pk == current.pk %}stage--current{% endif %} {% if stage.status == 'done' %}stage--done{% endif %} {% if stage.waiting_contract %}stage--contract{% endif %}"
+         id="stage-{{ stage.pk }}" data-stage>
 
   <header class="stage__head">
     <span class="stage__num">{{ stage.number }}</span>
@@ -13,11 +14,67 @@
       <p class="stage__status">
         <span class="pill pill--{{ stage.status }}">{{ stage.get_status_display }}</span>
         {% if stage.waiting_on == 'client' %}<span class="pill pill--wait">ждём заказчика</span>{% endif %}
+        {% if stage.waiting_contract %}<span class="pill pill--wait">договор ждёт подписи</span>{% endif %}
         {% if stage.started_at %}<span class="stage__date">начат {{ stage.started_at|date:"d.m.Y" }}</span>{% endif %}
         {% if stage.finished_at %}<span class="stage__date">закрыт {{ stage.finished_at|date:"d.m.Y" }}</span>{% endif %}
       </p>
+      {% comment %}
+        Срок и деньги этапа — в его же шапке. Иначе ответ на «сколько это
+        займёт и за что я плачу» приходится собирать из трёх мест экрана.
+      {% endcomment %}
+      <p class="stage__facts muted">
+        {{ stage.planned_days|workdays }} · {{ stage.share }}% всего срока
+        {% if stage.paid %} · оплачено {{ stage.paid|money }}{% endif %}
+      </p>
     </div>
   </header>
+
+  {% comment %}
+    Договор этапа. Стоит выше задач намеренно: пока он не подписан,
+    остальное на этапе не имеет силы. Заказчику видно, что скачать
+    и куда вернуть, Дарье — чего она ждёт.
+  {% endcomment %}
+  {% for contract in stage.contracts.all %}
+    <div class="stage__contract {% if contract.is_signed %}is-signed{% endif %}">
+      <div class="contract__head">
+        <strong>{{ contract.template.title }}{% if contract.number %} №{{ contract.number }}{% endif %}</strong>
+        <span class="pill pill--{{ contract.status }}">{{ contract.get_status_display }}</span>
+      </div>
+      <p class="muted">
+        от {{ contract.date|date:"d.m.Y" }}
+        {% if contract.amount %} · {{ contract.amount|money }}{% endif %}
+        {% if contract.signed_at %} · подписан {{ contract.signed_at|date:"d.m.Y" }}{% endif %}
+      </p>
+
+      <div class="contract__actions">
+        {% if contract.file %}
+          <a class="btn btn--ghost" href="{{ contract.file.url }}" download>Скачать договор</a>
+        {% endif %}
+        {% if contract.signed_file %}
+          <a class="btn btn--ghost" href="{{ contract.signed_file.url }}" download>Подписанный экземпляр</a>
+        {% endif %}
+        <a class="btn btn--ghost" href="{{ contract.get_absolute_url }}">Читать с расшифровками</a>
+      </div>
+
+      {% if not is_owner_view and not contract.is_signed %}
+        <form class="contract__upload" method="post" enctype="multipart/form-data"
+              action="{% url 'cabinet:contract_sign' contract.pk %}">
+          {% csrf_token %}
+          <label class="chat__attach">
+            <input type="file" name="signed_file" required>
+            <span>Выбрать подписанный файл</span>
+          </label>
+          <button class="btn" type="submit">Отправить подписанный</button>
+        </form>
+        <p class="muted">Подойдёт скан или фотография — главное, чтобы читались подписи.</p>
+      {% elif is_owner_view and not contract.is_signed %}
+        <p class="muted">
+          {% if contract.waiting_for_client %}Ждём подписанный экземпляр от заказчика.
+          {% else %}Черновик. Отправьте заказчику, приложив файл.{% endif %}
+        </p>
+      {% endif %}
+    </div>
+  {% endfor %}
 
   {% comment %} Задачи — то самое «что сейчас должно быть сделано». {% endcomment %}
   <div class="tasks">
@@ -71,6 +128,10 @@
         <p class="muted">Задач пока нет. Добавьте, что должно быть сделано на этом этапе.</p>
       {% elif current and stage.pk == current.pk %}
         <p class="muted">По этому этапу от вас пока ничего не нужно.</p>
+      {% elif stage.status == 'done' %}
+        <p class="muted">Этап закрыт{% if stage.finished_at %} {{ stage.finished_at|date:"d.m.Y" }}{% endif %}.</p>
+      {% else %}
+        <p class="muted">Этап впереди — до него ещё не дошли.</p>
       {% endif %}
     {% endfor %}
   </div>

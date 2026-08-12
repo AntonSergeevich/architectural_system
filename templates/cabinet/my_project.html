@@ -67,9 +67,16 @@
 
 <div class="cabgrid">
   <div class="cabgrid__main">
-    <section class="panel" id="stages">
+    {% comment %}
+      Раньше здесь лежали все восемь карточек подряд — и то же самое,
+      что на шкале, читалось второй раз. Теперь открыт один этап,
+      остальные раскрываются нажатием на шкале. Без JavaScript открыты
+      все: лучше длинно, чем недоступно.
+    {% endcomment %}
+    <section class="panel" id="stages" data-stages>
       <header class="panel__head">
         <h2>Что происходит</h2>
+        <span class="panel__hint">нажмите этап на шкале, чтобы открыть его</span>
       </header>
       {% for stage in stages %}
         {% include "cabinet/_stage.html" %}

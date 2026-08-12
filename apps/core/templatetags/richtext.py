@@ -59,6 +59,29 @@ def richtext(value):
     return mark_safe("\n".join(html))
 
 
+@register.filter(name="workdays")
+def workdays(value):
+    """7 → «7 рабочих дней», 21 → «21 рабочий день».
+
+    Русский счёт требует трёх форм, и `pluralize` их не умеет. «21 рабочих
+    дней» на экране заказчика читается как небрежность — а небрежность
+    в мелочах переносят на работу целиком.
+    """
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return value
+
+    tail, hundred = number % 10, number % 100
+    if tail == 1 and hundred != 11:
+        word = "рабочий день"
+    elif tail in (2, 3, 4) and hundred not in (12, 13, 14):
+        word = "рабочих дня"
+    else:
+        word = "рабочих дней"
+    return f"{number} {word}"
+
+
 @register.filter(name="money")
 def money(value):
     """15000 → «15 000 ₽», с неразрывными пробелами."""

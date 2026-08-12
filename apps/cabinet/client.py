@@ -96,7 +96,7 @@ def project(request):
     obj = _project_for(request.user)
     services.mark_messages_read(obj, request.user)
 
-    stages = list(obj.stages.order_by("number"))
+    stages = services.stage_shares(obj.stages.order_by("number"))
     current = obj.current_stage
 
     # «Что от меня ждут» — первое, что человек должен увидеть. Всё
@@ -120,7 +120,11 @@ def project(request):
             "form": RevisionForm(),
             "message_form": MessageForm(),
             "messages_list": obj.messages.all(),
-            "open_contracts": [c for c in contracts if not c.is_signed],
+            # Договор этапа показывается на самом этапе — там, где заказчик
+            # смотрит, что происходит. В боковой панели остаются только
+            # договоры вне этапов и архив подписанных.
+            "open_contracts": [c for c in contracts if not c.is_signed and c.stage_id is None],
+            "stage_contracts": [c for c in contracts if not c.is_signed and c.stage_id],
             "signed_contracts": [c for c in contracts if c.is_signed],
             "pending_changes": obj.pending_budget_changes,
             "decided_changes": [c for c in obj.budget_changes.all() if not c.is_pending],

@@ -355,3 +355,25 @@ class CookieTests(TestCase):
         response = self.client.post(reverse("public:cookie_consent"), {"choice": "everything"})
         self.assertEqual(response.status_code, 400)
         self.assertFalse(CookieConsent.objects.exists())
+
+
+class FilterTests(TestCase):
+    """Мелочи текста. «21 рабочих дней» на экране заказчика читается
+    как небрежность — а небрежность в мелочах переносят на работу."""
+
+    def test_workdays_uses_all_three_russian_forms(self):
+        from .templatetags.richtext import workdays
+
+        cases = {
+            1: "1 рабочий день",
+            2: "2 рабочих дня",
+            5: "5 рабочих дней",
+            11: "11 рабочих дней",
+            14: "14 рабочих дней",
+            21: "21 рабочий день",
+            22: "22 рабочих дня",
+            25: "25 рабочих дней",
+        }
+        for number, expected in cases.items():
+            with self.subTest(number=number):
+                self.assertEqual(workdays(number), expected)

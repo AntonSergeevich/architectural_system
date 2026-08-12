@@ -338,7 +338,7 @@ def project_detail(request, pk):
     project = get_object_or_404(services.project_queryset(), pk=pk)
     services.mark_messages_read(project, request.user)
 
-    stages = list(project.stages.order_by("number"))
+    stages = services.stage_shares(project.stages.order_by("number"))
     current = project.current_stage
     presets = TaskPreset.objects.filter(is_active=True).filter(
         Q(stage_number__isnull=True) | Q(stage_number=current.number if current else 0)
@@ -360,7 +360,14 @@ def project_detail(request, pk):
             "message_form": MessageForm(),
             "messages_list": project.messages.all(),
             "signed_contracts": [c for c in project.contracts.all() if c.is_signed],
-            "open_contracts": [c for c in project.contracts.all() if not c.is_signed],
+            # Договоры этапов живут на самих этапах: там их и ищут. В боковой
+            # панели остаётся то, что ни к какому этапу не привязано.
+            "open_contracts": [
+                c for c in project.contracts.all() if not c.is_signed and c.stage_id is None
+            ],
+            "stage_contracts": [
+                c for c in project.contracts.all() if not c.is_signed and c.stage_id
+            ],
             "is_owner_view": True,
             **services.telegram_context(request.user),
         },

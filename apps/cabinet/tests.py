@@ -537,6 +537,59 @@ class ContractTests(CabinetTestCase):
         self.assertFalse(contract.signed_file)
 
 
+class RailTests(CabinetTestCase):
+    """Шкала этапов: доля срока и договор, который ждёт подписи."""
+
+    def test_share_of_the_whole_term_is_shown(self):
+        """Восемь равных точек врут: этапы разной длины.
+
+        Доля считается от суммы плановых дней и в сумме даёт примерно
+        сотню — «примерно», потому что каждая доля округляется.
+        """
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        shares = [stage.share for stage in response.context["stages"]]
+        self.assertEqual(len(shares), 8)
+        self.assertAlmostEqual(sum(shares), 100, delta=4)
+        self.assertContains(response, f"{shares[0]}%")
+
+    def test_contract_waiting_marks_its_stage(self):
+        contract = Contract.objects.create(
+            template=ContractTemplate.objects.first(),
+            project=self.project,
+            client=self.customer,
+            stage=self.stage,
+            status=Contract.Status.SENT,
+        )
+
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        stages = {stage.pk: stage for stage in response.context["stages"]}
+        self.assertEqual(stages[self.stage.pk].waiting_contract, [contract])
+        self.assertContains(response, "договор ждёт подписи")
+
+        # И он не задваивается: договор этапа живёт на этапе, а в боковой
+        # панели остаётся ссылка на него.
+        self.assertNotIn(contract, response.context["open_contracts"])
+        self.assertIn(contract, response.context["stage_contracts"])
+
+        contract.signed_file = SimpleUploadedFile("d.pdf", b"%PDF-1.4")
+        contract.status = Contract.Status.SIGNED
+        contract.save(update_fields=["signed_file", "status"])
+        response = self.client.get(reverse("cabinet:my_project"))
+        stages = {stage.pk: stage for stage in response.context["stages"]}
+        self.assertEqual(stages[self.stage.pk].waiting_contract, [])
+
+    def test_stage_payments_are_shown_on_the_stage(self):
+        ProjectPayment.objects.create(
+            project=self.project, stage=self.stage, amount=Decimal("50000")
+        )
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        stages = {stage.pk: stage for stage in response.context["stages"]}
+        self.assertEqual(stages[self.stage.pk].paid, Decimal("50000"))
+
+
 class ChatTests(CabinetTestCase):
     def test_both_sides_write_and_see_each_other(self):
         self.login_owner()

@@ -5,6 +5,8 @@
 в двух местах значит однажды получить две разные истории одного проекта.
 """
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
@@ -143,8 +145,31 @@ def project_queryset():
         "stages__tasks",
         "stages__files",
         "stages__revisions",
+        "stages__contracts__template",
+        "stages__payments",
         "payments",
         "budget_changes",
         "contracts__template",
         "messages__files",
     )
+
+
+def stage_shares(stages):
+    """Сколько времени занимает каждый этап — в долях от всего срока.
+
+    «Обмеры» и «рабочая документация» стоят на шкале одинаковыми точками,
+    хотя первый занимает день, а второй — месяц. Отсюда и берётся ощущение
+    «мы застряли»: заказчик видит восемь равных шагов и считает, что после
+    третьего должно пройти три восьмых времени. Доля возвращает шкале
+    честный масштаб, не ломая её вида.
+    """
+    stages = list(stages)
+    total = sum(stage.planned_days for stage in stages) or 1
+    for stage in stages:
+        stage.share = round(stage.planned_days * 100 / total)
+        # Договор и деньги этапа — рядом с самим этапом, а не в общем
+        # списке где-то сбоку: вопрос «за что я плачу» задаётся именно
+        # в тот момент, когда смотришь, что на этапе делается.
+        stage.waiting_contract = [c for c in stage.contracts.all() if not c.is_signed]
+        stage.paid = sum((p.amount for p in stage.payments.all()), Decimal("0"))
+    return stages

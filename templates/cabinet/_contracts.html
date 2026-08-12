@@ -56,7 +56,27 @@
         </article>
       {% endfor %}
     </div>
-  {% else %}
+  {% endif %}
+
+  {% comment %}
+    Договоры этапов показаны на самих этапах — здесь только напоминание
+    со ссылкой. Показывать их дважды значит заставить сверять два списка
+    и гадать, один это договор или два.
+  {% endcomment %}
+  {% if stage_contracts %}
+    <ul class="files">
+      {% for contract in stage_contracts %}
+        <li>
+          <a href="#stage-{{ contract.stage_id }}" data-rail-link="stage-{{ contract.stage_id }}">
+            {{ contract.template.title }} — этап «{{ contract.stage.title }}»
+          </a>
+          <span class="muted">ждёт подписи</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if not open_contracts and not stage_contracts %}
     <p class="muted">Договоров на подписание нет.</p>
   {% endif %}
 
