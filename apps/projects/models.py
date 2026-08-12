@@ -239,6 +239,19 @@ class StageFile(models.Model):
     def __str__(self):
         return self.title or self.file.name
 
+    @property
+    def label(self):
+        """Имя файла, а не путь вида projects/2026/08/438.JPG."""
+        return self.title or self.file.name.rsplit("/", 1)[-1]
+
+    @property
+    def is_image(self):
+        return self.file.name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+
+    @property
+    def is_pdf(self):
+        return self.file.name.lower().endswith(".pdf")
+
 
 class Approval(models.Model):
     """Согласование этапа заказчиком.

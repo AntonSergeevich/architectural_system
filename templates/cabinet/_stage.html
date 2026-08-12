@@ -112,11 +112,19 @@
       </form>
     </details>
 
+    {% comment %}
+      Одна форма и одна кнопка. Раньше их было две — «Сохранить» и
+      «Приложить»: человек менял статус, прикладывал файл и жал одну
+      из них, а вторая половина сделанного пропадала. Это не экономия
+      клика, это потерянная работа.
+    {% endcomment %}
     <details class="adder">
       <summary>Этап: статус, заметка, файлы</summary>
-      <form class="adder__form" method="post" action="{% url 'cabinet:stage_update' project.pk %}">
+      <form class="adder__form" method="post" enctype="multipart/form-data"
+            action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form>
         {% csrf_token %}
         <input type="hidden" name="stage" value="{{ stage.pk }}">
+
         <div class="adder__row">
           <select name="status" aria-label="Статус этапа">
             {% for value, label in stage.Status.choices %}
@@ -124,19 +132,23 @@
             {% endfor %}
           </select>
           <input type="text" name="note" value="{{ stage.note }}" placeholder="Заметка (видите только вы)">
-          <button class="btn" type="submit">Сохранить</button>
         </div>
-      </form>
 
-      <form class="adder__form" method="post" enctype="multipart/form-data"
-            action="{% url 'cabinet:stage_file' project.pk %}">
-        {% csrf_token %}
-        <input type="hidden" name="stage" value="{{ stage.pk }}">
-        <div class="adder__row">
-          <input type="text" name="title" placeholder="Название файла">
-          <input type="file" name="file" required>
-          <button class="btn btn--ghost" type="submit">Приложить</button>
-        </div>
+        {% comment %}
+          Файлы бросают мышью из папки — так их и передают в жизни.
+          Кнопка остаётся: перетаскивание умеют не все, и на телефоне
+          его нет вовсе.
+        {% endcomment %}
+        <label class="drop" data-drop>
+          <input type="file" name="files" multiple data-drop-input>
+          <span class="drop__hint">
+            <strong>Перетащите файлы сюда</strong>
+            <span class="muted">или нажмите, чтобы выбрать</span>
+          </span>
+        </label>
+        <p class="drop__picked muted" data-drop-picked hidden></p>
+
+        <button class="btn" type="submit">Отправить</button>
       </form>
     </details>
   {% endif %}
@@ -144,23 +156,56 @@
   {% if stage.files.all %}
     <div class="stage__files">
       <p class="stage__sub">Файлы этапа</p>
-      <ul class="files">
+      {% comment %}
+        Картинки — миниатюрами: по имени вида «438.JPG» нельзя понять,
+        что внутри, а планировку от визуализации отличают взглядом.
+        Открываются окном поверх, документы — в соседней вкладке.
+      {% endcomment %}
+      <div class="thumbs">
         {% for file in stage.files.all %}
-          <li><a href="{{ file.file.url }}" download>{{ file.title|default:file.file.name }}</a>
-            <span class="muted">{{ file.uploaded_at|date:"d.m.Y" }}</span></li>
+          <div class="thumb {% if not file.is_image %}thumb--doc{% endif %}">
+            {% if file.is_image %}
+              <a href="{{ file.file.url }}" data-lightbox="{{ file.label }}">
+                <img src="{{ file.file.url }}" alt="{{ file.label }}" loading="lazy">
+              </a>
+            {% else %}
+              <a href="{{ file.file.url }}" target="_blank" rel="noopener">
+                <span class="thumb__ext">{% if file.is_pdf %}PDF{% else %}файл{% endif %}</span>
+                <span class="thumb__name">{{ file.label }}</span>
+              </a>
+            {% endif %}
+            <span class="thumb__date muted">{{ file.uploaded_at|date:"d.m.Y" }}</span>
+            {% if is_owner_view %}
+              <form method="post" action="{% url 'cabinet:stage_file_delete' project.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="file" value="{{ file.pk }}">
+                <button class="thumb__del" type="submit" title="Убрать файл" aria-label="Убрать файл">×</button>
+              </form>
+            {% endif %}
+          </div>
         {% endfor %}
-      </ul>
+      </div>
     </div>
   {% endif %}
 
   {% if stage.revisions.all %}
     <div class="stage__files">
       <p class="stage__sub">Правки</p>
-      <ul class="files">
+      {% comment %}
+        Правка выделена маркером: это то, что придётся сделать сверх
+        уже согласованного, и потеряться в общем тексте она не должна.
+      {% endcomment %}
+      <ul class="revisions">
         {% for revision in stage.revisions.all %}
-          <li>{{ revision.text }}
-            <span class="muted">— {{ revision.get_status_display }}</span>
-            {% if revision.answer %}<br><span class="muted">Ответ: {{ revision.answer }}</span>{% endif %}
+          <li class="revision revision--{{ revision.status }}">
+            <mark class="revision__text">{{ revision.text }}</mark>
+            <span class="revision__meta muted">
+              {% if revision.room %}{{ revision.room }} · {% endif %}{{ revision.get_status_display }}
+              {% if revision.reply_due_at and revision.status == 'new' %}
+                · ответить до {{ revision.reply_due_at|date:"d.m H:i" }}
+              {% endif %}
+            </span>
+            {% if revision.answer %}<span class="revision__answer">Ответ: {{ revision.answer }}</span>{% endif %}
           </li>
         {% endfor %}
       </ul>

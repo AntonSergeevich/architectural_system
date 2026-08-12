@@ -292,6 +292,51 @@
     });
   }
 
+  // --- Перетаскивание файлов ------------------------------------------------
+  // Файлы бросают мышью из папки — так их и передают в жизни. Кнопка при
+  // этом остаётся: перетаскивание умеют не все, а на телефоне его нет.
+
+  function names(list) {
+    return Array.prototype.map.call(list, function (f) { return f.name; }).join(', ');
+  }
+
+  document.querySelectorAll('[data-drop]').forEach(function (zone) {
+    var input = zone.querySelector('[data-drop-input]');
+    var picked = zone.parentElement.querySelector('[data-drop-picked]');
+    if (!input) return;
+
+    function show() {
+      if (!picked) return;
+      picked.hidden = !input.files.length;
+      picked.textContent = input.files.length
+        ? 'Готово к отправке: ' + names(input.files)
+        : '';
+    }
+
+    input.addEventListener('change', show);
+
+    ['dragenter', 'dragover'].forEach(function (name) {
+      zone.addEventListener(name, function (e) {
+        e.preventDefault();
+        zone.classList.add('is-over');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (name) {
+      zone.addEventListener(name, function (e) {
+        e.preventDefault();
+        zone.classList.remove('is-over');
+      });
+    });
+
+    zone.addEventListener('drop', function (e) {
+      if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+      // Кладём файлы прямо в поле формы: тогда обычная отправка работает
+      // так же, как если бы их выбрали кнопкой.
+      input.files = e.dataTransfer.files;
+      show();
+    });
+  });
+
   // --- Просмотр картинок ----------------------------------------------------
   // Фото открывается поверх переписки, а не новой вкладкой: посмотреть
   // присланное и вернуться к разговору должно быть одним движением.

@@ -259,6 +259,66 @@ class TaskTests(CabinetTestCase):
         self.assertTrue(task.is_done)
 
 
+class StageFilesTests(CabinetTestCase):
+    """Этап сохраняется одной кнопкой — вместе с файлами."""
+
+    def test_status_note_and_files_go_together(self):
+        """Раньше форм было две, и половина сделанного пропадала."""
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:stage_update", args=[self.project.pk]),
+            {
+                "stage": self.stage.pk,
+                "status": Stage.Status.IN_PROGRESS,
+                "note": "созвон во вторник",
+                "files": [
+                    SimpleUploadedFile("plan.pdf", b"%PDF-1.4"),
+                    SimpleUploadedFile("foto.jpg", b"\xff\xd8\xff"),
+                ],
+            },
+        )
+        self.stage.refresh_from_db()
+        self.assertEqual(self.stage.status, Stage.Status.IN_PROGRESS)
+        self.assertEqual(self.stage.note, "созвон во вторник")
+        self.assertEqual(self.stage.files.count(), 2)
+
+    def test_file_can_be_removed(self):
+        """Перепутанный файл должен убираться, а не висеть у заказчика."""
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:stage_update", args=[self.project.pk]),
+            {"stage": self.stage.pk, "files": SimpleUploadedFile("oshibka.jpg", b"\xff\xd8\xff")},
+        )
+        item = self.stage.files.get()
+
+        self.client.post(
+            reverse("cabinet:stage_file_delete", args=[self.project.pk]), {"file": item.pk}
+        )
+        self.assertEqual(self.stage.files.count(), 0)
+
+    def test_client_cannot_remove_stage_files(self):
+        from apps.projects.models import StageFile
+
+        item = StageFile.objects.create(
+            stage=self.stage, file=SimpleUploadedFile("plan.jpg", b"\xff\xd8\xff")
+        )
+        self.login_client()
+        response = self.client.post(
+            reverse("cabinet:stage_file_delete", args=[self.project.pk]), {"file": item.pk}
+        )
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(self.stage.files.filter(pk=item.pk).exists())
+
+    def test_file_label_is_a_name_not_a_path(self):
+        from apps.projects.models import StageFile
+
+        item = StageFile.objects.create(
+            stage=self.stage, file=SimpleUploadedFile("438.JPG", b"\xff\xd8\xff")
+        )
+        self.assertNotIn("/", item.label)
+        self.assertTrue(item.is_image)
+
+
 class MoneyTests(CabinetTestCase):
     def test_payments_add_up_and_leave_remainder(self):
         self.login_owner()

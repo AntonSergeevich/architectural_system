@@ -106,6 +106,20 @@
 
 .section { padding: var(--gap-8) 0; }
 .section--tight { padding: var(--gap-7) 0; }
+
+/* На телефоне те же отступы читаются как дыры: между карточкой расчёта
+   и первым фактом получалось почти полтора экрана пустоты, и человек
+   решал, что страница кончилась. Воздух нужен, но на широком экране
+   он работает вбок, а на узком — только вниз. */
+@media (max-width: 720px) {
+  .section { padding: var(--gap-7) 0; }
+  .section--tight { padding: var(--gap-6) 0; }
+  .hero { padding: var(--gap-5) 0 var(--gap-6); }
+  .hero__inner { gap: var(--gap-5); }
+  .quick { margin-top: var(--gap-5); }
+  .facts { gap: var(--gap-5); }
+  .footer { margin-top: var(--gap-7); padding: var(--gap-6) 0 var(--gap-5); }
+}
 .section--alt { background: var(--paper-alt); }
 .section--ink { background: var(--brand-500); color: #fff; }
 .section--ink h2, .section--ink a { color: #fff; }

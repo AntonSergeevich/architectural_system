@@ -438,11 +438,18 @@ def task_delete(request, pk):
 @owner_only
 @require_POST
 def stage_update(request, pk):
-    """Статус этапа и заметка к нему."""
+    """Этап целиком: статус, заметка и файлы — одной кнопкой.
+
+    Раньше здесь было две формы и две кнопки, «Сохранить» и «Приложить».
+    Человек меняет статус, прикладывает файл и жмёт одну из них — вторая
+    половина сделанного пропадает. Это не экономия клика, это потерянная
+    работа.
+    """
     project = _project_or_404(pk)
     stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
 
     status = request.POST.get("status")
+    changed_status = status in dict(Stage.Status.choices) and status != stage.status
     if status in dict(Stage.Status.choices):
         stage.status = status
         if status == Stage.Status.IN_PROGRESS and not stage.started_at:
@@ -456,26 +463,40 @@ def stage_update(request, pk):
     if "note" in request.POST:
         stage.note = request.POST["note"]
     stage.save()
-    if status in dict(Stage.Status.choices):
+
+    uploaded = request.FILES.getlist("files")
+    for item in uploaded:
+        StageFile.objects.create(stage=stage, file=item, title=item.name[:200])
+
+    if changed_status:
         notify.safe(notify.stage_changed, stage)
-    messages.success(request, f"Этап «{stage.title}» обновлён.")
-    return redirect("cabinet:project_detail", pk=pk)
+
+    parts = []
+    if changed_status:
+        parts.append(f"этап «{stage.title}» — {stage.get_status_display().lower()}")
+    if uploaded:
+        parts.append(f"файлов добавлено: {len(uploaded)}")
+    messages.success(request, ("Сохранено: " + ", ".join(parts)) if parts else "Сохранено.")
+    return redirect(f"{reverse('cabinet:project_detail', args=[pk])}#stage-{stage.pk}")
 
 
 @login_required
 @owner_only
 @require_POST
-def stage_file(request, pk):
-    """Файл этапа: планировки, эскизы, альбом."""
+def stage_file_delete(request, pk):
+    """Убрать файл этапа.
+
+    Не то же самое, что файл в переписке: там доказательная база и удалять
+    нельзя, а здесь рабочие материалы — перепутанный файл должен убираться,
+    а не оставаться висеть у заказчика.
+    """
     project = _project_or_404(pk)
-    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
-    uploaded = request.FILES.get("file")
-    if uploaded:
-        StageFile.objects.create(
-            stage=stage, file=uploaded, title=request.POST.get("title", "")[:200]
-        )
-        messages.success(request, "Файл добавлен, заказчик увидит его у себя.")
-    return redirect("cabinet:project_detail", pk=pk)
+    item = get_object_or_404(StageFile, pk=request.POST.get("file"), stage__project=project)
+    stage_id = item.stage_id
+    item.file.delete(save=False)
+    item.delete()
+    messages.success(request, "Файл убран.")
+    return redirect(f"{reverse('cabinet:project_detail', args=[pk])}#stage-{stage_id}")
 
 
 @login_required
