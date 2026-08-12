@@ -32,8 +32,8 @@
       <div class="card" style="margin-top: var(--gap-4)">
         <p class="card__title">Анкета</p>
         <div class="summary-lines">
-          {% for key, value in lead.answers.items %}
-            <div class="summary-line"><span class="card__muted">{{ key }}</span><span>{{ value }}</span></div>
+          {% for row in lead.answers_display %}
+            <div class="summary-line"><span class="card__muted">{{ row.label }}</span><span>{{ row.value }}</span></div>
           {% endfor %}
         </div>
       </div>

@@ -227,6 +227,23 @@ class LeadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Lead.objects.exists())
 
+    def test_answers_are_readable(self):
+        """В кабинете анкета — это вопрос и ответ, а не имена полей формы.
+
+        «has_builders False» читается как ошибка, хотя это законный ответ
+        «своей бригады нет».
+        """
+        self.client.post(reverse("public:contacts"), self._payload(keys_received="on"))
+        rows = Lead.objects.get().answers_display
+        shown = {row["label"]: row["value"] for row in rows}
+
+        self.assertIn("Ключи получены", shown)
+        self.assertEqual(shown["Ключи получены"], "да")
+        self.assertEqual(shown["Своя бригада"], "нет")
+        for row in rows:
+            self.assertNotIn("_", row["label"], f"осталось имя поля: {row['label']}")
+            self.assertNotIn(row["value"], (True, False), "осталось питоновское значение")
+
     def test_honeypot_blocks_bots(self):
         response = self.client.post(reverse("public:contacts"), self._payload(website="spam"))
         self.assertEqual(response.status_code, 200)

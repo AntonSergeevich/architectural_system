@@ -153,6 +153,48 @@ class Lead(models.Model):
             self.next_action_at < timezone.now()
         )
 
+    # Ключи анкеты — это имена полей формы, а значения приходят как есть,
+    # вместе с питоновскими True и False. Человеку в кабинете нужны
+    # вопрос и ответ, а не устройство базы: «has_builders False» читается
+    # как ошибка, хотя это законный ответ «своей бригады нет».
+    ANSWER_LABELS = {
+        "complexity": "Какой интерьер",
+        "decides_alone": "Решение принимает один",
+        "desired_move_in": "Когда хочет въехать",
+        "has_builders": "Своя бригада",
+        "keys_received": "Ключи получены",
+    }
+
+    @property
+    def answers_display(self):
+        """Анкета по-русски: пары «вопрос — ответ» в осмысленном порядке."""
+        from apps.catalog.models import ComplexityFactor
+
+        rows = []
+        for key, label in self.ANSWER_LABELS.items():
+            if key not in self.answers:
+                continue
+            value = self.answers[key]
+
+            if value is True:
+                value = "да"
+            elif value is False:
+                value = "нет"
+            elif value in (None, ""):
+                value = "—"
+            elif key == "complexity":
+                factor = ComplexityFactor.objects.filter(code=value).first()
+                value = factor.title if factor else value
+
+            rows.append({"label": label, "value": value})
+
+        # Ключи, которых нет в словаре, всё равно показываем: анкета
+        # меняется, и потерять новый ответ хуже, чем показать его сырым.
+        for key, value in self.answers.items():
+            if key not in self.ANSWER_LABELS and value not in (None, "", False):
+                rows.append({"label": key, "value": value})
+        return rows
+
 
 class Quote(models.Model):
     """Коммерческое предложение — то, что открывается по ссылке.
