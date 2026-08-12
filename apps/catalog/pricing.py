@@ -141,7 +141,7 @@ def calculate(area, rooms=1, complexity=None, modules=None, months=None, stages=
     """Посчитать стоимость для набора модулей.
 
     `area` — площадь в м², `modules` — итерируемое с ServiceModule.
-    Обязательные модули добавляются всегда: убрать фундамент нельзя.
+    Обязательные модули добавляются всегда: убрать пол из-под проекта нельзя.
     """
     settings = settings or PricingSettings.get()
     area = Decimal(area or 0)
@@ -181,7 +181,7 @@ def calculate(area, rooms=1, complexity=None, modules=None, months=None, stages=
         calc.fixed_design_price = settings.small_area_price
 
     # Что снято — нужно не меньше, чем что выбрано: из этого собираются
-    # дыры в доме и честные плашки «что вы берёте на себя».
+    # дыры в комнате и честные плашки «что вы берёте на себя».
     calc.missing = list(
         ServiceModule.objects.filter(is_active=True, is_required=False)
         .exclude(pk__in=chosen)

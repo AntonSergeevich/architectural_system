@@ -513,24 +513,24 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .step__days { color: var(--muted); font-size: var(--step--1); margin-top: var(--gap-2); }
 
 /* ==========================================================================
-   Конструктор: дом из кубиков
+   Конструктор: комната из блоков
    ========================================================================== */
 
-/* Две колонки задаются НА ФОРМЕ, а не на обёртке: дом и склад лежат
+/* Две колонки задаются НА ФОРМЕ, а не на обёртке: комната и склад лежат
    внутри неё, и колонки внешнего контейнера до них просто не доходили —
    форма занимала одну колонку, а внутри всё вставало друг под друга. */
 .constructor { display: block; }
 
 /* На узком экране колонок нет, и это не «то же самое в одну колонку».
    Сетка в один столбец давала каждому блоку свою строку, а липкий
-   элемент прилипает только внутри своей строки — то есть дом уезжал
+   элемент прилипает только внутри своей строки — то есть комната уезжала
    за экран ровно тогда, когда человек добирался до склада блоков.
-   Тащить становилось некуда: блок в руке, а дома не видно.
+   Тащить становилось некуда: блок в руке, а комнаты не видно.
 
-   Поэтому здесь flex-колонка: липкий дом держится за всю форму
+   Поэтому здесь flex-колонка: липкая комната держится за всю форму
    целиком и остаётся сверху, пока склад прокручивается под ним.
    Пояснения к цене при этом уходят в самый низ — они не должны стоять
-   между домом и блоками. */
+   между комнатой и блоками. */
 .constructor__form { display: flex; flex-direction: column; gap: var(--gap-5); }
 .constructor__left, .constructor__right { display: contents; }
 .total__notes { order: 5; }
@@ -540,9 +540,9 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
     display: grid;
     grid-template-columns: minmax(360px, 44%) 1fr;
     /* Колонки НЕ выравниваем по верху: при align-items: start левая
-       колонка получает высоту своего содержимого, и липкий дом
+       колонка получает высоту своего содержимого, и липкая комната
        перестаёт держаться, как только она закончилась. А список блоков
-       справа втрое длиннее — то есть у нижних блоков дом уже за экраном,
+       справа втрое длиннее — то есть у нижних блоков комната уже за экраном,
        и тащить их некуда. Растянутая колонка чинит это целиком. */
     align-items: stretch;
   }
@@ -552,7 +552,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   .total__notes { order: 0; }
 }
 
-/* Дом «прилипает» и остаётся перед глазами, пока справа прокручивается
+/* Комната «прилипает» и остаётся перед глазами, пока справа прокручивается
    склад блоков. Иначе тащить нечего: блок и цель не помещаются на экран
    одновременно. */
 .house-panel {
@@ -561,13 +561,13 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   padding-bottom: var(--gap-3);
 }
 @media (min-width: 1000px) {
-  /* На широком экране колонка с домом прокручивается вместе со страницей
+  /* На широком экране колонка с комнатой прокручивается вместе со страницей
      до своего конца и там останавливается — так итог с ценой всегда виден
      рядом с блоками. */
   .house-panel { max-height: calc(100dvh - 84px); overflow: visible; }
 }
 @media (max-width: 999px) {
-  /* Дом закреплён сверху, склад прокручивается под ним. Тащить недалеко:
+  /* Комната закреплена сверху, склад прокручивается под ней. Тащить недалеко:
      палец не идёт через весь экран — на телефоне это важнее любой
      анимации. */
   .house-panel {
@@ -578,26 +578,31 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   }
 }
 
+/* Пропорции рамки одни и те же на всех экранах: геометрия комнаты
+   считается в процентах от неё, и смена соотношения сдвигала бы стены
+   относительно пола. Высота ограничивается через max-width — при
+   max-height браузер сохраняет ширину и ломает как раз соотношение. */
 .house {
   position: relative;
-  aspect-ratio: 5 / 4;
-  max-height: 30dvh;
+  aspect-ratio: 4 / 3;
   margin-inline: auto;
   width: 100%;
+  max-width: calc(30dvh * 4 / 3);
   background:
     linear-gradient(to bottom, var(--surface-2) 0%, var(--paper-alt) 100%);
   border-radius: var(--radius-3);
   overflow: hidden;
 }
-@media (min-width: 1000px) { .house { max-height: none; aspect-ratio: 4 / 3; } }
+@media (min-width: 1000px) { .house { max-width: none; } }
 
-@media (max-width: 999px) { .house { max-height: 24dvh; } }
+@media (max-width: 999px) { .house { max-width: calc(24dvh * 4 / 3); } }
 
-/* Каждый элемент дома — свой слот. Пустой слот рисуется пунктиром:
+/* Каждая часть комнаты — свой слот. Пустой слот рисуется пунктиром:
    это и есть «правило честного отказа». Текст можно пролистать, дыру нельзя. */
 .slot {
   position: absolute;
   display: grid; place-items: center;
+  transform: var(--iso, none);
   border-radius: 6px;
   transition: background .25s var(--ease), border-color .25s var(--ease), opacity .25s;
   font-size: var(--step--2);
@@ -605,7 +610,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   color: transparent;
 }
 /* Пустое место — тонкий контур, и только. Штриховка внутри каждого
-   слота превращала недостроенный дом в кашу из серых коробок:
+   слота превращала недостроенную комнату в кашу из серых коробок:
    вместо «здесь чего-то нет» читалось «здесь что-то сломалось». */
 .slot.is-empty {
   background: none;
@@ -613,7 +618,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   color: var(--muted);
 }
 /* Положенный блок должен читаться как нарисованный от руки, а не как
-   залитый прямоугольник. Ровная заливка на маленьком доме терялась:
+   залитый прямоугольник. Ровная заливка на маленькой комнате терялась:
    человек доносил стены и не понимал, изменилось что-нибудь или нет.
    Поэтому у каждой части своя штриховка и свой контур — и короткая
    анимация появления, чтобы момент постановки было видно. */
@@ -622,21 +627,24 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   box-shadow: inset 0 0 0 2px var(--ink-2);
   animation: part-in .34s var(--ease) both;
 }
+/* Изометрия части лежит в --iso, и анимация обязана её сохранить:
+   ключевые кадры перебивают обычный transform, и без var(--iso) внутри
+   них положенный блок терял проекцию и становился плоским. */
 @keyframes part-in {
-  from { transform: scale(.88); opacity: 0; }
-  to   { transform: none; opacity: 1; }
+  from { transform: var(--iso, none) scale(.88); opacity: 0; }
+  to   { transform: var(--iso, none); opacity: 1; }
 }
 
 /* Только что положенный блок отбивается кольцом: на телефоне палец
-   закрывает пол-дома, и без вспышки постановка проходит незамеченной. */
+   закрывает пол-комнаты, и без вспышки постановка проходит незамеченной. */
 .slot.is-just-placed { animation: part-in .34s var(--ease) both, part-ring .7s var(--ease); }
 @keyframes part-ring {
   0%   { outline: 3px solid var(--brand-500); outline-offset: 6px; }
   100% { outline: 3px solid transparent; outline-offset: 2px; }
 }
 
-/* Убрать блок — нажать на него в доме. Крестик показывает, что часть
-   дома вообще можно трогать: без него вопрос «а как убрать обратно»
+/* Убрать блок — нажать на него в комнате. Крестик показывает, что часть
+   комнаты вообще можно трогать: без него вопрос «а как убрать обратно»
    остаётся без ответа. */
 .slot.is-filled { cursor: pointer; }
 .slot.is-filled::after {
@@ -679,49 +687,96 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .house.is-receiving { outline: 2px dashed var(--brand-300); outline-offset: -4px; }
 .house.is-receiving .house__hint { color: var(--brand-500); font-weight: 600; }
 
-.slot[data-part="foundation"] { left: 6%; right: 6%; bottom: 4%; height: 9%; }
+/* --- Комната в изометрии ---------------------------------------------------
+   Дарья проектирует интерьеры, и собирать проект логично из того, из чего
+   он состоит на самом деле: пол, стены, потолок, окно, свет, мебель.
+   Домик из кубиков объяснял метафору, но говорил не на языке заказчика —
+   человек приходит сюда за комнатой, а не за коттеджем.
+
+   Геометрия обычная изометрическая, 2:1. Пол и потолок — квадраты
+   (`aspect-ratio: 1`, поэтому они остаются квадратами при любой ширине),
+   повёрнутые на 45° и сжатые вдвое по высоте. Стены — прямоугольники,
+   скошенные на 26.57°: это atan(0.5), тот самый наклон 2:1.
+
+   Всё построено трансформациями, а не clip-path: трансформация тянет
+   за собой рамку, и пунктир пустого места остаётся пунктиром нужной
+   формы. Порядок слоёв задан z-index, а не порядком в разметке:
+   разметка перечисляет части по смыслу, слои — по глубине.
+
+   Опорные точки (в процентах от рамки 4:3): пол — ромб с центром
+   (50%, 62%), полушириной 32% и полувысотой 21.3%; высота стен 34.7%. */
+
+/* Пол — с него всё начинается: обмер, бриф и планировка это и есть
+   «на чём стоит проект». */
+.slot[data-part="foundation"] {
+  left: 33%; top: 51.3%; width: 34%; aspect-ratio: 1; height: auto;
+  --iso: scaleY(.5) rotate(45deg);
+  z-index: 2;
+}
 .slot[data-part="foundation"].is-filled {
   background:
     repeating-linear-gradient(90deg,
-      transparent 0 13px, color-mix(in srgb, var(--paper) 45%, transparent) 13px 15px),
-    var(--ink-2);
+      transparent 0 22px, color-mix(in srgb, var(--ink) 14%, transparent) 22px 23px),
+    var(--paper-alt);
+  box-shadow: inset 0 0 0 2px var(--ink-2);
 }
 
-/* Стены — кирпичная кладка: вертикальные швы и ряды. Именно на стенах
-   ровная заливка читалась хуже всего, а кладка видна сразу. */
-.slot[data-part="walls"] { left: 12%; right: 12%; bottom: 13%; height: 38%; }
-.slot[data-part="walls"].is-filled {
-  background:
-    repeating-linear-gradient(90deg,
-      transparent 0 26px, color-mix(in srgb, var(--ink) 22%, transparent) 26px 28px),
-    repeating-linear-gradient(0deg,
-      transparent 0 13px, color-mix(in srgb, var(--ink) 22%, transparent) 13px 15px),
-    var(--sand);
+/* Отделка — покрытие поверх плиты. Лежит на полу и меньше его: реальные
+   материалы это не «ещё один пол», а то, чем он покрыт. */
+.slot[data-part="finish"] {
+  left: 39%; top: 62.3%; width: 22%; aspect-ratio: 1; height: auto;
+  --iso: scaleY(.5) rotate(45deg);
+  z-index: 4;
 }
-
-/* Фасад — штриховка по диагонали: так рисуют эскиз от руки. */
-.slot[data-part="facade"] { left: 12%; right: 12%; bottom: 51%; height: 12%; }
-.slot[data-part="facade"].is-filled {
-  background:
-    repeating-linear-gradient(-45deg,
-      transparent 0 5px, color-mix(in srgb, var(--brand-600) 45%, transparent) 5px 7px),
-    var(--brand-200);
-}
-
-.slot[data-part="finish"] { left: 12%; width: 7%; bottom: 13%; height: 38%; }
 .slot[data-part="finish"].is-filled {
-  background: repeating-linear-gradient(
-    0deg, var(--brand-300), var(--brand-300) 5px, var(--brand-200) 5px, var(--brand-200) 10px);
+  background: repeating-linear-gradient(90deg,
+    var(--brand-200) 0 7px, var(--brand-300) 7px 14px);
+  box-shadow: inset 0 0 0 2px var(--brand-600);
 }
 
-/* Окна — переплёт крестом: без него светлый прямоугольник на стене
-   ничего не обозначает. */
-.slot[data-part="windows"] { left: 33%; width: 17%; bottom: 25%; height: 15%; }
+/* Стены — две плоскости, сходящиеся в дальнем углу. Левая рисуется самим
+   слотом, правая его псевдоэлементом: место в комнате одно, и убирать
+   их по отдельности нельзя — чертежи либо есть, либо нет.
+
+   Скосы складываются по тангенсам, а не по градусам: у родителя сдвиг
+   -0.5, ребёнку нужен итоговый +0.5, значит его собственный сдвиг +1.0,
+   то есть skewY(45deg). */
+.slot[data-part="walls"] {
+  left: 26%; top: 52%; width: 24%; height: 22%;
+  --iso: skewY(-26.57deg);
+  transform-origin: 0 0;
+  z-index: 3;
+}
+.slot[data-part="walls"]::before {
+  content: '';
+  position: absolute; left: 100%; top: 0; width: 100%; height: 100%;
+  transform: skewY(45deg); transform-origin: 0 0;
+  border: inherit; background: inherit; box-shadow: inherit;
+}
+.slot[data-part="walls"].is-filled,
+.slot[data-part="walls"].is-filled::before {
+  background:
+    repeating-linear-gradient(0deg,
+      transparent 0 15px, color-mix(in srgb, var(--ink) 9%, transparent) 15px 16px),
+    var(--sand);
+  box-shadow: inset 0 0 0 2px var(--ink-2);
+}
+
+/* Окно — в плоскости правой стены. Свет в нём загорается, когда положена
+   визуализация: это единственная часть проекта, которую заказчик видит
+   буквально глазами. */
+.slot[data-part="windows"] {
+  left: 57%; top: 40%; width: 13%; height: 12%;
+  --iso: skewY(26.57deg);
+  transform-origin: 0 0;
+  z-index: 5;
+}
 .slot[data-part="windows"].is-filled {
   background:
     linear-gradient(var(--ink-2), var(--ink-2)) center / 2px 100% no-repeat,
     linear-gradient(var(--ink-2), var(--ink-2)) center / 100% 2px no-repeat,
     #cfe0e6;
+  box-shadow: inset 0 0 0 2px var(--ink-2);
 }
 .slot[data-part="windows"].has-light {
   background:
@@ -731,33 +786,87 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   box-shadow: inset 0 0 0 2px var(--ink-2), 0 0 26px rgba(246, 223, 160, .95);
 }
 
-/* Крыша — черепица штрихами по скату. Контур внутрь тут не нарисуешь:
-   его срежет clip-path, поэтому линии делают всю работу. */
-.slot[data-part="roof"] { left: 6%; right: 6%; bottom: 63%; height: 20%; }
+/* Потолок — плоскость над комнатой, поднятая на высоту стен. Лежит ниже
+   стен по слоям: передняя половина ромба уходит за них, и видно ровно
+   то, что должно быть видно — потолок над дальним углом. */
+.slot[data-part="roof"] {
+  left: 33%; top: 3%; width: 34%; aspect-ratio: 1; height: auto;
+  --iso: scaleY(.5) rotate(45deg);
+  z-index: 1;
+}
 .slot[data-part="roof"].is-filled {
   background:
     repeating-linear-gradient(90deg,
-      transparent 0 14px, color-mix(in srgb, var(--ink) 28%, transparent) 14px 16px),
-    var(--brand-500);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      transparent 0 22px, color-mix(in srgb, var(--ink) 9%, transparent) 22px 23px),
+    color-mix(in srgb, var(--paper) 88%, var(--ink));
+  box-shadow: inset 0 0 0 2px var(--ink-2);
+}
+
+/* Светильник — висит из-под потолка. Комплектация это привезённые
+   на объект вещи, и лампа над столом самая узнаваемая из них. */
+.slot[data-part="light"] {
+  left: 46.5%; top: 38%; width: 7%; height: 6%;
+  z-index: 7;
+}
+.slot[data-part="light"].is-filled {
+  background: var(--ink-2);
+  clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%);
   box-shadow: none;
 }
-.slot[data-part="roof"].is-filled::after { right: 8%; top: 46%; }
+/* Шнур: без него лампа висит в воздухе сама по себе. */
+.slot[data-part="light"].is-filled::before {
+  content: '';
+  position: absolute; left: 50%; bottom: 100%;
+  width: 2px; height: 60%;
+  background: var(--ink-2);
+}
 
-/* Труба: стоит на скате, а не висит сбоку. */
-.slot[data-part="light"] { right: 22%; width: 6%; bottom: 66%; height: 14%; }
-.slot[data-part="light"].is-filled { background: var(--ink-2); border-radius: 2px 2px 0 0; }
+/* Мебель — диван у левой стены: сиденье в плоскости пола и спинка над ним.
+   Концепция это облик комнаты, а облик комнаты начинается с того,
+   на чём в ней сидят. */
+.slot[data-part="facade"] {
+  left: 31%; top: 60%; width: 20%; height: 9%;
+  --iso: skewY(-26.57deg);
+  transform-origin: 0 0;
+  z-index: 6;
+}
+.slot[data-part="facade"].is-filled {
+  background: var(--brand-400);
+  box-shadow: inset 0 0 0 2px var(--brand-600);
+}
+.slot[data-part="facade"].is-filled::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 100%;
+  height: 90%;
+  background: var(--brand-500);
+  border: 2px solid var(--brand-600);
+  border-radius: 3px 3px 0 0;
+}
 
-.slot[data-part="garden"] { right: 2%; width: 10%; bottom: 13%; height: 22%; }
-.slot[data-part="garden"].is-filled { background: var(--ok); border-radius: 50% 50% 20% 20%; }
-/* Сад — не дыра в доме, а необязательное украшение рядом с ним. Пунктир
+/* Растение — не дыра в комнате, а необязательное украшение. Пунктир
    на его месте читался бы как поломка, а не как «этого нет». */
+.slot[data-part="garden"] {
+  left: 63%; top: 58%; width: 7%; height: 11%;
+  z-index: 6;
+}
 .slot[data-part="garden"].is-empty { background: none; border: 0; }
+.slot[data-part="garden"].is-filled {
+  background: var(--ok);
+  border-radius: 50% 50% 30% 30%;
+  box-shadow: none;
+}
+.slot[data-part="garden"].is-filled::before {
+  content: '';
+  position: absolute; left: 22%; right: 22%; top: 100%;
+  height: 50%;
+  background: var(--brand-300);
+  clip-path: polygon(0 0, 100% 0, 82% 100%, 18% 100%);
+}
 
 /* Итог всегда виден в момент постановки блока — иначе теряется весь смысл.
    Но именно поэтому он НЕ липкий сам по себе: липким внутри липкой панели
-   он наезжал на дом и закрывал то, ради чего человек сюда пришёл.
-   Панель целиком прилипает, а внутри неё дом и итог просто лежат друг
+   он наезжал на комнату и закрывал то, ради чего человек сюда пришёл.
+   Панель целиком прилипает, а внутри неё комната и итог просто лежат друг
    под другом. */
 .total {
   margin-top: var(--gap-3);
@@ -776,7 +885,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .total__row--grand .total__value { color: var(--brand-500); font-size: var(--step-2); }
 
 /* Закреплённая панель обязана оставить место складу. Дом с итогом
-   во весь экран — это дом, к которому нечего нести: блоки под ним
+   во весь экран — это комната, к которой нечего нести: блоки под ней
    просто не помещаются. Поэтому на телефоне итог ужимается до предела,
    а подписи-уточнения уходят вниз, в пояснения под складом.
    Стоять этот блок обязан ПОСЛЕ обычных правил .total: при равной
@@ -832,7 +941,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .block__price { font-size: var(--step--1); color: var(--muted); white-space: nowrap; }
 
 /* На узком экране цена в третьей колонке не переносится и не сжимается —
-   и весь склад уезжал за правый край экрана вместе с домом. Поэтому
+   и весь склад уезжал за правый край экрана вместе с комнатой. Поэтому
    на телефоне цена встаёт под названием отдельной строкой. */
 @media (max-width: 560px) {
   .block { grid-template-columns: auto 1fr; }
@@ -926,8 +1035,13 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .block--dragging.block--group > .block__price { display: inline; }
 .block--ghost { opacity: .35; }
 
+/* Подсказка ушла вниз: наверху теперь плоскость потолка, и текст
+   ложился прямо на неё. */
 .house__hint {
-  position: absolute; inset-inline: 0; top: var(--gap-3);
+  position: absolute; inset-inline: 0; bottom: var(--gap-2);
+  width: fit-content; margin-inline: auto;
+  padding: 2px var(--gap-3); border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
   text-align: center; font-size: var(--step--2); color: var(--muted);
   pointer-events: none;
 }

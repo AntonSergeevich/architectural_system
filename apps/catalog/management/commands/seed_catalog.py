@@ -33,13 +33,13 @@ from apps.catalog.models import (
 from apps.core.models import Objection, SiteSettings, StageNorm
 
 GROUPS = [
-    ("windows", "Окна: чем смотреть на будущий интерьер", HousePart.WINDOWS, 10),
+    ("windows", "Окно: чем смотреть на будущий интерьер", HousePart.WINDOWS, 10),
     ("walls", "Стены: рабочая документация", HousePart.WALLS, 20),
-    ("roof", "Крыша: авторский надзор", HousePart.ROOF, 30),
+    ("roof", "Потолок: авторский надзор", HousePart.ROOF, 30),
 ]
 
 MODULES = [
-    # код, название, коротко, блок, группа, элемент дома, единица, цена,
+    # код, название, коротко, блок, группа, часть комнаты, единица, цена,
     # обязательный, активен, дней, что входит, что на выходе, что берёте на себя
     dict(
         code="A1", title="Обмер и обмерный план", short_title="Обмер",
@@ -78,7 +78,7 @@ MODULES = [
         outcome="Утверждённое планировочное решение",
     ),
     dict(
-        code="A4", title="Концепция: эскизы и коллажи", short_title="Фасад",
+        code="A4", title="Концепция: эскизы и коллажи", short_title="Мебель",
         block=Block.DESIGN, house_part=HousePart.FACADE, unit=Unit.SQM,
         price="600", duration_days=10,
         description="Ручные эскизы и коллажи по каждому помещению на основе "
@@ -113,7 +113,7 @@ MODULES = [
         outcome="Эскизы от руки, без фотореализма",
     ),
     dict(
-        code="A6b", title="Нейро-визуализация", short_title="Нейро-окна",
+        code="A6b", title="Нейро-визуализация", short_title="Нейро-окно",
         block=Block.DESIGN, group="windows", house_part=HousePart.WINDOWS, unit=Unit.SQM,
         price="650", duration_days=7, is_active=False,
         description="Я строю черновой объём, поверх нейросетью натягиваются "
@@ -122,7 +122,7 @@ MODULES = [
         outcome="Наглядные картинки по каждому помещению",
     ),
     dict(
-        code="A6c", title="Фотореалистичная 3D-визуализация", short_title="Окна",
+        code="A6c", title="Фотореалистичная 3D-визуализация", short_title="Окно",
         block=Block.DESIGN, group="windows", house_part=HousePart.WINDOWS, unit=Unit.SQM,
         price="900", duration_days=14,
         description="3–6 ракурсов на каждое помещение по реально подобранным "
@@ -165,7 +165,7 @@ MODULES = [
     ),
     # --- Реализация --------------------------------------------------------
     dict(
-        code="B1", title="Авторский надзор в Красноярске", short_title="Крыша",
+        code="B1", title="Авторский надзор в Красноярске", short_title="Потолок",
         block=Block.REALIZATION, group="roof", house_part=HousePart.ROOF, unit=Unit.MONTH,
         price="50000", affected_by_complexity=False,
         description="Выезды на объект, контроль соответствия проектным решениям, "
@@ -188,7 +188,7 @@ MODULES = [
         outcome="Отчёт по выезду с замечаниями",
     ),
     dict(
-        code="B2", title="Авторское сопровождение удалённо", short_title="Крыша онлайн",
+        code="B2", title="Авторское сопровождение удалённо", short_title="Потолок онлайн",
         block=Block.REALIZATION, group="roof", house_part=HousePart.ROOF, unit=Unit.MONTH,
         price="50000", affected_by_complexity=False,
         description="То же, что авторский надзор, но созвонами: разовые "
@@ -197,7 +197,7 @@ MODULES = [
         outcome="Ответы на вопросы стройки в рабочем режиме",
     ),
     dict(
-        code="B3", title="Комплектация", short_title="Свет в окнах",
+        code="B3", title="Комплектация", short_title="Светильник",
         block=Block.REALIZATION, house_part=HousePart.LIGHT, unit=Unit.MONTH,
         price="20000", affected_by_complexity=False,
         description="Поиск и подбор реальных позиций чистовых материалов, "
@@ -256,7 +256,7 @@ MODULES = [
         "а не после ремонта",
     ),
     dict(
-        code="C3", title="Декорирование и съёмка интерьера", short_title="Сад у крыльца",
+        code="C3", title="Декорирование и съёмка интерьера", short_title="Растение",
         block=Block.EXTRA, house_part=HousePart.GARDEN, unit=Unit.CUSTOM,
         price="0", affected_by_complexity=False,
         description="Финальный декор и фотосъёмка готового интерьера. Делает "

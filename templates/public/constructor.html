@@ -8,11 +8,11 @@
 <section class="section section--tight">
   <div class="wrap">
     <p class="eyebrow">Конструктор</p>
-    <h1>Соберите свой дом</h1>
+    <h1>Соберите свою комнату</h1>
     <p class="lead">
-      Пока на площадке только фундамент — обмер, бриф и планировка,
-      без них проекта не бывает. Всё остальное перетащите на дом сами:
-      возьмите блок и отпустите его на подсвеченном месте.
+      Пока есть только пол — обмер, бриф и планировка, без них проекта
+      не бывает. Всё остальное перенесите в комнату сами: возьмите блок
+      и отпустите его на подсвеченном месте.
     </p>
     <p class="lead">
       Так видно, из чего собирается проект и во что обходится каждая часть.
@@ -32,16 +32,22 @@
 
       <div class="constructor__left">
       <div class="house-panel">
+        {% comment %}
+          Комната в изометрии, а не домик: Дарья проектирует интерьеры,
+          и собирать проект логично из того, из чего он состоит на самом
+          деле — пол, стены, потолок, свет, мебель. Порядок слотов
+          в разметке не важен, глубина задаётся в стилях.
+        {% endcomment %}
         <div class="house" data-house>
           <p class="house__hint" data-house-hint>Перетащите блок сюда</p>
-          <div class="slot" data-part="roof"><span class="visually-hidden">Крыша — авторский надзор</span></div>
-          <div class="slot" data-part="light"><span class="visually-hidden">Комплектация</span></div>
-          <div class="slot" data-part="facade"><span class="visually-hidden">Фасад — концепция</span></div>
+          <div class="slot" data-part="roof"><span class="visually-hidden">Потолок — авторский надзор</span></div>
           <div class="slot" data-part="walls"><span class="visually-hidden">Стены — чертежи</span></div>
-          <div class="slot" data-part="finish"><span class="visually-hidden">Отделка — реальные материалы</span></div>
-          <div class="slot" data-part="windows"><span class="visually-hidden">Окна — визуализация</span></div>
-          <div class="slot" data-part="garden"><span class="visually-hidden">Декоратор</span></div>
-          <div class="slot" data-part="foundation"><span class="visually-hidden">Фундамент — обмер, бриф, планировки, альбом</span></div>
+          <div class="slot" data-part="windows"><span class="visually-hidden">Окно — визуализация</span></div>
+          <div class="slot" data-part="foundation"><span class="visually-hidden">Пол — обмер, бриф, планировки, альбом</span></div>
+          <div class="slot" data-part="finish"><span class="visually-hidden">Отделка пола — реальные материалы</span></div>
+          <div class="slot" data-part="facade"><span class="visually-hidden">Мебель — концепция</span></div>
+          <div class="slot" data-part="garden"><span class="visually-hidden">Растение — декоратор</span></div>
+          <div class="slot" data-part="light"><span class="visually-hidden">Светильник — комплектация</span></div>
         </div>
 
         {% comment %}
@@ -49,7 +55,7 @@
           понятный способ — тащить блок со склада, а обратной дороги
           человек не находит.
         {% endcomment %}
-        <p class="house__note">Нажмите на часть дома, чтобы её убрать</p>
+        <p class="house__note">Нажмите на часть комнаты, чтобы её убрать</p>
 
         <div class="total">
           <div class="total__row">
@@ -82,7 +88,7 @@
 
       {% comment %}
         Пояснения вынесены из липкой панели наружу. Внутри неё они делали
-        её выше экрана, и карточка наезжала на дом — то есть закрывала
+        её выше экрана, и карточка наезжала на комнату — то есть закрывала
         ровно то, ради чего человек сюда пришёл.
       {% endcomment %}
       <div class="total__notes">

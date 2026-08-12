@@ -4,10 +4,10 @@
 
 Раньше их было три отдельных блока, и выходила путаница: берёшь «выезды» —
 подсвечивается крыша, берёшь «надзор» — снова та же крыша. И главное,
-непонятно, как убрать один конкретный блок, если крыша в доме одна.
+непонятно, как убрать один конкретный блок, если окно в комнате одно.
 
-Место в доме одно — значит и блок один. Формат выбирается переключателем
-внутри блока, а на дом уезжает то, что выбрано.
+Место в комнате одно — значит и блок один. Формат выбирается переключателем
+внутри блока, а в комнату уезжает то, что выбрано.
 {% endcomment %}
 <div class="block block--group {% if section.active.pk in selected_ids %}is-selected{% endif %}"
      data-module="{{ section.active.pk }}"
@@ -20,7 +20,7 @@
   <span class="block__title">{{ section.group.title }}</span>
 
   {% comment %} Цена активного варианта: на складе её закрывают строки
-     переключателя, а вот в руке, когда блок несут к дому, кроме названия
+     переключателя, а вот в руке, когда блок несут в комнату, кроме названия
      и цены ничего и не нужно. {% endcomment %}
   <span class="block__price" data-group-price>{% with module=section.active %}{% include "components/module_price.html" %}{% endwith %}</span>
 
@@ -42,8 +42,8 @@
   </div>
 
   <p class="block__hint">
-    Место в доме одно — «{{ section.group.get_house_part_display|lower }}».
-    Выберите формат и перетащите блок на дом.
+    Место в комнате одно — «{{ section.group.get_house_part_display|lower }}».
+    Выберите формат и перетащите блок в комнату.
   </p>
 
   <button class="clause__toggle" type="button" data-expand="more-group-{{ section.group.pk }}">Чем отличаются</button>

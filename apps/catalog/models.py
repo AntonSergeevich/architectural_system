@@ -102,20 +102,23 @@ class Block(models.TextChoices):
 
 
 class HousePart(models.TextChoices):
-    """Элемент дома в конструкторе.
+    """Часть комнаты в конструкторе.
 
     Метафора работает вместо предупреждающего текста: снятый модуль
-    оставляет в доме видимую дыру. Текст можно пролистать, дыру нельзя.
+    оставляет в комнате видимую дыру. Текст можно пролистать, дыру нельзя.
+
+    Коды остались от прежнего домика — переименовывать их в базе незачем,
+    а вот подписи должны говорить о том, что человек видит на экране.
     """
 
-    FOUNDATION = "foundation", "Фундамент"
+    FOUNDATION = "foundation", "Пол"
     WALLS = "walls", "Стены"
-    WINDOWS = "windows", "Окна"
-    FACADE = "facade", "Фасад"
-    FINISH = "finish", "Отделка"
-    ROOF = "roof", "Крыша"
-    LIGHT = "light", "Свет в окнах"
-    GARDEN = "garden", "Сад у крыльца"
+    WINDOWS = "windows", "Окно"
+    FACADE = "facade", "Мебель"
+    FINISH = "finish", "Отделка пола"
+    ROOF = "roof", "Потолок"
+    LIGHT = "light", "Светильник"
+    GARDEN = "garden", "Растение"
 
 
 class ModuleGroup(models.Model):
@@ -128,7 +131,7 @@ class ModuleGroup(models.Model):
     code = models.CharField("Код", max_length=32, unique=True)
     title = models.CharField("Название", max_length=150)
     house_part = models.CharField(
-        "Элемент дома", max_length=16, choices=HousePart.choices, blank=True
+        "Часть комнаты", max_length=16, choices=HousePart.choices, blank=True
     )
     order = models.PositiveSmallIntegerField("Порядок", default=100)
 
@@ -157,7 +160,7 @@ class ServiceModule(models.Model):
         related_name="modules",
     )
     house_part = models.CharField(
-        "Элемент дома", max_length=16, choices=HousePart.choices, blank=True
+        "Часть комнаты", max_length=16, choices=HousePart.choices, blank=True
     )
 
     unit = models.CharField("Единица", max_length=10, choices=Unit.choices, default=Unit.SQM)

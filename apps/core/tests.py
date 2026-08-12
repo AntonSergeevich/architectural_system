@@ -45,14 +45,14 @@ class PublicPagesTests(TestCase):
                 self.assertEqual(response.status_code, 200)
 
     def test_constructor_starts_with_the_foundation_only(self):
-        """Стартовое состояние — только фундамент, дом собирают с нуля.
+        """Стартовое состояние — только пол, комнату собирают с нуля.
 
         Обязательные модули всё равно посчитаны: убрать обмер, бриф
         и планировку нельзя, без них проекта не существует. А всё,
         от чего можно отказаться, изначально снято.
         """
         response = self.client.get(reverse("public:constructor"))
-        self.assertContains(response, "Соберите свой дом")
+        self.assertContains(response, "Соберите свою комнату")
 
         calc = response.context["calc"]
         self.assertGreater(calc.design_total, 0)
@@ -253,9 +253,9 @@ class LeadTests(TestCase):
 class ShelfTests(TestCase):
     """Группа взаимоисключающих услуг — один блок, а не несколько.
 
-    Место в доме одно: крыша одна, окна одни. Три отдельных блока
-    на складе означали, что человек кладёт «выезды», видит крышу,
-    кладёт «надзор» — снова ту же крышу, а как убрать конкретный
+    Место в комнате одно: потолок один, окно одно. Три отдельных блока
+    на складе означали, что человек кладёт «выезды», видит потолок,
+    кладёт «надзор» — снова тот же потолок, а как убрать конкретный
     блок, не понимает вовсе.
     """
 
@@ -268,12 +268,12 @@ class ShelfTests(TestCase):
         response = self.client.get(reverse("public:constructor"))
         sections = response.context["realization_sections"]
         roof = [s for s in sections if s["group"] and s["group"].house_part == "roof"]
-        self.assertEqual(len(roof), 1, "крыша должна быть одной секцией")
+        self.assertEqual(len(roof), 1, "потолок должен быть одной секцией")
         self.assertGreater(len(roof[0]["modules"]), 1, "форматов надзора несколько")
         self.assertIn(roof[0]["active"], roof[0]["modules"])
 
     def test_one_house_part_never_has_two_draggable_blocks(self):
-        """Иначе на один слот в доме претендуют две карточки склада.
+        """Иначе на один слот в комнате претендуют две карточки склада.
 
         Обязательные модули не в счёт: их не перетаскивают и не снимают,
         фундамент уложен изначально.
