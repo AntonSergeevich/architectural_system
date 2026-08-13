@@ -546,7 +546,9 @@
     // стрелки числового поля на части телефонов дают только «change».
     ['input', 'change'].forEach(function (name) {
       form.addEventListener(name, function (e) {
-        if (e.target.matches('input[type="number"], select')) recalc();
+        // Галочки сложности сюда же: они такое же условие расчёта,
+        // как площадь, и молчать в ответ на них нельзя.
+        if (e.target.matches('input[type="number"], input[type="checkbox"], select')) recalc();
       });
     });
   }
