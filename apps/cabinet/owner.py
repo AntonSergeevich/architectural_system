@@ -391,6 +391,23 @@ def _tell_about_task(task):
         notify.safe(notify.task_for_client, task)
 
 
+def _stage_back(request, project, stage, message="", error=""):
+    """Ответ на действие внутри этапа.
+
+    С JavaScript возвращается перерисованная карточка — страница не
+    перезагружается и не прыгает к началу. Без него всё работает по-старому,
+    обычной отправкой формы: кабинетом пользуются с телефона на объекте,
+    где связь рвётся, и терять там работоспособность нельзя.
+    """
+    if services.is_ajax(request):
+        return services.stage_response(request, project, stage, message, error)
+    if error:
+        messages.error(request, error)
+    elif message:
+        messages.success(request, message)
+    return redirect(f"{reverse('cabinet:project_detail', args=[project.pk])}#stage-{stage.pk}")
+
+
 @login_required
 @owner_only
 @require_POST
@@ -404,19 +421,38 @@ def task_add(request, pk):
         preset = get_object_or_404(TaskPreset, pk=preset_id)
         task = StageTask.objects.create(stage=stage, title=preset.title, who=preset.who)
         _tell_about_task(task)
-        messages.success(request, "Задача добавлена.")
-        return redirect("cabinet:project_detail", pk=pk)
+        return _stage_back(request, project, stage, "Задача добавлена.")
 
     form = TaskForm(request.POST)
-    if form.is_valid():
-        task = form.save(commit=False)
-        task.stage = stage
-        task.save()
-        _tell_about_task(task)
-        messages.success(request, "Задача добавлена.")
-    else:
-        messages.error(request, "Напишите, что нужно сделать.")
-    return redirect("cabinet:project_detail", pk=pk)
+    if not form.is_valid():
+        return _stage_back(request, project, stage, error="Напишите, что нужно сделать.")
+
+    task = form.save(commit=False)
+    task.stage = stage
+    task.save()
+    _tell_about_task(task)
+    return _stage_back(request, project, stage, "Задача добавлена.")
+
+
+@login_required
+@owner_only
+@require_POST
+def task_edit(request, pk):
+    """Поправить задачу: формулировку, исполнителя, срок.
+
+    Задача — живая строка, а не запись в журнале: «прислать фото розеток»
+    превращается в «прислать фото розеток и вывода под бра», и заводить
+    ради этого вторую строку значит копить мусор.
+    """
+    project = _project_or_404(pk)
+    task = get_object_or_404(StageTask, pk=request.POST.get("task"), stage__project=project)
+
+    form = TaskForm(request.POST, instance=task)
+    if not form.is_valid():
+        return _stage_back(request, project, task.stage, error="Напишите, что нужно сделать.")
+
+    form.save()
+    return _stage_back(request, project, task.stage, "Задача поправлена.")
 
 
 @login_required
@@ -456,8 +492,9 @@ def task_toggle(request, pk):
 def task_delete(request, pk):
     project = _project_or_404(pk)
     task = get_object_or_404(StageTask, pk=request.POST.get("task"), stage__project=project)
+    stage = task.stage
     task.delete()
-    return redirect("cabinet:project_detail", pk=pk)
+    return _stage_back(request, project, stage, "Задача убрана.")
 
 
 @login_required
@@ -502,8 +539,9 @@ def stage_update(request, pk):
         parts.append(f"этап «{stage.title}» — {stage.get_status_display().lower()}")
     if uploaded:
         parts.append(f"файлов добавлено: {len(uploaded)}")
-    messages.success(request, ("Сохранено: " + ", ".join(parts)) if parts else "Сохранено.")
-    return redirect(f"{reverse('cabinet:project_detail', args=[pk])}#stage-{stage.pk}")
+    return _stage_back(
+        request, project, stage, ("Сохранено: " + ", ".join(parts)) if parts else "Сохранено."
+    )
 
 
 @login_required
@@ -518,11 +556,10 @@ def stage_file_delete(request, pk):
     """
     project = _project_or_404(pk)
     item = get_object_or_404(StageFile, pk=request.POST.get("file"), stage__project=project)
-    stage_id = item.stage_id
+    stage = item.stage
     item.file.delete(save=False)
     item.delete()
-    messages.success(request, "Файл убран.")
-    return redirect(f"{reverse('cabinet:project_detail', args=[pk])}#stage-{stage_id}")
+    return _stage_back(request, project, stage, "Файл убран.")
 
 
 @login_required

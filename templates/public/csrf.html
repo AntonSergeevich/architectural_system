@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Страница устарела{% endblock %}
+
+{% comment %}
+  Вместо стандартной страницы Django про подделку запросов. За ней почти
+  всегда стоит устаревшая вкладка, а не атака, и говорить об этом надо
+  человеческим языком.
+{% endcomment %}
+
+{% block content %}
+<section class="section">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Не отправилось</p>
+    <h1>Страница устарела</h1>
+    <p class="lead">
+      Похоже, эта вкладка была открыта давно, и за это время вход
+      обновился. Данные не потерялись — их просто нужно отправить заново.
+    </p>
+    <p class="note">
+      Обновите страницу, повторите действие. Если оно повторяется каждый
+      раз — напишите мне, разберёмся.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--big" href="{{ request.path }}">Обновить страницу</a>
+      <a class="btn btn--ghost" href="{% url 'cabinet:home' %}">В кабинет</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

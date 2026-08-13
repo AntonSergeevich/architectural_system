@@ -158,10 +158,29 @@
 .rail__link:hover .rail__dot { border-color: var(--brand-400); }
 
 /* Какой этап сейчас раскрыт. Отличается от «текущего»: смотреть можно
-   любой, а идёт всегда один — и путать эти два состояния нельзя. */
-.rail__link.is-open .rail__dot { box-shadow: 0 0 0 4px var(--sand); }
-.rail__link.is-open .rail__title { color: var(--ink); text-decoration: underline; }
-.rail__item.is-current .rail__link.is-open .rail__dot { box-shadow: 0 0 0 6px var(--brand-50); }
+   любой, а идёт всегда один — и путать эти два состояния нельзя.
+
+   Раскрытый обведён кольцом и связан с карточкой ниже: без связи человек
+   нажимает на шкале, карточка меняется где-то под ней, и приходится
+   догадываться, что это одно и то же. Кольцо и линия отвечают на это
+   молча — до всякого текста. */
+.rail__link.is-open .rail__dot {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand-500);
+  border-color: var(--brand-500); color: var(--brand-600);
+}
+.rail__link.is-open .rail__title { color: var(--ink); font-weight: 700; }
+.rail__link.is-open .rail__share { color: var(--brand-500); }
+
+/* Ножка от точки вниз — начало связи. Продолжает её сама карточка
+   этапа своей меткой сверху. */
+.rail__link.is-open .rail__dot::after {
+  content: ''; position: absolute; top: calc(100% + 5px); left: 50%;
+  width: 2px; height: 26px; margin-left: -1px;
+  background: linear-gradient(var(--brand-500), transparent);
+  border-radius: 1px;
+}
+.rail__link.is-open .rail__title,
+.rail__link.is-open .rail__meta { position: relative; z-index: 1; }
 
 /* --- Раскладка ------------------------------------------------------------ */
 
@@ -279,6 +298,15 @@
 /* Раскрытый этап — «облако» шкалы: он появляется на месте, а не подгружает
    страницу, и это движение объясняет, откуда он взялся. */
 .stage--in { animation: stage-in .32s var(--ease) both; }
+
+/* Открытая карточка обведена той же линией, что и точка на шкале: две
+   вещи одного цвета и одной толщины читаются как одна. */
+[data-stages] .stage {
+  border-color: var(--brand-300);
+  box-shadow: 0 0 0 1px var(--brand-300), var(--shadow-1);
+  background: var(--surface);
+}
+[data-stages] .stage[hidden] { display: none; }
 @keyframes stage-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
@@ -327,6 +355,9 @@
   transition: opacity .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease);
 }
 .task--client { border-left: 3px solid var(--brand-400); }
+/* Строка задачи раскладывается флексом, и одного атрибута hidden ей мало:
+   правило класса перебивает служебный display:none браузера. */
+.task[hidden] { display: none; }
 .task.is-done { opacity: .55; }
 .task.is-done .task__title { text-decoration: line-through; }
 .task.is-flying { transform: scale(.99); }
@@ -354,11 +385,32 @@
 .who--client { background: var(--brand-50); color: var(--brand-600); }
 .who--both { background: var(--info-bg); color: var(--info); }
 
-.task__del {
-  flex: none; background: none; border: 0; cursor: pointer;
-  color: var(--muted-2); font-size: var(--step-1); line-height: 1; padding: 0 var(--gap-2);
+/* Действия строки: поправить и убрать. На мыши проявляются по наведению,
+   на тач-экране видны всегда — прятать действие за долгим нажатием
+   значит спрятать его совсем. */
+.task__tools { flex: none; display: flex; gap: 2px; align-items: center; }
+.task__tool {
+  background: none; border: 0; cursor: pointer; color: var(--muted-2);
+  font-size: var(--step-0); line-height: 1; padding: var(--gap-1) var(--gap-2);
+  display: grid; place-items: center; min-width: 32px; min-height: 32px;
+  border-radius: var(--radius-2);
+  opacity: 0; transition: opacity .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
 }
-.task__del:hover { color: var(--err); }
+.task:hover .task__tool, .task:focus-within .task__tool { opacity: 1; }
+.task__tool:hover { background: var(--surface-2); color: var(--ink); }
+.task__tools form:last-child .task__tool:hover { color: var(--err); }
+@media (hover: none) { .task__tool { opacity: .6; } }
+
+/* Правка задачи — на месте строки, а не отдельной страницей: строка
+   в две секунды не заслуживает перехода туда и обратно. */
+.task-edit {
+  display: grid; gap: var(--gap-2);
+  padding: var(--gap-3);
+  background: var(--surface); border: 1px solid var(--brand-300);
+  border-radius: var(--radius-2);
+}
+.task-edit[hidden] { display: none; }
+.task-edit textarea { min-height: 0; }
 
 /* --- Добавление: свёрнуто, пока не нужно ---------------------------------- */
 
@@ -373,6 +425,12 @@
 .adder__label { font-size: var(--step--2); color: var(--muted); margin: var(--gap-2) 0; }
 .adder__form { display: grid; gap: var(--gap-3); margin-top: var(--gap-3); }
 .adder__row { display: flex; flex-wrap: wrap; gap: var(--gap-3); align-items: flex-end; }
+/* В правке задачи поля узкие и должны стоять в строку: форма занимает
+   место самой задачи, и вытянутая на пол-экрана она читается как «сейчас
+   произойдёт что-то большое». */
+.task-edit .adder__row > select { flex: 1 1 140px; min-width: 0; }
+.task-edit .adder__row > input[type="date"] { flex: 0 1 165px; min-width: 0; }
+.task-edit .adder__row > .btn { flex: none; }
 .adder__row > input[type="text"] { flex: 1 1 200px; min-width: 0; }
 .adder__row > .field { flex: 1 1 180px; margin: 0; }
 
@@ -666,3 +724,28 @@
   .adder__row > * { width: 100%; }
   .msg { max-width: 100%; }
 }
+
+
+/* --- Короткий ответ на действие -------------------------------------------
+   Страница больше не перезагружается, а значит и полоса сообщений сверху
+   не появляется. Ответ всё равно нужен: «нажал и ничего не произошло» —
+   это повод нажать второй раз. */
+
+.toast {
+  position: fixed; left: 50%; bottom: var(--gap-5); z-index: 95;
+  transform: translate(-50%, 12px);
+  background: var(--ink); color: var(--paper);
+  font-size: var(--step--1);
+  padding: var(--gap-3) var(--gap-5);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+  max-width: min(92vw, 460px); text-align: center;
+}
+.toast.is-open { opacity: 1; transform: translate(-50%, 0); }
+.toast--error { background: var(--err); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: opacity .2s linear; } }
+
+/* Пока запрос в пути, форма приглушена: видно, что нажатие услышано. */
+.is-busy { opacity: .6; transition: opacity .15s var(--ease); }

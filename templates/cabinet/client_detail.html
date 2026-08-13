@@ -32,14 +32,15 @@
         <h2>Заметки</h2>
         <span class="panel__hint">видите только вы</span>
       </header>
-      <form class="notes" method="post" action="{% url 'cabinet:client_notes' client.pk %}">
+      <form class="notes" method="post" action="{% url 'cabinet:client_notes' client.pk %}"
+              data-async data-refresh="#zametki">
         {% csrf_token %}
         {% field notes_form.notes %}
         <button class="btn btn--ghost" type="submit">Сохранить заметку</button>
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="projects">
       <header class="panel__head">
         <h2>Проекты</h2>
       </header>
@@ -60,7 +61,8 @@
       <details class="adder" {% if not client.projects.all %}open{% endif %}>
         <summary>Завести проект</summary>
         {% if client.properties.all %}
-          <form class="adder__form" method="post" action="{% url 'cabinet:client_project' client.pk %}">
+          <form class="adder__form" method="post" action="{% url 'cabinet:client_project' client.pk %}"
+            data-async data-refresh="#projects">
             {% csrf_token %}
             <div class="grid grid--3">
               {% field project_form.estate %}
@@ -78,7 +80,7 @@
       </details>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="estates">
       <header class="panel__head"><h2>Объекты</h2></header>
       {% for estate in client.properties.all %}
         <article class="row">
@@ -96,7 +98,8 @@
 
       <details class="adder">
         <summary>Добавить объект</summary>
-        <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}">
+        <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}"
+          data-async data-refresh="#estates">
           {% csrf_token %}
           <div class="grid grid--3">
             {% field estate_form.city %}
@@ -138,9 +141,10 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="card">
       <header class="panel__head"><h2>Карточка</h2></header>
-      <form class="adder__form" method="post" action="{% url 'cabinet:client_edit' client.pk %}">
+      <form class="adder__form" method="post" action="{% url 'cabinet:client_edit' client.pk %}"
+        data-async data-refresh="#card">
         {% csrf_token %}
         {% field form.name %}
         {% field form.phone %}

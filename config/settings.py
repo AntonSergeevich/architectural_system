@@ -44,7 +44,37 @@ if _env_file.exists():
 SECRET_KEY = env("DJANGO_SECRET_KEY", "django-insecure-dev-only-change-me")
 DEBUG = env_bool("DJANGO_DEBUG", True)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1],testserver")
-CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+
+def _trusted_origins():
+    """Домены, которым разрешено отправлять формы.
+
+    Список выводится из ALLOWED_HOSTS, а не пишется руками: забытый здесь
+    домен даёт не понятную ошибку, а «Ошибка проверки CSRF, запрос
+    отклонён» посреди работы — и найти причину без подсказки тяжело.
+    Явная переменная окружения, если она задана, всё это перекрывает.
+    """
+    explicit = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+    if explicit:
+        return explicit
+
+    origins = []
+    for host in ALLOWED_HOSTS:
+        if host in {"*", "localhost", "127.0.0.1", "[::1]", "testserver"}:
+            continue
+        # «.da-des.ru» в ALLOWED_HOSTS означает домен и все поддомены;
+        # в списке origin это записывается через звёздочку.
+        name = f"*{host}" if host.startswith(".") else host
+        origins.append(f"https://{name}")
+    return origins
+
+
+CSRF_TRUSTED_ORIGINS = _trusted_origins()
+
+# Страница вместо стандартной «Ошибка проверки CSRF». Токен устаревает,
+# если вкладку с кабинетом открыли вчера, а сегодня зашли заново, — и это
+# случается ровно на телефоне, где вкладки живут месяцами.
+CSRF_FAILURE_VIEW = "apps.core.views.csrf_failure"
 
 INSTALLED_APPS = [
     "django.contrib.admin",

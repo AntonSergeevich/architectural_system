@@ -604,3 +604,23 @@ def cookie_consent(request):
         secure=not request.get_host().startswith("127.0.0.1"),
     )
     return response
+
+
+def csrf_failure(request, reason=""):
+    """Токен устарел — это не ошибка человека и не повод его пугать.
+
+    Стандартная страница Django говорит «Ошибка проверки CSRF, запрос
+    отклонён» и предлагает почитать про подделку запросов. В жизни за этим
+    почти всегда стоит одно: вкладку с кабинетом открыли вчера, а сегодня
+    зашли заново — и токен в старой разметке уже не тот. На телефоне, где
+    вкладки живут месяцами, это происходит регулярно.
+
+    Ответ 403 сохраняем: для браузера ничего не изменилось, отклонён так
+    отклонён. Меняется только то, что человек читает.
+    """
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse(
+            {"ok": False, "error": "Страница устарела. Обновите её и повторите."}, status=403
+        )
+    response = render(request, "public/csrf.html", {"reason": reason}, status=403)
+    return response

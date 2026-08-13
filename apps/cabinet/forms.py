@@ -16,6 +16,20 @@ from apps.crm.models import Client, Property
 from apps.projects.models import BudgetChange, Project, ProjectPayment, StageTask
 
 
+class DateField(forms.DateInput):
+    """Поле даты, которое браузер понимает.
+
+    Календарь браузера принимает ровно один формат — ГГГГ-ММ-ДД. Django
+    же под русской локалью подставляет «13.08.2026», браузер такое значение
+    молча выбрасывает, и поле оказывается пустым. Если оно ещё и
+    обязательное — форма перестаёт отправляться вообще, без единого
+    сообщения: ровно так «Записать оплату» ничего не записывала.
+    """
+
+    def __init__(self, attrs=None):
+        super().__init__(attrs={"type": "date", **(attrs or {})}, format="%Y-%m-%d")
+
+
 def generate_password(length=10):
     """Пароль, который можно продиктовать голосом.
 
@@ -136,7 +150,7 @@ class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
         fields = ["estate", "title", "agreed_amount", "starts_at", "status"]
-        widgets = {"starts_at": forms.DateInput(attrs={"type": "date"})}
+        widgets = {"starts_at": DateField()}
 
     def __init__(self, *args, client=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -152,7 +166,13 @@ class TaskForm(forms.ModelForm):
         model = StageTask
         fields = ["title", "who", "due_date", "comment"]
         widgets = {
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            # Поле многострочное намеренно. В однострочном input клавиша
+            # Enter отправляет форму, и на телефоне, где эта клавиша
+            # подписана «перенос строки», задача добавлялась на середине
+            # фразы. Переносы всё равно схлопываются при сохранении:
+            # заголовок задачи — одна строка, просто набирают его свободно.
+            "title": forms.Textarea(attrs={"rows": 2}),
+            "due_date": DateField(),
             "comment": forms.Textarea(attrs={"rows": 2}),
         }
 
@@ -160,13 +180,16 @@ class TaskForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["title"].widget.attrs["placeholder"] = "Например: прислать фото розеток"
 
+    def clean_title(self):
+        return " ".join(self.cleaned_data["title"].split())
+
 
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = ProjectPayment
         fields = ["kind", "stage", "title", "amount", "paid_on", "comment"]
         widgets = {
-            "paid_on": forms.DateInput(attrs={"type": "date"}),
+            "paid_on": DateField(),
             "comment": forms.Textarea(attrs={"rows": 2}),
         }
 

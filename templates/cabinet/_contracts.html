@@ -36,7 +36,8 @@
 
           {% if not is_owner_view %}
             <form class="contract__upload" method="post" enctype="multipart/form-data"
-                  action="{% url 'cabinet:contract_sign' contract.pk %}">
+                  action="{% url 'cabinet:contract_sign' contract.pk %}"
+                  data-async data-refresh="#contracts,[data-rail]">
               {% csrf_token %}
               <label class="chat__attach">
                 <input type="file" name="signed_file" required>
@@ -110,7 +111,8 @@
     <details class="adder">
       <summary>Отправить договор заказчику</summary>
       <form class="adder__form" method="post" enctype="multipart/form-data"
-            action="{% url 'cabinet:contract_add' project.pk %}">
+            action="{% url 'cabinet:contract_add' project.pk %}"
+            data-async data-refresh="#contracts,[data-rail],#stages">
         {% csrf_token %}
         <div class="grid grid--3">
           {% field contract_form.template %}

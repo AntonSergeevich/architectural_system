@@ -9,6 +9,8 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db.models import Q
+from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.core.models import StageNorm
@@ -152,6 +154,52 @@ def project_queryset():
         "contracts__template",
         "messages__files",
     )
+
+
+def is_ajax(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def stage_payload(request, project, stage, message="", error=""):
+    """Перерисованная карточка этапа и шкала — ответ на действие в кабинете.
+
+    Кусок разметки собирает сервер, а не браузер: шаблон один, и второй
+    его копии на JavaScript не появляется. Иначе две версии одного этапа
+    рано или поздно разойдутся, и стороны увидят разное.
+
+    Шкала возвращается вместе с карточкой: смена статуса меняет текущий
+    этап, а договор — метку на точке. Обновить одно и забыть другое
+    значит показать человеку рассинхронизированный экран.
+    """
+    from apps.projects.models import TaskPreset
+
+    stages = stage_shares(project.stages.order_by("number"))
+    fresh = next((s for s in stages if s.pk == stage.pk), stage)
+    current = project.current_stage
+
+    context = {
+        "project": project,
+        "stages": stages,
+        "stage": fresh,
+        "current": current,
+        "is_owner_view": bool(getattr(request.user, "is_owner", False)),
+        "presets": TaskPreset.objects.filter(is_active=True).filter(
+            Q(stage_number__isnull=True) | Q(stage_number=fresh.number)
+        ),
+    }
+    return {
+        "ok": not error,
+        "error": error,
+        "message": message,
+        "stage_id": f"stage-{fresh.pk}",
+        "stage": render_to_string("cabinet/_stage.html", context, request=request),
+        "rail": render_to_string("cabinet/_rail.html", context, request=request),
+        "progress": project.progress,
+    }
+
+
+def stage_response(request, project, stage, message="", error=""):
+    return JsonResponse(stage_payload(request, project, stage, message, error))
 
 
 def stage_shares(stages):

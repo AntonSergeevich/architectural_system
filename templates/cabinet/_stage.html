@@ -111,13 +111,48 @@
         </div>
 
         {% if is_owner_view %}
-          <form method="post" action="{% url 'cabinet:task_delete' project.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="task" value="{{ task.pk }}">
-            <button class="task__del" type="submit" title="Убрать задачу" aria-label="Убрать задачу">×</button>
-          </form>
+          {% comment %}
+            Две кнопки на строке: поправить и убрать. Появляются при
+            наведении и всегда видны с телефона — прятать действие
+            за долгим нажатием значит спрятать его совсем.
+          {% endcomment %}
+          <div class="task__tools">
+            <button class="task__tool" type="button" data-task-edit="{{ task.pk }}"
+                    title="Поправить задачу" aria-label="Поправить задачу">
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+                <path d="M11.2 1.8 14.2 4.8 5.5 13.5 1.6 14.4 2.5 10.5z" fill="none"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <form method="post" action="{% url 'cabinet:task_delete' project.pk %}" data-async
+                  data-confirm="Убрать задачу «{{ task.title }}»?">
+              {% csrf_token %}
+              <input type="hidden" name="task" value="{{ task.pk }}">
+              <button class="task__tool" type="submit" title="Убрать задачу" aria-label="Убрать задачу">×</button>
+            </form>
+          </div>
         {% endif %}
       </div>
+
+      {% if is_owner_view %}
+        <form class="task-edit" method="post" action="{% url 'cabinet:task_edit' project.pk %}"
+              data-async data-task-form="{{ task.pk }}" hidden>
+          {% csrf_token %}
+          <input type="hidden" name="task" value="{{ task.pk }}">
+          <textarea name="title" rows="2" aria-label="Что сделать">{{ task.title }}</textarea>
+          <div class="adder__row">
+            <select name="who" aria-label="Кто делает">
+              <option value="owner" {% if task.who == 'owner' %}selected{% endif %}>Дарья</option>
+              <option value="client" {% if task.who == 'client' %}selected{% endif %}>Заказчик</option>
+              <option value="both" {% if task.who == 'both' %}selected{% endif %}>Вместе</option>
+            </select>
+            <input type="date" name="due_date" aria-label="Срок"
+                   value="{{ task.due_date|date:'Y-m-d' }}">
+            <button class="btn" type="submit">Сохранить</button>
+            <button class="btn btn--ghost" type="button" data-task-cancel="{{ task.pk }}">Отмена</button>
+          </div>
+        </form>
+      {% endif %}
     {% empty %}
       {% comment %}
         Заказчику эта строка нужна только на текущем этапе. Повторённая
@@ -144,7 +179,7 @@
         <p class="adder__label">Готовые — нажмите, чтобы поставить:</p>
         <div class="chips">
           {% for preset in presets %}
-            <form method="post" action="{% url 'cabinet:task_add' project.pk %}">
+            <form method="post" action="{% url 'cabinet:task_add' project.pk %}" data-async>
               {% csrf_token %}
               <input type="hidden" name="stage" value="{{ stage.pk }}">
               <input type="hidden" name="preset" value="{{ preset.pk }}">
@@ -157,11 +192,17 @@
         </div>
       {% endif %}
 
-      <form class="adder__form" method="post" action="{% url 'cabinet:task_add' project.pk %}">
+      {% comment %}
+        Поле многострочное намеренно: в однострочном Enter отправляет форму,
+        и на телефоне, где эта клавиша подписана «перенос строки», задача
+        добавлялась на середине фразы. Ставит задачу только кнопка.
+      {% endcomment %}
+      <form class="adder__form" method="post" action="{% url 'cabinet:task_add' project.pk %}" data-async>
         {% csrf_token %}
         <input type="hidden" name="stage" value="{{ stage.pk }}">
+        <textarea name="title" rows="2" placeholder="Или напишите свою задачу"
+                  aria-label="Что сделать" required></textarea>
         <div class="adder__row">
-          <input type="text" name="title" placeholder="Или напишите свою задачу" required>
           <select name="who" aria-label="Кто делает">
             <option value="owner">Дарья</option>
             <option value="client">Заказчик</option>
@@ -182,7 +223,7 @@
     <details class="adder">
       <summary>Этап: статус, заметка, файлы</summary>
       <form class="adder__form" method="post" enctype="multipart/form-data"
-            action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form>
+            action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form data-async>
         {% csrf_token %}
         <input type="hidden" name="stage" value="{{ stage.pk }}">
 
@@ -237,7 +278,8 @@
             {% endif %}
             <span class="thumb__date muted">{{ file.uploaded_at|date:"d.m.Y" }}</span>
             {% if is_owner_view %}
-              <form method="post" action="{% url 'cabinet:stage_file_delete' project.pk %}">
+              <form method="post" action="{% url 'cabinet:stage_file_delete' project.pk %}" data-async
+                    data-confirm="Убрать файл «{{ file.label }}»?">
                 {% csrf_token %}
                 <input type="hidden" name="file" value="{{ file.pk }}">
                 <button class="thumb__del" type="submit" title="Убрать файл" aria-label="Убрать файл">×</button>
@@ -274,7 +316,8 @@
   {% endif %}
 
   {% if not is_owner_view and stage.status == 'review' %}
-    <form method="post" action="{% url 'cabinet:approve_stage' stage.pk %}" class="stage__approve">
+    <form method="post" action="{% url 'cabinet:approve_stage' stage.pk %}" class="stage__approve"
+          data-async data-refresh="#stages,[data-rail]">
       {% csrf_token %}
       <button class="btn" type="submit">Согласовать этап</button>
       <span class="muted">Согласование фиксируется с датой — это защищает нас обоих.</span>

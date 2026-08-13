@@ -92,7 +92,8 @@
         не теряется, объём виден нам обоим, и на каждую есть ответ
         в срок по регламенту.
       </p>
-      <form class="adder__form" method="post" action="{% url 'cabinet:add_revision' %}">
+      <form class="adder__form" method="post" action="{% url 'cabinet:add_revision' %}"
+              data-async data-refresh="#stages,#revision">
         {% csrf_token %}
         <div class="adder__row">
           <select name="stage" aria-label="К какому этапу">

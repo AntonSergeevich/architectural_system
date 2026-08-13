@@ -11,10 +11,169 @@
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* Токен берём из cookie, а не из разметки.
+
+     Разметка стареет: вкладку с кабинетом открыли вчера, сегодня зашли
+     заново — и токен в форме уже не тот, что в браузере. Django отвечает
+     на это «Ошибка проверки CSRF, запрос отклонён», и человек видит её
+     ровно в тот момент, когда отправляет фотографии с телефона, где
+     вкладки живут месяцами. Cookie при этом всегда свежая. */
   function csrf() {
+    var match = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+    if (match) return decodeURIComponent(match[2]);
     var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
     return input ? input.value : '';
   }
+
+  // --- Короткое сообщение --------------------------------------------------
+  // Ответ на действие нужен всегда: без перезагрузки страницы пропадает
+  // и полоса сообщений сверху, а «нажал и ничего не произошло» — это
+  // повод нажать второй раз.
+
+  var toastTimer = null;
+
+  function toast(text, kind) {
+    if (!text) return;
+    var box = document.querySelector('[data-toast]');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'toast';
+      box.setAttribute('data-toast', '');
+      box.setAttribute('role', 'status');
+      box.setAttribute('aria-live', 'polite');
+      document.body.appendChild(box);
+    }
+    box.textContent = text;
+    box.classList.toggle('toast--error', kind === 'error');
+    box.classList.add('is-open');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { box.classList.remove('is-open'); }, 2600);
+  }
+
+  // --- Формы без перезагрузки ----------------------------------------------
+  // Одно правило на весь кабинет: форма с data-async уходит запросом,
+  // сервер возвращает перерисованный кусок страницы. Разметку по-прежнему
+  // собирает шаблон — второй её копии на JavaScript не появляется.
+  //
+  // Без JavaScript ничего не меняется: та же форма отправляется обычным
+  // способом, сервер отвечает страницей.
+
+  function swap(payload) {
+    if (payload.stage) {
+      var card = document.getElementById(payload.stage_id);
+      if (card) {
+        card.outerHTML = payload.stage;
+        // Свежая карточка приходит без пометки «свёрнута»: раскладку
+        // этапов восстанавливаем сами.
+        applyStages(payload.stage_id, false);
+      }
+    }
+    if (payload.rail) {
+      var rail = document.querySelector('[data-rail]');
+      if (rail) {
+        rail.outerHTML = payload.rail;
+        applyStages(openStageId, false);
+        paintRail();
+      }
+    }
+    if (typeof payload.progress === 'number') {
+      document.querySelectorAll('[data-progress]').forEach(function (el) {
+        el.textContent = payload.progress;
+      });
+    }
+  }
+
+  /* Ответ приходит в одном из двух видов, и это не усложнение, а экономия.
+
+     Этап отвечает готовым куском разметки: там действия частые, и гонять
+     ради галочки всю страницу незачем. Всё остальное — оплаты, договоры,
+     карточка — отвечает обычной страницей, как и без JavaScript; мы просто
+     достаём из неё нужные панели и подменяем их на месте. Так ни один
+     из десятка видов не пришлось переписывать под запрос. */
+  function refreshFrom(html, form) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var targets = (form.dataset.refresh || '').split(',').map(function (s) { return s.trim(); });
+
+    targets.filter(Boolean).forEach(function (selector) {
+      var fresh = doc.querySelector(selector);
+      var old = document.querySelector(selector);
+      if (fresh && old) old.replaceWith(fresh);
+    });
+
+    // Подменённые панели приезжают в исходном виде: свёрнутые этапы
+    // снова развёрнуты, полосы обнулены. Возвращаем состояние на место.
+    applyStages(openStageId, false);
+    paintRail();
+    paintMoney();
+
+    var said = doc.querySelector('.message');
+    if (said) {
+      toast(said.textContent.trim(), said.classList.contains('message--error') ? 'error' : '');
+    }
+  }
+
+  function send(form) {
+    var body = new FormData(form);
+    // Токен подменяем свежим: в форме он мог устареть вместе со вкладкой.
+    body.set('csrfmiddlewaretoken', csrf());
+
+    var button = form.querySelector('[type="submit"]');
+    if (button) button.disabled = true;
+    form.classList.add('is-busy');
+
+    function done() {
+      if (button) button.disabled = false;
+      form.classList.remove('is-busy');
+    }
+
+    fetch(form.action, {
+      method: 'POST',
+      body: body,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (response) {
+        var json = (response.headers.get('Content-Type') || '').indexOf('json') >= 0;
+        return response.text().then(function (text) {
+          return { ok: response.ok, json: json, text: text };
+        });
+      })
+      .then(function (answer) {
+        done();
+
+        if (!answer.json) {
+          if (!answer.ok) { form.submit(); return; }
+          refreshFrom(answer.text, form);
+          form.reset();
+          return;
+        }
+
+        var payload;
+        try { payload = JSON.parse(answer.text); } catch (e) { form.submit(); return; }
+
+        if (payload.ok === false) {
+          toast(payload.error || 'Не получилось. Попробуйте ещё раз.', 'error');
+          return;
+        }
+        swap(payload);
+        toast(payload.message);
+        form.reset();
+      })
+      .catch(function () {
+        done();
+        form.submit();  // сеть отвалилась — пусть работает обычная отправка
+      });
+  }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target.closest('form[data-async]');
+    if (!form || !window.fetch) return;
+    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+      e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    send(form);
+  });
 
   // --- Шкала этапов --------------------------------------------------------
   // Заливка тянется до центра текущего этапа, а не до «процентов»: человек
@@ -62,57 +221,87 @@
   // спрашивают. Остальные не удалены и не спрятаны от поиска: они здесь же,
   // просто свёрнуты, и без JavaScript открыты все.
 
+  var openStageId = '';
+
+  /* Раскладка этапов применяется заново после каждой подмены карточки:
+     список узлов кэшировать нельзя — после ответа сервера он состоит
+     из отсоединённых от страницы элементов, и раскладка молча перестаёт
+     работать. */
+  function applyStages(id, animate) {
+    var host = document.querySelector('[data-stages]');
+    if (!host) return false;
+    var stages = host.querySelectorAll('[data-stage]');
+    if (stages.length < 2) return false;
+
+    var found = false;
+    stages.forEach(function (stage) {
+      var mine = stage.id === id;
+      stage.hidden = !mine;
+      if (mine) found = true;
+    });
+    // Незнакомый якорь не должен схлопывать всё: пусть лучше останется
+    // открытым текущий этап.
+    if (!found) return false;
+
+    openStageId = id;
+    document.querySelectorAll('[data-rail-link]').forEach(function (link) {
+      var mine = link.dataset.railLink === id;
+      link.classList.toggle('is-open', mine);
+      if (link.hasAttribute('aria-expanded')) link.setAttribute('aria-expanded', String(mine));
+    });
+
+    var card = document.getElementById(id);
+    if (card && animate && !reduceMotion) {
+      card.classList.remove('stage--in');
+      void card.offsetWidth;  // перезапуск анимации
+      card.classList.add('stage--in');
+    }
+    return true;
+  }
+
   function setupStages() {
     var host = document.querySelector('[data-stages]');
     if (!host) return;
     var stages = host.querySelectorAll('[data-stage]');
     if (stages.length < 2) return;
 
-    function open(id, scroll) {
-      var found = false;
-      stages.forEach(function (stage) {
-        var mine = stage.id === id;
-        stage.hidden = !mine;
-        if (mine) found = true;
-      });
-      // Незнакомый якорь не должен схлопывать всё: пусть лучше
-      // останется открытым текущий этап.
-      if (!found) return false;
-
-      document.querySelectorAll('[data-rail-link]').forEach(function (link) {
-        link.classList.toggle('is-open', link.dataset.railLink === id);
-      });
-
-      var stage = document.getElementById(id);
-      if (stage && !reduceMotion) {
-        stage.classList.remove('stage--in');
-        void stage.offsetWidth;  // перезапуск анимации
-        stage.classList.add('stage--in');
-      }
-      if (scroll && stage) {
-        // Шапка сайта липкая: без отступа на её высоту заголовок панели
-        // уезжает под неё, и кажется, что открылось что-то не то.
-        var header = document.querySelector('.header');
-        var offset = (header ? header.offsetHeight : 0) + 16;
-        var top = host.getBoundingClientRect().top + window.pageYOffset - offset;
-        window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? 'auto' : 'smooth' });
-      }
-      return true;
-    }
-
     var start = (location.hash || '').replace('#', '');
     var current = host.querySelector('.stage--current') || stages[0];
-    if (!start || !open(start, false)) open(current.id, false);
+    if (!start || !applyStages(start, false)) applyStages(current.id, false);
 
     document.addEventListener('click', function (e) {
       var link = e.target.closest('[data-rail-link]');
       if (!link) return;
-      if (!open(link.dataset.railLink, true)) return;
       e.preventDefault();
-      // Адрес меняем без прыжка: ссылкой на этап можно поделиться.
+      if (!applyStages(link.dataset.railLink, true)) return;
+      // Страница не прыгает: этап и так под шкалой, а прокрутка к нему
+      // выглядит как перезагрузка — ровно то ощущение, от которого
+      // и уходим. Адрес меняем без перехода: ссылкой можно поделиться.
       if (history.replaceState) history.replaceState(null, '', '#' + link.dataset.railLink);
     });
   }
+
+  // --- Правка задачи -------------------------------------------------------
+  // Форма живёт рядом со строкой и раскрывается по карандашу. Отдельной
+  // страницы у задачи нет намеренно: строка в две секунды не заслуживает
+  // перехода туда и обратно.
+
+  document.addEventListener('click', function (e) {
+    var open = e.target.closest('[data-task-edit]');
+    var close = e.target.closest('[data-task-cancel]');
+    if (!open && !close) return;
+    var id = (open || close).dataset.taskEdit || (open || close).dataset.taskCancel;
+    var form = document.querySelector('[data-task-form="' + id + '"]');
+    var row = document.querySelector('.task[data-task="' + id + '"]');
+    if (!form) return;
+    e.preventDefault();
+    form.hidden = !!close;
+    if (row) row.hidden = !close;
+    if (!close) {
+      var field = form.querySelector('textarea');
+      if (field) field.focus();
+    }
+  });
 
   // --- Полоса оплаты -------------------------------------------------------
 
@@ -311,15 +500,21 @@
       var button = form.querySelector('button[type="submit"]');
       if (button) button.disabled = true;
 
+      var body = new FormData(form);
+      body.set('csrfmiddlewaretoken', csrf());  // свежий токен, а не из старой вкладки
+
       fetch(form.getAttribute('action'), {
         method: 'POST',
-        body: new FormData(form),
+        body: body,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       })
         .then(function (r) { return r.json(); })
         .then(function (payload) {
           if (button) button.disabled = false;
-          if (!payload.ok) return;
+          if (!payload.ok) {
+            if (payload.error) toast(payload.error, 'error');
+            return;
+          }
           append(payload.messages);
           form.reset();
           if (input) input.style.height = 'auto';
@@ -358,41 +553,51 @@
     return Array.prototype.map.call(list, function (f) { return f.name; }).join(', ');
   }
 
-  document.querySelectorAll('[data-drop]').forEach(function (zone) {
+  /* Обработчики висят на документе, а не на каждой зоне.
+
+     Карточка этапа перерисовывается после каждого действия, и зона
+     приезжает новая. Обработчики, повешенные при загрузке страницы,
+     остались бы на выброшенном узле — перетаскивание тихо переставало
+     бы работать после первого же добавления файла. */
+
+  function showPicked(zone) {
     var input = zone.querySelector('[data-drop-input]');
-    var picked = zone.parentElement.querySelector('[data-drop-picked]');
-    if (!input) return;
+    var picked = zone.parentElement && zone.parentElement.querySelector('[data-drop-picked]');
+    if (!input || !picked) return;
+    picked.hidden = !input.files.length;
+    picked.textContent = input.files.length ? 'Готово к отправке: ' + names(input.files) : '';
+  }
 
-    function show() {
-      if (!picked) return;
-      picked.hidden = !input.files.length;
-      picked.textContent = input.files.length
-        ? 'Готово к отправке: ' + names(input.files)
-        : '';
-    }
+  document.addEventListener('change', function (e) {
+    var zone = e.target.closest('[data-drop]');
+    if (zone) showPicked(zone);
+  });
 
-    input.addEventListener('change', show);
-
-    ['dragenter', 'dragover'].forEach(function (name) {
-      zone.addEventListener(name, function (e) {
-        e.preventDefault();
-        zone.classList.add('is-over');
-      });
+  ['dragenter', 'dragover'].forEach(function (name) {
+    document.addEventListener(name, function (e) {
+      var zone = e.target.closest('[data-drop]');
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.add('is-over');
     });
-    ['dragleave', 'drop'].forEach(function (name) {
-      zone.addEventListener(name, function (e) {
-        e.preventDefault();
-        zone.classList.remove('is-over');
-      });
-    });
+  });
 
-    zone.addEventListener('drop', function (e) {
-      if (!e.dataTransfer || !e.dataTransfer.files.length) return;
-      // Кладём файлы прямо в поле формы: тогда обычная отправка работает
-      // так же, как если бы их выбрали кнопкой.
-      input.files = e.dataTransfer.files;
-      show();
-    });
+  document.addEventListener('dragleave', function (e) {
+    var zone = e.target.closest('[data-drop]');
+    if (zone) zone.classList.remove('is-over');
+  });
+
+  document.addEventListener('drop', function (e) {
+    var zone = e.target.closest('[data-drop]');
+    if (!zone) return;
+    e.preventDefault();
+    zone.classList.remove('is-over');
+    var input = zone.querySelector('[data-drop-input]');
+    if (!input || !e.dataTransfer || !e.dataTransfer.files.length) return;
+    // Кладём файлы прямо в поле формы: обычная отправка работает так же,
+    // как если бы их выбрали кнопкой.
+    input.files = e.dataTransfer.files;
+    showPicked(zone);
   });
 
   // --- Копирование доступа -------------------------------------------------

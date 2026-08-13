@@ -53,7 +53,8 @@
             <td class="ta-r">{{ payment.amount|money }}</td>
             {% if is_owner_view %}
               <td class="ta-r">
-                <form method="post" action="{% url 'cabinet:payment_delete' project.pk %}">
+                <form method="post" action="{% url 'cabinet:payment_delete' project.pk %}"
+                      data-async data-refresh="#money" data-confirm="Убрать эту оплату?">
                   {% csrf_token %}
                   <input type="hidden" name="payment" value="{{ payment.pk }}">
                   <button class="task__del" type="submit" title="Удалить оплату">×</button>
@@ -71,7 +72,8 @@
   {% if is_owner_view %}
     <details class="adder">
       <summary>Записать оплату</summary>
-      <form class="adder__form" method="post" action="{% url 'cabinet:payment_add' project.pk %}">
+      <form class="adder__form" method="post" action="{% url 'cabinet:payment_add' project.pk %}"
+            data-async data-refresh="#money">
         {% csrf_token %}
         <div class="grid grid--3">
           {% field payment_form.kind %}
@@ -106,7 +108,8 @@
           {% if is_owner_view %}
             <p class="muted">Ждём решения заказчика. В сумму проекта пока не входит.</p>
           {% else %}
-            <form class="change__decide" method="post" action="{% url 'cabinet:budget_decide' change.pk %}">
+            <form class="change__decide" method="post" action="{% url 'cabinet:budget_decide' change.pk %}"
+                  data-async data-refresh="#money">
               {% csrf_token %}
               <input type="text" name="comment" placeholder="Комментарий (по желанию)">
               <button class="btn" type="submit" name="decision" value="accept">Согласовать</button>
@@ -132,7 +135,8 @@
           Сумма не может вырасти молча. Заказчик увидит изменение у себя
           и либо согласует его, либо откажется — с датой и именем.
         </p>
-        <form class="adder__form" method="post" action="{% url 'cabinet:budget_add' project.pk %}">
+        <form class="adder__form" method="post" action="{% url 'cabinet:budget_add' project.pk %}"
+            data-async data-refresh="#money">
           {% csrf_token %}
           <div class="grid grid--3">
             {% field budget_form.title %}

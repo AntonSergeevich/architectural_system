@@ -708,3 +708,67 @@ class StageTests(CabinetTestCase):
         self.stage.refresh_from_db()
         self.assertEqual(self.stage.status, Stage.Status.DONE)
         self.assertTrue(hasattr(self.stage, "approval"))
+
+
+class AsyncTests(CabinetTestCase):
+    """Действия в кабинете отвечают куском страницы, а не перезагрузкой."""
+
+    def ajax(self, url, data):
+        return self.client.post(url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+
+    def test_task_add_returns_the_stage_card(self):
+        self.login_owner()
+        response = self.ajax(
+            reverse("cabinet:task_add", args=[self.project.pk]),
+            {"stage": self.stage.pk, "title": "Прислать фото розеток", "who": "client"},
+        )
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertIn("Прислать фото розеток", payload["stage"])
+        self.assertIn("rail__items", payload["rail"])
+        self.assertEqual(payload["stage_id"], f"stage-{self.stage.pk}")
+
+    def test_task_is_edited_in_place(self):
+        task = StageTask.objects.create(stage=self.stage, title="Старое", who="owner")
+        self.login_owner()
+        payload = self.ajax(
+            reverse("cabinet:task_edit", args=[self.project.pk]),
+            {"task": task.pk, "title": "Новое", "who": "client"},
+        ).json()
+        task.refresh_from_db()
+        self.assertEqual(task.title, "Новое")
+        self.assertEqual(task.who, "client")
+        self.assertIn("Новое", payload["stage"])
+
+    def test_line_breaks_do_not_become_part_of_the_task(self):
+        """Поле многострочное, чтобы Enter не отправлял форму с телефона.
+        Сама задача при этом остаётся одной строкой."""
+        self.login_owner()
+        self.ajax(
+            reverse("cabinet:task_add", args=[self.project.pk]),
+            {"stage": self.stage.pk, "title": "Прислать фото\nрозеток  и выводов", "who": "client"},
+        )
+        task = StageTask.objects.latest("id")
+        self.assertEqual(task.title, "Прислать фото розеток и выводов")
+
+    def test_without_javascript_everything_still_redirects(self):
+        self.login_owner()
+        response = self.client.post(
+            reverse("cabinet:task_add", args=[self.project.pk]),
+            {"stage": self.stage.pk, "title": "Без скриптов", "who": "owner"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(StageTask.objects.filter(title="Без скриптов").exists())
+
+    def test_payment_form_gives_the_browser_a_date_it_understands(self):
+        """Календарь браузера принимает только ГГГГ-ММ-ДД.
+
+        С русской локалью Django подставлял «13.08.2026», браузер такое
+        значение выбрасывал, поле оставалось пустым — и обязательная дата
+        молча запрещала отправить форму. «Записать оплату» не записывала
+        ничего, без единого сообщения.
+        """
+        from apps.cabinet.forms import PaymentForm
+
+        html = str(PaymentForm(project=self.project)["paid_on"])
+        self.assertIn(timezone.localdate().strftime("%Y-%m-%d"), html)
