@@ -39,6 +39,8 @@ urlpatterns = [
     # --- Общее для обеих сторон ----------------------------------------------
     path("proekty/<int:pk>/soobshchenie/", owner_views.message_send, name="message_send"),
     path("proekty/<int:pk>/soobshcheniya/", owner_views.messages_since, name="messages_since"),
+    path("proekty/<int:pk>/soobshchenie/pravka/", owner_views.message_edit, name="message_edit"),
+    path("proekty/<int:pk>/soobshchenie/reshenie/", owner_views.message_decision, name="message_decision"),
     path("proekty/<int:pk>/zadacha/otmetit/", owner_views.task_toggle, name="task_toggle"),
     path("uvedomleniya/", owner_views.telegram_prefs, name="telegram_prefs"),
     # --- Заказчик ------------------------------------------------------------

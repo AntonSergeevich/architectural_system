@@ -38,6 +38,19 @@ class Client(models.Model):
         blank=True,
         related_name="client",
     )
+    # Второй аккаунт — для пары. Половина проектов ведётся вдвоём: один
+    # смотрит планировки вечером, другой отвечает днём с работы, и каждый
+    # хочет писать от своего имени. Заставлять их сидеть под одним логином
+    # значит получить переписку, в которой не разобрать, кто что просил.
+    partner = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Второй аккаунт",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="client_as_partner",
+        help_text="Муж, жена, соавтор решения — работает в том же кабинете",
+    )
     notes = models.TextField("Заметки", blank=True, help_text="Видит только Дарья")
     created_at = models.DateTimeField(auto_now_add=True)
 

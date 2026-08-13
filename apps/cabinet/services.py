@@ -50,8 +50,9 @@ def create_stages(project):
 def post_message(project, user, text, files=(), stage=None):
     """Записать сообщение в переписку по проекту.
 
-    Сообщения не редактируются и не удаляются: переписка нужна как
-    доказательная база, а редактируемая переписка ничего не доказывает.
+    Сообщения не удаляются, а поправить их можно только минуту после
+    отправки и только автору: переписка нужна как доказательная база,
+    а переписанная задним числом ничего не доказывает.
     """
     message = Message.objects.create(
         project=project,
@@ -74,19 +75,37 @@ def post_message(project, user, text, files=(), stage=None):
     return message
 
 
-def message_json(message, viewer_is_owner):
+def chat_url(user, project):
+    """Куда вернуть человека после действия в переписке."""
+    from django.urls import reverse
+
+    if getattr(user, "is_owner", False):
+        return reverse("cabinet:project_detail", args=[project.pk]) + "#chat"
+    return reverse("cabinet:my_project") + "#chat"
+
+
+def message_json(message, viewer):
     """Сообщение для дорисовки в переписке без перезагрузки страницы.
 
-    `mine` считается на сервере, а не в браузере: «своё справа» зависит
-    от того, кто смотрит, и решать это в двух местах — верный способ
-    однажды показать заказчику его собственные сообщения слева.
+    `mine` и `own` считаются на сервере, а не в браузере. «Своё справа»
+    зависит от того, кто смотрит, и решать это в двух местах — верный
+    способ однажды показать заказчику его собственные сообщения слева.
+    А `own` — это ещё и право на правку: «моё» и «с моей стороны» здесь
+    разные вещи, потому что со стороны заказчика бывает двое.
     """
+    viewer_is_owner = bool(getattr(viewer, "is_owner", False))
     return {
         "id": message.pk,
         "author": message.author_name,
         "mine": message.author_is_owner == viewer_is_owner,
+        "own": message.author_id == getattr(viewer, "pk", None),
         "text": message.text,
         "at": timezone.localtime(message.created_at).strftime("%d.%m.%Y %H:%M"),
+        "edited": bool(message.edited_at),
+        "decision": message.is_decision,
+        # Секунды до конца окна правки: кнопка должна исчезнуть сама,
+        # а не оставаться до перезагрузки и жаловаться на отказ сервера.
+        "edit_left": max(int((message.edit_deadline - timezone.now()).total_seconds()), 0),
         "stage": message.stage.title if message.stage else "",
         "files": [
             {

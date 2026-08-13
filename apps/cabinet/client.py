@@ -30,7 +30,9 @@ from .forms import MessageForm
 
 
 def _project_for(user):
-    client = getattr(user, "client", None)
+    # Кабинет открывается и основному заказчику, и второму аккаунту пары:
+    # проект у них один, и разделять его между мужем и женой незачем.
+    client = getattr(user, "client", None) or getattr(user, "client_as_partner", None)
     if client is None:
         raise Http404("Проект не найден")
     project = (
@@ -120,6 +122,10 @@ def project(request):
             "form": RevisionForm(),
             "message_form": MessageForm(),
             "messages_list": obj.messages.all(),
+            # Решения — то, о чём договорились. Отдельным списком наверху
+            # переписки: в длинной ленте договорённость тонет между
+            # «спасибо» и фотографиями, а искать её приходится через полгода.
+            "decisions": [m for m in obj.messages.all() if m.is_decision],
             # Договор этапа показывается на самом этапе — там, где заказчик
             # смотрит, что происходит. В боковой панели остаются только
             # договоры вне этапов и архив подписанных.

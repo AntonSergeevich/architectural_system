@@ -407,8 +407,12 @@
 
   function messageNode(item) {
     var box = document.createElement('div');
-    box.className = 'msg ' + (item.mine ? 'msg--mine' : 'msg--theirs');
+    box.className = 'msg ' + (item.mine ? 'msg--mine' : 'msg--theirs') +
+      (item.decision ? ' msg--decision' : '');
+    box.id = 'msg-' + item.id;
     box.dataset.message = item.id;
+    box.dataset.editLeft = item.edit_left || 0;
+    if (item.own) box.dataset.own = '';
 
     var meta = document.createElement('div');
     meta.className = 'msg__meta';
@@ -466,7 +470,178 @@
       });
       box.appendChild(wrap);
     }
+
+    box.appendChild(messageTools(item));
     return box;
+  }
+
+  /* Инструменты сообщения: «это решение» и «поправить».
+
+     Правка живёт минуту и только у автора — этого хватает на «отправил
+     не ту цифру» и не хватает, чтобы переписать историю. Кнопка гаснет
+     сама, а не остаётся до перезагрузки, чтобы потом получить отказ. */
+  function messageTools(item) {
+    var tools = document.createElement('div');
+    tools.className = 'msg__tools';
+
+    var decide = document.createElement('button');
+    decide.type = 'button';
+    decide.className = 'msg__tool';
+    decide.dataset.decide = item.id;
+    decide.setAttribute('aria-pressed', String(!!item.decision));
+    decide.textContent = item.decision ? '✓ решение' : '✓ это решение';
+    tools.appendChild(decide);
+
+    var edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'msg__tool';
+    edit.dataset.edit = item.id;
+    edit.textContent = 'поправить';
+    edit.hidden = true;
+    tools.appendChild(edit);
+    return tools;
+  }
+
+  /* Окно правки: кнопка появляется у своих сообщений и гаснет сама.
+
+     Считаем по секундам, оставшимся с сервера: часы в браузере могут
+     врать на минуты, и доверять им в вопросе «прошла ли минута» нельзя. */
+  function watchEditWindow() {
+    document.querySelectorAll('.msg[data-own]').forEach(function (node) {
+      var left = Number(node.dataset.editLeft || 0);
+      var button = node.querySelector('[data-edit]');
+      if (!button) return;
+      button.hidden = left <= 0;
+      if (left > 0) {
+        node.dataset.editLeft = left - 1;
+        if (left - 1 <= 0) closeEdit(node);
+      }
+    });
+  }
+
+  function closeEdit(node) {
+    var form = node.querySelector('.msg__edit');
+    if (form) form.remove();
+    var text = node.querySelector('.msg__text');
+    if (text) text.hidden = false;
+    var button = node.querySelector('[data-edit]');
+    if (button) button.hidden = true;
+  }
+
+  document.addEventListener('click', function (e) {
+    var start = e.target.closest('[data-edit]');
+    if (start) {
+      var node = start.closest('.msg');
+      if (!node || node.querySelector('.msg__edit')) return;
+      var text = node.querySelector('.msg__text');
+
+      var form = document.createElement('form');
+      form.className = 'msg__edit';
+      var field = document.createElement('textarea');
+      field.rows = 2;
+      field.value = text ? text.textContent.trim() : '';
+      var save = document.createElement('button');
+      save.type = 'submit';
+      save.className = 'btn';
+      save.textContent = 'Сохранить';
+      var cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'btn btn--ghost';
+      cancel.textContent = 'Отмена';
+      cancel.addEventListener('click', function () { closeEdit(node); });
+      form.appendChild(field);
+      form.appendChild(save);
+      form.appendChild(cancel);
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var panel = document.querySelector('[data-chat-panel]');
+        var body = new FormData();
+        body.append('message', node.dataset.message);
+        body.append('text', field.value);
+        body.append('csrfmiddlewaretoken', csrf());
+        fetch(panel.dataset.editUrl, {
+          method: 'POST', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (payload) {
+            if (!payload.ok) { toast(payload.error, 'error'); return; }
+            if (text) text.textContent = payload.message.text;
+            var meta = node.querySelector('.msg__meta');
+            if (meta && !meta.querySelector('.msg__edited')) {
+              var mark = document.createElement('span');
+              mark.className = 'muted msg__edited';
+              mark.textContent = '· поправлено';
+              meta.appendChild(mark);
+            }
+            closeEdit(node);
+          })
+          .catch(function () { toast('Не отправилось. Попробуйте ещё раз.', 'error'); });
+      });
+
+      if (text) text.hidden = true;
+      node.insertBefore(form, node.querySelector('.msg__tools'));
+      field.focus();
+      return;
+    }
+
+    /* Метка «решение». Ставит любая сторона: договорённость — это то,
+       о чём договорились оба, и подтвердить её может каждый. */
+    var decide = e.target.closest('[data-decide]');
+    if (!decide) return;
+    var msg = decide.closest('.msg');
+    var panel = document.querySelector('[data-chat-panel]');
+    if (!msg || !panel || !window.fetch) return;
+
+    var body = new FormData();
+    body.append('message', decide.dataset.decide);
+    body.append('csrfmiddlewaretoken', csrf());
+    decide.disabled = true;
+
+    fetch(panel.dataset.decisionUrl, {
+      method: 'POST', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (payload) {
+        decide.disabled = false;
+        if (!payload.ok) { toast(payload.error, 'error'); return; }
+        var on = payload.message.decision;
+        msg.classList.toggle('msg--decision', on);
+        decide.setAttribute('aria-pressed', String(on));
+        decide.textContent = on ? '✓ решение' : '✓ это решение';
+        paintDecisions(payload.message, on);
+        toast(on ? 'Записано в решения.' : 'Метка снята.');
+      })
+      .catch(function () { decide.disabled = false; });
+  });
+
+  // Список решений держим в согласии с лентой: иначе он расходится
+  // с ней до первой перезагрузки, а верить нужно обоим.
+  function paintDecisions(item, on) {
+    var box = document.querySelector('[data-decisions]');
+    if (!box) return;
+    var list = box.querySelector('.decisions__list');
+    var existing = list && list.querySelector('[href="#msg-' + item.id + '"]');
+
+    if (on && !existing && list) {
+      var li = document.createElement('li');
+      var link = document.createElement('a');
+      link.href = '#msg-' + item.id;
+      link.textContent = item.text.slice(0, 120);
+      var who = document.createElement('span');
+      who.className = 'muted';
+      who.textContent = item.author + ' · ' + item.at.slice(0, 10);
+      li.appendChild(link);
+      li.appendChild(who);
+      list.appendChild(li);
+    }
+    if (!on && existing) existing.closest('li').remove();
+
+    var count = list ? list.children.length : 0;
+    box.hidden = count === 0;
+    if (count) box.open = true;
+    var label = box.querySelector('[data-decisions-count]');
+    if (label) label.textContent = '(' + count + ')';
   }
 
   function setupChatExchange(chat, input, files, picked) {
@@ -664,5 +839,7 @@
   paintMoney();
   setupChat();
   setupStages();
+  watchEditWindow();
+  setInterval(watchEditWindow, 1000);
   window.addEventListener('resize', paintRail);
 })();

@@ -6,6 +6,7 @@
 интерфейса, а не назойливость заказчика.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -426,9 +427,17 @@ class Message(models.Model):
     Переписка живёт здесь, а не в мессенджере, по двум причинам. Первая:
     в мессенджере она перемешана с личным и теряется. Вторая, более
     важная: при разбирательстве нужна доказательная база — кто, что
-    и когда сказал. Поэтому сообщения не редактируются и не удаляются
-    ни одной из сторон.
+    и когда сказал.
+
+    Поэтому сообщения не удаляются вовсе, а поправить их можно только
+    минуту после отправки и только автору. Минута закрывает единственный
+    честный случай — «отправил не ту цифру» — и не даёт переписать
+    историю задним числом: правка помечается, а время отправки остаётся
+    прежним.
     """
+
+    # Столько времени сообщение считается опиской, а не документом.
+    EDIT_WINDOW = timedelta(minutes=1)
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="messages")
     author = models.ForeignKey(
@@ -450,6 +459,14 @@ class Message(models.Model):
     text = models.TextField("Сообщение", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField("Прочитано другой стороной", null=True, blank=True)
+    edited_at = models.DateTimeField("Поправлено", null=True, blank=True)
+
+    # Решение — то, о чём договорились. В длинной переписке договорённость
+    # тонет между «спасибо» и фотографиями, а искать её приходится через
+    # полгода. Помеченные решения собираются отдельным списком наверху,
+    # и это дешевле второго чата: два места для разговора значат два
+    # места, где надо искать.
+    is_decision = models.BooleanField("Решение", default=False)
 
     class Meta:
         verbose_name = "Сообщение по проекту"
@@ -459,6 +476,27 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.author_name}: {self.text[:40]}"
+
+    @property
+    def edit_deadline(self):
+        return self.created_at + self.EDIT_WINDOW
+
+    @property
+    def edit_left_seconds(self):
+        """Сколько ещё можно править. Ноль — окно закрылось."""
+        if not self.created_at:
+            return 0
+        return max(int((self.edit_deadline - timezone.now()).total_seconds()), 0)
+
+    def can_edit(self, user):
+        """Править можно своё и только в первую минуту.
+
+        Файлы при этом не трогаются: приложенное остаётся приложенным,
+        иначе «поправлю опечатку» превращается в способ убрать документ.
+        """
+        if not user or not user.is_authenticated or self.author_id != user.pk:
+            return False
+        return timezone.now() <= self.edit_deadline
 
 
 class MessageFile(models.Model):

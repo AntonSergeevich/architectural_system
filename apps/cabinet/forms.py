@@ -116,8 +116,13 @@ class AccessForm(forms.Form):
         self.existing = User.objects.filter(email=email).first()
         return email
 
-    def save(self, client):
-        """Создать или обновить аккаунт заказчика. Возвращает (user, пароль)."""
+    def save(self, client, partner=False):
+        """Создать или обновить аккаунт заказчика. Возвращает (user, пароль).
+
+        `partner` — второй человек в паре. Проект чаще всего ведут вдвоём,
+        и общий логин на двоих превращает переписку в разговор, где
+        не разобрать, кто что просил.
+        """
         password = self.cleaned_data.get("password") or generate_password()
         user = self.existing
         if user is None:
@@ -134,8 +139,11 @@ class AccessForm(forms.Form):
                 user.full_name = self.cleaned_data["full_name"]
             user.save()
 
-        client.user = user
-        client.save(update_fields=["user"])
+        if partner:
+            client.partner = user
+        else:
+            client.user = user
+        client.save(update_fields=["partner" if partner else "user"])
         return user, password
 
 

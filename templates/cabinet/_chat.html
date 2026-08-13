@@ -4,8 +4,14 @@
 
   Она здесь не для удобства — для доказательной базы. В мессенджере
   «я вам присылала» не значит ничего: сообщение удаляется, чат чистится,
-  файл теряется. Здесь сообщения не редактируются и не удаляются ни одной
-  из сторон, у каждого есть автор и время.
+  файл теряется. Здесь сообщения не удаляются вовсе, а поправить своё
+  можно только минуту после отправки — ровно чтобы исправить не ту цифру,
+  и не настолько, чтобы переписать историю.
+
+  Решения помечаются и собираются наверху. Проект часто ведут вдвоём,
+  муж и жена пишут по очереди, и договорённость тонет между «спасибо»
+  и фотографиями. Второй чат эту задачу не решает, а удваивает: два места
+  для разговора — это два места, где потом надо искать.
 
   «Своё справа» считается на сервере: зависит от того, кто смотрит,
   и решать это в двух местах — верный способ однажды показать заказчику
@@ -13,20 +19,46 @@
 {% endcomment %}
 <section class="panel" id="chat"
          data-chat-panel
-         data-poll-url="{% url 'cabinet:messages_since' project.pk %}">
+         data-poll-url="{% url 'cabinet:messages_since' project.pk %}"
+         data-edit-url="{% url 'cabinet:message_edit' project.pk %}"
+         data-decision-url="{% url 'cabinet:message_decision' project.pk %}">
   <header class="panel__head">
     <h2>Переписка по проекту</h2>
     <span class="muted">Сообщения и файлы сохраняются навсегда</span>
   </header>
 
+  {% comment %}
+    Блок стоит в разметке всегда, даже пустым: первую отметку ставят
+    без перезагрузки, и дорисовывать список некуда, если его нет.
+  {% endcomment %}
+  <details class="decisions" data-decisions {% if not decisions %}hidden{% endif %}
+           {% if decisions|length < 4 %}open{% endif %}>
+    <summary>
+      <span class="decisions__mark" aria-hidden="true">✓</span>
+      Решения по проекту <span class="muted" data-decisions-count>({{ decisions|length }})</span>
+    </summary>
+    <ul class="decisions__list">
+      {% for message in decisions %}
+        <li>
+          <a href="#msg-{{ message.pk }}">{{ message.text|truncatechars:120 }}</a>
+          <span class="muted">{{ message.author_name }} · {{ message.created_at|date:"d.m.Y" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+
   <div class="chat" data-chat>
     {% for message in messages_list %}
-      <div class="msg {% if message.author_is_owner == is_owner_view %}msg--mine{% else %}msg--theirs{% endif %}"
-           data-message="{{ message.pk }}">
+      <div class="msg {% if message.author_is_owner == is_owner_view %}msg--mine{% else %}msg--theirs{% endif %}
+                  {% if message.is_decision %}msg--decision{% endif %}"
+           id="msg-{{ message.pk }}" data-message="{{ message.pk }}"
+           {% if message.author_id == user.pk %}data-own{% endif %}
+           data-edit-left="{{ message.edit_left_seconds }}">
         <div class="msg__meta">
           <strong>{{ message.author_name|default:"—" }}</strong>
           <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"d.m.Y H:i" }}</time>
           {% if message.stage %}<span class="muted">· {{ message.stage.title }}</span>{% endif %}
+          {% if message.edited_at %}<span class="muted">· поправлено</span>{% endif %}
         </div>
         {% if message.text %}<p class="msg__text">{{ message.text|linebreaksbr }}</p>{% endif %}
         {% if message.files.all %}
@@ -54,6 +86,16 @@
             {% endfor %}
           </div>
         {% endif %}
+
+        <div class="msg__tools">
+          <button class="msg__tool" type="button" data-decide="{{ message.pk }}"
+                  aria-pressed="{{ message.is_decision|yesno:'true,false' }}"
+                  title="Отметить решением">
+            ✓ {% if message.is_decision %}решение{% else %}это решение{% endif %}
+          </button>
+          <button class="msg__tool" type="button" data-edit="{{ message.pk }}"
+                  title="Поправить" hidden>поправить</button>
+        </div>
       </div>
     {% empty %}
       <p class="muted chat__empty" data-chat-empty>

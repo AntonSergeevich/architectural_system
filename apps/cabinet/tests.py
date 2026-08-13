@@ -643,8 +643,8 @@ class ChatTests(CabinetTestCase):
         )
         message = Message.objects.get()
 
-        self.assertTrue(services.message_json(message, viewer_is_owner=True)["mine"])
-        self.assertFalse(services.message_json(message, viewer_is_owner=False)["mine"])
+        self.assertTrue(services.message_json(message, self.owner)["mine"])
+        self.assertFalse(services.message_json(message, self.client_user)["mine"])
 
     def test_new_messages_arrive_without_reloading(self):
         """Обе стороны сидят и ждут ответа — обновлять страницу не должен никто."""
@@ -834,3 +834,108 @@ class ArchiveTests(CabinetTestCase):
         call_command("purge_archive", verbosity=0)
         self.assertFalse(Client.objects.filter(pk=self.customer.pk).exists())
         self.assertFalse(User.objects.filter(pk=self.client_user.pk).exists())
+
+
+class MessageEditTests(CabinetTestCase):
+    """Правка сообщения — минута и только своё."""
+
+    def send(self, text="сумма 120 000"):
+        self.login_owner()
+        self.client.post(reverse("cabinet:message_send", args=[self.project.pk]), {"text": text})
+        return Message.objects.latest("id")
+
+    def test_own_message_can_be_fixed_within_a_minute(self):
+        message = self.send()
+        response = self.client.post(
+            reverse("cabinet:message_edit", args=[self.project.pk]),
+            {"message": message.pk, "text": "сумма 130 000"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertTrue(response.json()["ok"])
+        message.refresh_from_db()
+        self.assertEqual(message.text, "сумма 130 000")
+        self.assertIsNotNone(message.edited_at)
+
+    def test_after_a_minute_the_history_is_locked(self):
+        message = self.send()
+        Message.objects.filter(pk=message.pk).update(
+            created_at=timezone.now() - timezone.timedelta(minutes=2)
+        )
+        response = self.client.post(
+            reverse("cabinet:message_edit", args=[self.project.pk]),
+            {"message": message.pk, "text": "переписываю прошлое"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 403)
+        message.refresh_from_db()
+        self.assertEqual(message.text, "сумма 120 000")
+
+    def test_someone_elses_message_is_untouchable(self):
+        message = self.send()
+        self.login_client()
+        response = self.client.post(
+            reverse("cabinet:message_edit", args=[self.project.pk]),
+            {"message": message.pk, "text": "не моё, но поправлю"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 403)
+        message.refresh_from_db()
+        self.assertEqual(message.text, "сумма 120 000")
+
+    def test_decision_mark_works_from_both_sides(self):
+        message = self.send("Договорились: кухня без верхних шкафов")
+        self.login_client()
+        payload = self.client.post(
+            reverse("cabinet:message_decision", args=[self.project.pk]),
+            {"message": message.pk},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        ).json()
+        self.assertTrue(payload["message"]["decision"])
+
+        page = self.client.get(reverse("cabinet:my_project"))
+        self.assertEqual(len(page.context["decisions"]), 1)
+
+        self.client.post(
+            reverse("cabinet:message_decision", args=[self.project.pk]),
+            {"message": message.pk},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        message.refresh_from_db()
+        self.assertFalse(message.is_decision)
+
+
+class PartnerTests(CabinetTestCase):
+    """Пара работает в одном кабинете, но каждый под своим именем."""
+
+    def setUp(self):
+        self.partner = User.objects.create_user(
+            email="petr@example.com",
+            password="partner-pass-1",
+            full_name="Пётр",
+            data_consent_at=timezone.now(),
+        )
+        self.customer.partner = self.partner
+        self.customer.save(update_fields=["partner"])
+
+    def test_partner_sees_the_same_project(self):
+        self.client.login(email="petr@example.com", password="partner-pass-1")
+        response = self.client.get(reverse("cabinet:my_project"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Квартира на Мира")
+
+    def test_partner_writes_under_his_own_name(self):
+        self.client.login(email="petr@example.com", password="partner-pass-1")
+        self.client.post(
+            reverse("cabinet:message_send", args=[self.project.pk]), {"text": "а если сдвинуть кухню"}
+        )
+        message = Message.objects.latest("id")
+        self.assertEqual(message.author_name, "Пётр")
+        self.assertFalse(message.author_is_owner)
+
+    def test_notifications_reach_both(self):
+        from apps.core import notify
+
+        self.assertEqual(
+            {u.pk for u in notify._project_users(self.project)},
+            {self.client_user.pk, self.partner.pk},
+        )

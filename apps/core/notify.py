@@ -165,8 +165,28 @@ def new_lead(lead):
 
 
 def _project_user(project):
+    """Основной аккаунт заказчика — для обратной совместимости."""
     client = getattr(project, "client", None)
     return getattr(client, "user", None) if client else None
+
+
+def _project_users(project):
+    """Все, кто со стороны заказчика: сам заказчик и его вторая половина.
+
+    Проект чаще всего ведут вдвоём, и уведомление, пришедшее одному
+    из пары, вторым не читается вовсе.
+    """
+    client = getattr(project, "client", None)
+    if not client:
+        return []
+    return [u for u in (client.user, getattr(client, "partner", None)) if u]
+
+
+def to_clients(project, text, kind="message"):
+    sent = False
+    for user in _project_users(project):
+        sent = to_user(user, text, kind) or sent
+    return sent
 
 
 def stage_changed(stage):
@@ -184,7 +204,7 @@ def stage_changed(stage):
     if stage.waiting_on == "client":
         text += "\n\nНужно ваше согласование."
     text += f"\n{link(reverse('cabinet:my_project'))}"
-    return to_user(_project_user(project), text, kind="stage")
+    return to_clients(project, text, kind="stage")
 
 
 def task_for_client(task):
@@ -199,7 +219,7 @@ def task_for_client(task):
     if task.comment:
         text += f"\n{escape(task.comment)}"
     text += f"\n{link(reverse('cabinet:my_project'))}"
-    return to_user(_project_user(project), text, kind="task")
+    return to_clients(project, text, kind="task")
 
 
 def new_message(message):
@@ -209,12 +229,15 @@ def new_message(message):
     text = f"<b>{escape(message.author_name)}</b> по проекту «{escape(project)}»:\n{body}"
 
     if message.author_is_owner:
-        return to_user(
-            _project_user(project),
-            text + f"\n{link(reverse('cabinet:my_project'))}",
-            kind="message",
-        )
-    return to_owner(text + f"\n{link(reverse('cabinet:project_detail', args=[project.pk]))}")
+        return to_clients(project, text + f"\n{link(reverse('cabinet:my_project'))}", kind="message")
+
+    # Сообщение от одного из пары получает и Дарья, и второй заказчик:
+    # они договариваются между собой в той же переписке.
+    sent = to_owner(text + f"\n{link(reverse('cabinet:project_detail', args=[project.pk]))}")
+    for user in _project_users(project):
+        if user.pk != message.author_id:
+            sent = to_user(user, text + f"\n{link(reverse('cabinet:my_project'))}", "message") or sent
+    return sent
 
 
 def budget_change(change):
@@ -226,7 +249,7 @@ def budget_change(change):
         f"Почему: {escape(change.reason[:400])}\n\n"
         f"Нужно ваше решение: {link(reverse('cabinet:my_project'))}#money"
     )
-    return to_user(_project_user(project), text, kind="money")
+    return to_clients(project, text, kind="money")
 
 
 def budget_decided(change):
@@ -252,7 +275,7 @@ def contract_sent(contract):
     if contract.stage_id:
         text += f"\nЭтап: {escape(contract.stage.title)}"
     text += f"\nСкачать и подписать: {link(reverse('cabinet:my_project'))}{anchor}"
-    return to_user(_project_user(contract.project), text, kind="money")
+    return to_clients(contract.project, text, kind="money")
 
 
 def contract_signed(contract):

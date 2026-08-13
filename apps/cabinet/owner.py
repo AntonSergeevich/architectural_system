@@ -19,6 +19,7 @@ from apps.core.models import SiteSettings
 from apps.crm.models import Client, Lead
 from apps.projects.models import (
     BudgetChange,
+    Message,
     Project,
     ProjectPayment,
     Stage,
@@ -303,7 +304,8 @@ def client_access(request, pk):
         messages.error(request, "Проверьте почту заказчика.")
         return redirect("cabinet:client_detail", pk=pk)
 
-    user, password = form.save(client)
+    partner = bool(request.POST.get("partner"))
+    user, password = form.save(client, partner=partner)
 
     # Готовое сообщение, а не три поля для переписывания. Дарья отправляет
     # доступ в мессенджер, и собирать текст руками — это лишняя минута
@@ -403,6 +405,10 @@ def project_detail(request, pk):
             "contract_form": ContractUploadForm(project=project),
             "message_form": MessageForm(),
             "messages_list": project.messages.all(),
+            # Решения — то, о чём договорились. Отдельным списком наверху
+            # переписки: в длинной ленте договорённость тонет между
+            # «спасибо» и фотографиями, а искать её приходится через полгода.
+            "decisions": [m for m in project.messages.all() if m.is_decision],
             "signed_contracts": [c for c in project.contracts.all() if c.is_signed],
             # Договоры этапов живут на самих этапах: там их и ищут. В боковой
             # панели остаётся то, что ни к какому этапу не привязано.
@@ -701,12 +707,80 @@ def message_send(request, pk):
         notify.safe(notify.new_message, message)
         if ajax:
             return JsonResponse(
-                {"ok": True, "messages": [services.message_json(message, request.user.is_owner)]}
+                {"ok": True, "messages": [services.message_json(message, request.user)]}
             )
 
     if request.user.is_owner:
         return redirect(reverse("cabinet:project_detail", args=[project.pk]) + "#chat")
     return redirect(reverse("cabinet:my_project") + "#chat")
+
+
+@login_required
+@require_POST
+def message_edit(request, pk):
+    """Поправить своё сообщение — минуту после отправки.
+
+    Единственный честный случай — «отправил не ту цифру». Всё, что позже,
+    это уже переписывание истории: переписка нужна как доказательная база,
+    и правка задним числом обесценивает её целиком. Поэтому окно короткое,
+    правка помечается, а время отправки остаётся прежним.
+
+    Файлы правка не трогает: иначе «поправлю опечатку» превращается
+    в способ убрать документ.
+    """
+    project = _visible_project(request, pk)
+    message = get_object_or_404(Message, pk=request.POST.get("message"), project=project)
+
+    if not message.can_edit(request.user):
+        error = "Поправить можно только своё сообщение и только минуту после отправки."
+        if services.is_ajax(request):
+            return JsonResponse({"ok": False, "error": error}, status=403)
+        messages.error(request, error)
+        return redirect(services.chat_url(request.user, project))
+
+    text = (request.POST.get("text") or "").strip()
+    if not text and not message.files.exists():
+        error = "Пустое сообщение не сохранить. Если оно лишнее — так и напишите."
+        if services.is_ajax(request):
+            return JsonResponse({"ok": False, "error": error}, status=400)
+        messages.error(request, error)
+        return redirect(services.chat_url(request.user, project))
+
+    message.text = text
+    message.edited_at = timezone.now()
+    message.save(update_fields=["text", "edited_at"])
+
+    if services.is_ajax(request):
+        return JsonResponse(
+            {"ok": True, "message": services.message_json(message, request.user)}
+        )
+    return redirect(services.chat_url(request.user, project))
+
+
+@login_required
+@require_POST
+def message_decision(request, pk):
+    """Пометить сообщение решением — или снять метку.
+
+    Договорённости тонут в переписке между «спасибо» и фотографиями,
+    а искать их приходится через полгода. Помеченные собираются отдельным
+    списком наверху — это дешевле второго чата: два места для разговора
+    значат два места, где надо искать.
+
+    Метку ставит любая сторона: решение — это то, о чём договорились,
+    и подтвердить это может каждый участник.
+    """
+    project = _visible_project(request, pk)
+    message = get_object_or_404(Message, pk=request.POST.get("message"), project=project)
+
+    message.is_decision = not message.is_decision
+    message.save(update_fields=["is_decision"])
+
+    if services.is_ajax(request):
+        return JsonResponse(
+            {"ok": True, "message": services.message_json(message, request.user)}
+        )
+    return redirect(services.chat_url(request.user, project))
 
 
 @login_required
@@ -734,7 +808,7 @@ def messages_since(request, pk):
     return JsonResponse(
         {
             "ok": True,
-            "messages": [services.message_json(m, request.user.is_owner) for m in fresh],
+            "messages": [services.message_json(m, request.user) for m in fresh],
         }
     )
 
@@ -780,7 +854,11 @@ def _visible_project(request, pk):
     project = _project_or_404(pk)
     if request.user.is_owner:
         return project
-    client = getattr(request.user, "client", None)
+    # Со стороны заказчика бывает двое: сам заказчик и второй аккаунт пары.
+    # Проект у них один, и проверка обязана знать про обоих.
+    client = getattr(request.user, "client", None) or getattr(
+        request.user, "client_as_partner", None
+    )
     if client is None or project.client_id != client.pk:
         raise Http404("Проект не найден")
     return project
