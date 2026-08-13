@@ -772,3 +772,65 @@ class AsyncTests(CabinetTestCase):
 
         html = str(PaymentForm(project=self.project)["paid_on"])
         self.assertIn(timezone.localdate().strftime("%Y-%m-%d"), html)
+
+
+class ArchiveTests(CabinetTestCase):
+    """Заказчик не удаляется одной кнопкой.
+
+    За карточкой стоят проекты, договоры, переписка и оплаты — то есть
+    доказательная база. Кнопка убирает её в архив, и вернуть можно месяц.
+    """
+
+    def test_archive_needs_the_name_typed(self):
+        self.login_owner()
+        response = self.client.post(
+            reverse("cabinet:client_archive", args=[self.customer.pk]), {"confirm": "не то имя"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_archived)
+
+    def test_archived_card_hides_and_access_stops(self):
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_archive", args=[self.customer.pk]),
+            {"confirm": self.customer.name},
+        )
+        self.customer.refresh_from_db()
+        self.assertTrue(self.customer.is_archived)
+        self.assertEqual(self.customer.days_left, Client.ARCHIVE_DAYS)
+
+        # Доступ в кабинет закрывается сразу.
+        self.client_user.refresh_from_db()
+        self.assertFalse(self.client_user.is_active)
+        self.assertFalse(self.client.login(email="mariya@example.com", password="client-pass-123"))
+
+        page = self.client.get(reverse("cabinet:clients"))
+        self.assertIn(self.customer, page.context["archived"])
+        self.assertNotIn(self.customer, page.context["clients"])
+
+    def test_restore_brings_everything_back(self):
+        self.customer.archive()
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_archive", args=[self.customer.pk]), {"restore": "1"}
+        )
+        self.customer.refresh_from_db()
+        self.client_user.refresh_from_db()
+        self.assertFalse(self.customer.is_archived)
+        self.assertTrue(self.client_user.is_active)
+        self.assertTrue(Project.objects.filter(client=self.customer).exists())
+
+    def test_purge_waits_out_the_month(self):
+        from django.core.management import call_command
+
+        self.customer.archive()
+        call_command("purge_archive", verbosity=0)
+        self.assertTrue(Client.objects.filter(pk=self.customer.pk).exists())
+
+        Client.objects.filter(pk=self.customer.pk).update(
+            archived_at=timezone.now() - timezone.timedelta(days=Client.ARCHIVE_DAYS + 1)
+        )
+        call_command("purge_archive", verbosity=0)
+        self.assertFalse(Client.objects.filter(pk=self.customer.pk).exists())
+        self.assertFalse(User.objects.filter(pk=self.client_user.pk).exists())

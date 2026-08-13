@@ -41,6 +41,14 @@ class Client(models.Model):
     notes = models.TextField("Заметки", blank=True, help_text="Видит только Дарья")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Удалить заказчика — значит удалить его проекты, договоры, переписку
+    # и всю доказательную базу разом. Одной кнопкой такое делать нельзя,
+    # поэтому кнопка убирает карточку в архив: месяц она лежит там целиком
+    # и возвращается одним нажатием.
+    archived_at = models.DateTimeField("В архиве с", null=True, blank=True)
+
+    ARCHIVE_DAYS = 30
+
     class Meta:
         verbose_name = "Заказчик"
         verbose_name_plural = "Заказчики"
@@ -52,6 +60,43 @@ class Client(models.Model):
     def save(self, *args, **kwargs):
         self.phone = normalize_phone(self.phone)
         super().save(*args, **kwargs)
+
+    @property
+    def is_archived(self):
+        return self.archived_at is not None
+
+    @property
+    def purge_on(self):
+        """Когда карточка исчезнет окончательно."""
+        if not self.archived_at:
+            return None
+        return (self.archived_at + timezone.timedelta(days=self.ARCHIVE_DAYS)).date()
+
+    @property
+    def days_left(self):
+        if not self.archived_at:
+            return None
+        return max((self.purge_on - timezone.localdate()).days, 0)
+
+    def archive(self):
+        """В архив вместе с доступом в кабинет.
+
+        Доступ отключается сразу: смысл архива в том, что заказчик уже
+        не работает с нами, и оставлять ему открытый кабинет — значит
+        держать открытой дверь в проект, которого для него больше нет.
+        """
+        self.archived_at = timezone.now()
+        self.save(update_fields=["archived_at"])
+        if self.user_id and self.user.is_active:
+            self.user.is_active = False
+            self.user.save(update_fields=["is_active"])
+
+    def restore(self):
+        self.archived_at = None
+        self.save(update_fields=["archived_at"])
+        if self.user_id and not self.user.is_active:
+            self.user.is_active = True
+            self.user.save(update_fields=["is_active"])
 
 
 class Property(models.Model):

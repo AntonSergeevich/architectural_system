@@ -34,6 +34,35 @@
         <p class="muted">Пока никого. Заведите первого заказчика справа.</p>
       {% endfor %}
     </section>
+
+    {% comment %}
+      Архив — не корзина «на всякий случай», а страховка от одного
+      неверного нажатия. Через месяц карточка исчезает сама, до этого
+      возвращается одной кнопкой.
+    {% endcomment %}
+    {% if archived %}
+      <section class="panel" id="archived">
+        <header class="panel__head">
+          <h2>Архив</h2>
+          <span class="panel__hint">исчезнут сами через месяц</span>
+        </header>
+        {% for client in archived %}
+          <article class="row">
+            <div class="row__main">
+              <a class="row__title" href="{% url 'cabinet:client_detail' client.pk %}">{{ client.name }}</a>
+              <p class="muted">в архиве с {{ client.archived_at|date:"d.m.Y" }} · осталось {{ client.days_left }} дн.</p>
+            </div>
+            <div class="row__side">
+              <form method="post" action="{% url 'cabinet:client_archive' client.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="restore" value="1">
+                <button class="btn btn--ghost" type="submit">Вернуть</button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+    {% endif %}
   </div>
 
   <aside class="cabgrid__side">
@@ -46,7 +75,6 @@
         {% field form.email %}
         {% field form.messenger %}
         {% field form.source %}
-        {% field form.notes %}
         {% if form.non_field_errors %}
           {% for error in form.non_field_errors %}<p class="field__error">{{ error }}</p>{% endfor %}
         {% endif %}

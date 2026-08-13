@@ -17,6 +17,22 @@
   </div>
 </header>
 
+{% if client.is_archived %}
+  <section class="callout callout--warn">
+    <h2>Карточка в архиве</h2>
+    <p class="muted">
+      Убрана {{ client.archived_at|date:"d.m.Y" }}. Исчезнет
+      {{ client.purge_on|date:"d.m.Y" }} — осталось {{ client.days_left }} дн.
+      Доступ в кабинет у заказчика отключён.
+    </p>
+    <form method="post" action="{% url 'cabinet:client_archive' client.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="restore" value="1">
+      <button class="btn" type="submit">Вернуть из архива</button>
+    </form>
+  </section>
+{% endif %}
+
 {% if issued_password %}{% include "cabinet/_credentials.html" %}{% endif %}
 
 <div class="cabgrid">
@@ -154,6 +170,34 @@
         <button class="btn btn--ghost" type="submit">Сохранить</button>
       </form>
     </section>
+
+    {% if not client.is_archived %}
+      {% comment %}
+        Удаления здесь нет намеренно: за карточкой стоят проекты, договоры,
+        переписка и оплаты. Кнопка убирает её в архив на месяц, а чтобы
+        нажать её случайно, нужно сначала напечатать имя заказчика —
+        это невозможно сделать не глядя.
+      {% endcomment %}
+      <section class="panel" id="archive">
+        <details class="adder">
+          <summary class="adder--danger">Убрать заказчика</summary>
+          <p class="muted">
+            Карточка уйдёт в архив на {{ client.ARCHIVE_DAYS }} дней вместе
+            с проектами, договорами и перепиской. Доступ в кабинет
+            отключится сразу. Вернуть можно одной кнопкой.
+          </p>
+          <form class="adder__form" method="post" action="{% url 'cabinet:client_archive' client.pk %}">
+            {% csrf_token %}
+            <label class="field">
+              <span>Напечатайте «{{ client.name }}», чтобы подтвердить</span>
+              <input type="text" name="confirm" autocomplete="off" required
+                     placeholder="{{ client.name }}">
+            </label>
+            <button class="btn btn--ghost btn--danger" type="submit">В архив</button>
+          </form>
+        </details>
+      </section>
+    {% endif %}
   </aside>
 </div>
 {% endblock %}

@@ -168,7 +168,16 @@ def clients(request):
         .prefetch_related("projects", "properties")
         .order_by("-created_at")
     )
-    return render(request, "cabinet/clients.html", {"clients": qs, "form": form, "section": "clients"})
+    return render(
+        request,
+        "cabinet/clients.html",
+        {
+            "clients": [c for c in qs if not c.is_archived],
+            "archived": [c for c in qs if c.is_archived],
+            "form": form,
+            "section": "clients",
+        },
+    )
 
 
 @login_required
@@ -224,6 +233,41 @@ def client_notes(request, pk):
         form.save()
         messages.success(request, "Заметка сохранена.")
     return redirect(reverse("cabinet:client_detail", args=[pk]) + "#zametki")
+
+
+@login_required
+@owner_only
+@require_POST
+def client_archive(request, pk):
+    """Убрать карточку в архив — или вернуть обратно.
+
+    Настоящего удаления здесь нет намеренно. За карточкой стоят проекты,
+    договоры, переписка и оплаты: это доказательная база, и стереть её
+    одним нажатием нельзя. Месяц карточка лежит в архиве целиком
+    и возвращается одной кнопкой.
+
+    Подтверждение — именем заказчика. Не «вы уверены?», на которое жмут
+    не глядя, а действие, которое невозможно совершить случайно: чтобы
+    напечатать имя, надо посмотреть, чьё оно.
+    """
+    client = get_object_or_404(Client, pk=pk)
+
+    if request.POST.get("restore"):
+        client.restore()
+        messages.success(request, f"Заказчик «{client.name}» вернулся из архива.")
+        return redirect("cabinet:client_detail", pk=pk)
+
+    typed = (request.POST.get("confirm") or "").strip().casefold()
+    if typed != client.name.strip().casefold():
+        messages.error(request, "Имя не совпало — карточка осталась на месте.")
+        return redirect("cabinet:client_detail", pk=pk)
+
+    client.archive()
+    messages.success(
+        request,
+        f"«{client.name}» в архиве. Вернуть можно в течение {Client.ARCHIVE_DAYS} дней.",
+    )
+    return redirect("cabinet:clients")
 
 
 @login_required
