@@ -786,13 +786,16 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   box-shadow: inset 0 0 0 2px var(--ink-2), 0 0 26px rgba(246, 223, 160, .95);
 }
 
-/* Потолок — плоскость над комнатой, поднятая на высоту стен. Лежит ниже
-   стен по слоям: передняя половина ромба уходит за них, и видно ровно
-   то, что должно быть видно — потолок над дальним углом. */
+/* Потолок — плоскость над комнатой, приподнятая над стенами.
+
+   Рисуется поверх всего остального, и это не украшение, а геометрия:
+   ближний угол потолка ближе к глазу, чем дальний угол комнаты, значит
+   он обязан его перекрывать. Спрятанный за угол потолок ломает объём —
+   плоскость, которая выше и ближе, не может уходить назад. */
 .slot[data-part="roof"] {
-  left: 33%; top: 3%; width: 34%; aspect-ratio: 1; height: auto;
+  left: 33%; top: 6%; width: 34%; aspect-ratio: 1; height: auto;
   --iso: scaleY(.5) rotate(45deg);
-  z-index: 1;
+  z-index: 9;
 }
 .slot[data-part="roof"].is-filled {
   background:
@@ -802,10 +805,11 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   box-shadow: inset 0 0 0 2px var(--ink-2);
 }
 
-/* Светильник — висит из-под потолка. Комплектация это привезённые
-   на объект вещи, и лампа над столом самая узнаваемая из них. */
+/* Светильник — над диваном, а не в дальнем углу: в углу он спорил
+   с потолком, который проходит там же. Комплектация это привезённые
+   на объект вещи, и лампа над диваном самая узнаваемая из них. */
 .slot[data-part="light"] {
-  left: 46.5%; top: 38%; width: 7%; height: 6%;
+  left: 47%; top: 48%; width: 7%; height: 6%;
   z-index: 7;
 }
 .slot[data-part="light"].is-filled {
@@ -817,7 +821,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .slot[data-part="light"].is-filled::before {
   content: '';
   position: absolute; left: 50%; bottom: 100%;
-  width: 2px; height: 60%;
+  width: 2px; height: 130%;
   background: var(--ink-2);
 }
 
@@ -825,7 +829,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
    Концепция это облик комнаты, а облик комнаты начинается с того,
    на чём в ней сидят. */
 .slot[data-part="facade"] {
-  left: 31%; top: 60%; width: 20%; height: 9%;
+  left: 28%; top: 63%; width: 17%; height: 8%;
   --iso: skewY(-26.57deg);
   transform-origin: 0 0;
   z-index: 6;
@@ -837,7 +841,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .slot[data-part="facade"].is-filled::before {
   content: '';
   position: absolute; left: 0; right: 0; bottom: 100%;
-  height: 90%;
+  height: 80%;
   background: var(--brand-500);
   border: 2px solid var(--brand-600);
   border-radius: 3px 3px 0 0;
