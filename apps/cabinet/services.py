@@ -164,7 +164,8 @@ def project_queryset():
     """Проект со всем, что показывает кабинет, — одним заходом в базу."""
     return Project.objects.select_related("client", "estate").prefetch_related(
         "stages__tasks",
-        "stages__files",
+        "stages__files__room",
+        "rooms",
         "stages__revisions",
         "stages__contracts__template",
         "stages__payments",
@@ -239,4 +240,27 @@ def stage_shares(stages):
         # в тот момент, когда смотришь, что на этапе делается.
         stage.waiting_contract = [c for c in stage.contracts.all() if not c.is_signed]
         stage.paid = sum((p.amount for p in stage.payments.all()), Decimal("0"))
+        stage.file_groups = _by_room(stage.files.all())
     return stages
+
+
+def _by_room(files):
+    """Файлы этапа, разложенные по помещениям.
+
+    На одном этапе подбираются обои в спальню и плитка в санузел. В общей
+    куче миниатюр через месяц не разобрать, где что, а работа почти всегда
+    идёт сразу по нескольким помещениям — Дарья перескакивает между ними
+    по ходу дела.
+
+    Без помещения файлы идут первыми: это «про проект целиком», и прятать
+    их в конец за комнатами неправильно.
+    """
+    groups = {}
+    for item in files:
+        groups.setdefault(item.room, []).append(item)
+
+    ordered = []
+    if None in groups:
+        ordered.append((None, groups.pop(None)))
+    ordered += sorted(groups.items(), key=lambda pair: (pair[0].order, pair[0].title))
+    return ordered

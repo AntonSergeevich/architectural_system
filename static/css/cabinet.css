@@ -721,7 +721,16 @@
 
 @media (max-width: 600px) {
   .adder__row { flex-direction: column; align-items: stretch; }
+  /* Основа флекса в колонке — это высота, а не ширина: поле с `flex: 1 1
+     200px` вырастало в двухсотпиксельный прямоугольник. На телефоне поля
+     и так во всю ширину, растягивать их нечем. Селекторы подробные
+     намеренно: правила выше заданы по типу поля и иначе перевесят. */
   .adder__row > * { width: 100%; }
+  .adder__row > input[type="text"],
+  .adder__row > input[type="date"],
+  .adder__row > select,
+  .adder__row > .field,
+  .adder__row > .btn { flex: none; }
   .msg { max-width: 100%; }
 }
 
@@ -814,3 +823,26 @@
 .msg__edit { display: grid; gap: var(--gap-2); margin-top: var(--gap-2); }
 .msg__edit textarea { min-height: 0; font-size: var(--step--1); }
 .msg__edit .btn { justify-self: start; padding: var(--gap-2) var(--gap-4); min-height: 36px; }
+
+/* --- Спящая кнопка ---------------------------------------------------------
+   Кнопка «Отправить» всегда красной читается как «у тебя что-то
+   не отправлено» — и это ощущение висит над человеком всё время, пока он
+   листает страницу. Пока отправлять нечего, кнопка спит: контур вместо
+   заливки. Появилось что отправить — загорелась. */
+
+.btn--asleep {
+  background: none; color: var(--muted);
+  border: 1px dashed var(--line); box-shadow: none;
+  cursor: default;
+}
+.btn--asleep:hover { background: none; color: var(--muted); transform: none; }
+
+/* Подпись к файлу — обычная строка под миниатюрой, а не поле формы:
+   поле в каждой карточке превращает список файлов в анкету. */
+.thumb__caption input {
+  width: 100%; min-height: 0; padding: 2px var(--gap-2);
+  font-size: var(--step--2); color: var(--ink-2);
+  background: none; border: 1px solid transparent; border-radius: var(--radius-2);
+}
+.thumb__caption input:hover { border-color: var(--line); }
+.thumb__caption input:focus { background: var(--surface); border-color: var(--brand-300); }

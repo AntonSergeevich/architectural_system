@@ -226,10 +226,48 @@ class TaskPreset(models.Model):
         return self.title
 
 
+class Room(models.Model):
+    """Помещение объекта: гостиная, кухня, санузел.
+
+    Работа идёт не «по проекту вообще», а по комнатам: на одном этапе
+    подбираются обои в спальню и плитка в санузел, и в общей куче файлов
+    потом не разобрать, где что. Список у каждого объекта свой и заводится
+    по ходу дела — заранее его не спросить, потому что состав помещений
+    выясняется на обмере, а половина проектов вообще частичные: две комнаты
+    из пяти.
+    """
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="rooms")
+    title = models.CharField("Помещение", max_length=100)
+    order = models.PositiveSmallIntegerField("Порядок", default=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Помещение"
+        verbose_name_plural = "Помещения"
+        ordering = ["order", "created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["project", "title"], name="uniq_room_title")
+        ]
+
+    def __str__(self):
+        return self.title
+
+
 class StageFile(models.Model):
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="files")
     file = models.FileField("Файл", upload_to="projects/%Y/%m/")
-    title = models.CharField("Название", max_length=200, blank=True)
+    # Подпись, а не имя файла. «438.JPG» не говорит ничего, а «обои
+    # Loymina Geometrica в гостиную» говорит всё — и через полгода тоже.
+    title = models.CharField("Подпись", max_length=200, blank=True)
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="files",
+        verbose_name="Помещение",
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -242,7 +280,7 @@ class StageFile(models.Model):
 
     @property
     def label(self):
-        """Имя файла, а не путь вида projects/2026/08/438.JPG."""
+        """Подпись, а если её нет — имя файла, а не путь вида projects/…/438.JPG."""
         return self.title or self.file.name.rsplit("/", 1)[-1]
 
     @property

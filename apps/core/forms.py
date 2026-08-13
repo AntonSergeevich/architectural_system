@@ -86,7 +86,17 @@ class CalculatorForm(forms.Form):
     area = forms.DecimalField(label="Площадь, м²", max_digits=7, decimal_places=1, min_value=1, max_value=10000)
     rooms = forms.IntegerField(label="Помещений", min_value=1, max_value=50, initial=1)
     complexity = forms.ModelChoiceField(
-        label="Характер интерьера", queryset=ComplexityFactor.objects.all(), required=False
+        label="Характер интерьера",
+        queryset=ComplexityFactor.objects.filter(kind=ComplexityFactor.Kind.STYLE),
+        required=False,
+    )
+    # Обстоятельства объекта: отмечается сколько есть, каждое добавляет
+    # работы независимо от остальных. Начатый ремонт и старый фонд
+    # случаются вместе, и «выбрать одно» здесь нельзя.
+    conditions = forms.ModelMultipleChoiceField(
+        label="Что осложняет объект",
+        queryset=ComplexityFactor.objects.filter(kind=ComplexityFactor.Kind.CONDITION),
+        required=False,
     )
     modules = forms.ModelMultipleChoiceField(
         label="Что входит",

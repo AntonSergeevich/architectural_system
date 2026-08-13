@@ -223,7 +223,7 @@
     <details class="adder">
       <summary>Этап: статус, заметка, файлы</summary>
       <form class="adder__form" method="post" enctype="multipart/form-data"
-            action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form data-async>
+            action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form data-async data-armed>
         {% csrf_token %}
         <input type="hidden" name="stage" value="{{ stage.pk }}">
 
@@ -233,8 +233,36 @@
               <option value="{{ value }}" {% if stage.status == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
-          <input type="text" name="note" value="{{ stage.note }}" placeholder="Заметка (видите только вы)">
         </div>
+
+        {% comment %}
+          Заметка многострочная. Однострочное поле уводило текст за правый
+          край — набранное просто исчезало из виду, и проверить написанное
+          было нельзя.
+        {% endcomment %}
+        <textarea name="note" rows="3" aria-label="Заметка"
+                  placeholder="Заметка (видите только вы)">{{ stage.note }}</textarea>
+
+        {% comment %}
+          Помещение и подпись стоят рядом с файлами, а не после них:
+          Дарья выкладывает не «файл», а мысль — «обои Loymina в гостиную,
+          вот три варианта». Подпись одна на всю партию, помещение тоже:
+          так их и присылают.
+
+          Новая комната заводится тем же действием, что и загрузка. Спросить
+          список заранее нельзя: состав помещений выясняется на обмере,
+          а половина проектов частичные — две комнаты из пяти.
+        {% endcomment %}
+        <div class="adder__row">
+          <select name="room" aria-label="Помещение">
+            <option value="">Весь проект</option>
+            {% for room in project.rooms.all %}
+              <option value="{{ room.pk }}">{{ room.title }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="room_new" placeholder="Или новое помещение" autocomplete="off">
+        </div>
+        <input type="text" name="caption" placeholder="Подпись к файлам: что это и зачем">
 
         {% comment %}
           Файлы бросают мышью из папки — так их и передают в жизни.
@@ -250,24 +278,30 @@
         </label>
         <p class="drop__picked muted" data-drop-picked hidden></p>
 
-        <button class="btn" type="submit">Отправить</button>
+        {% comment %}
+          Кнопка спит, пока отправлять нечего. Всегда красная, она читается
+          как «у тебя что-то не отправлено» — и это ощущение висит над
+          человеком всё время, пока он листает страницу.
+        {% endcomment %}
+        <button class="btn btn--asleep" type="submit" data-arm-button>Отправить</button>
       </form>
     </details>
   {% endif %}
 
-  {% if stage.files.all %}
+  {% comment %}
+    Файлы разложены по помещениям: на одном этапе подбираются обои
+    в гостиную и плитка в санузел, и в общей куче миниатюр через месяц
+    не разобрать, где что. «Весь проект» идёт первым — это про объект
+    целиком, и прятать его за комнатами неправильно.
+  {% endcomment %}
+  {% for room, files in stage.file_groups %}
     <div class="stage__files">
-      <p class="stage__sub">Файлы этапа</p>
-      {% comment %}
-        Картинки — миниатюрами: по имени вида «438.JPG» нельзя понять,
-        что внутри, а планировку от визуализации отличают взглядом.
-        Открываются окном поверх, документы — в соседней вкладке.
-      {% endcomment %}
+      <p class="stage__sub">{% if room %}{{ room.title }}{% else %}Файлы этапа{% endif %}</p>
       <div class="thumbs">
-        {% for file in stage.files.all %}
+        {% for file in files %}
           <div class="thumb {% if not file.is_image %}thumb--doc{% endif %}">
             {% if file.is_image %}
-              <a href="{{ file.file.url }}" data-lightbox="{{ file.label }}">
+              <a href="{{ file.file.url }}" data-lightbox="{{ file.label }}" data-gallery="stage-{{ stage.pk }}">
                 <img src="{{ file.file.url }}" alt="{{ file.label }}" loading="lazy">
               </a>
             {% else %}
@@ -276,6 +310,25 @@
                 <span class="thumb__name">{{ file.label }}</span>
               </a>
             {% endif %}
+
+            {% comment %}
+              Подпись под кадром: «438.JPG» через полгода не говорит ничего,
+              а «обои Loymina Geometrica» говорит всё. Правится на месте —
+              подписывают уже после загрузки, когда смотрят на снимок.
+            {% endcomment %}
+            {% if is_owner_view %}
+              <form class="thumb__caption" method="post" data-async
+                    action="{% url 'cabinet:stage_file_edit' project.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="file" value="{{ file.pk }}">
+                <input type="hidden" name="room" value="{{ file.room_id|default_if_none:'' }}">
+                <input type="text" name="title" value="{{ file.title }}"
+                       placeholder="Подпись" aria-label="Подпись к файлу">
+              </form>
+            {% elif file.title %}
+              <span class="thumb__name">{{ file.title }}</span>
+            {% endif %}
+
             <span class="thumb__date muted">{{ file.uploaded_at|date:"d.m.Y" }}</span>
             {% if is_owner_view %}
               <form method="post" action="{% url 'cabinet:stage_file_delete' project.pk %}" data-async
@@ -289,7 +342,7 @@
         {% endfor %}
       </div>
     </div>
-  {% endif %}
+  {% endfor %}
 
   {% if stage.revisions.all %}
     <div class="stage__files">

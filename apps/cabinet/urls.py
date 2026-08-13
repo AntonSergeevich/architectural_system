@@ -25,6 +25,7 @@ urlpatterns = [
     path("proekty/<int:pk>/etap/", owner_views.move_stage, name="move_stage"),
     path("proekty/<int:pk>/etap/obnovit/", owner_views.stage_update, name="stage_update"),
     path("proekty/<int:pk>/etap/fayl/udalit/", owner_views.stage_file_delete, name="stage_file_delete"),
+    path("proekty/<int:pk>/etap/fayl/podpis/", owner_views.stage_file_edit, name="stage_file_edit"),
     path("proekty/<int:pk>/zadacha/", owner_views.task_add, name="task_add"),
     path("proekty/<int:pk>/zadacha/pravka/", owner_views.task_edit, name="task_edit"),
     path("proekty/<int:pk>/zadacha/udalit/", owner_views.task_delete, name="task_delete"),

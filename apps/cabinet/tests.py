@@ -939,3 +939,77 @@ class PartnerTests(CabinetTestCase):
             {u.pk for u in notify._project_users(self.project)},
             {self.client_user.pk, self.partner.pk},
         )
+
+
+class RoomTests(CabinetTestCase):
+    """Файлы этапа разложены по помещениям.
+
+    На одном этапе подбираются обои в гостиную и плитка в санузел,
+    и в общей куче миниатюр через месяц не разобрать, где что.
+    """
+
+    def upload(self, name="oboi.jpg", room_new="", room="", caption=""):
+        return self.client.post(
+            reverse("cabinet:stage_update", args=[self.project.pk]),
+            {
+                "stage": self.stage.pk,
+                "status": self.stage.status,
+                "note": self.stage.note,
+                "room_new": room_new,
+                "room": room,
+                "caption": caption,
+                "files": SimpleUploadedFile(name, b"\x89PNG\r\n"),
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_new_room_is_created_by_the_same_action(self):
+        """Спросить список помещений заранее нельзя: он выясняется
+        на обмере, а половина проектов частичные."""
+        from apps.projects.models import Room, StageFile
+
+        self.login_owner()
+        self.upload(room_new="Гостиная", caption="Обои Loymina Geometrica")
+
+        room = Room.objects.get(project=self.project, title="Гостиная")
+        item = StageFile.objects.latest("id")
+        self.assertEqual(item.room, room)
+        self.assertEqual(item.title, "Обои Loymina Geometrica")
+
+    def test_same_room_is_not_duplicated(self):
+        from apps.projects.models import Room
+
+        self.login_owner()
+        self.upload(room_new="Санузел")
+        self.upload(room_new="Санузел")
+        self.assertEqual(Room.objects.filter(project=self.project, title="Санузел").count(), 1)
+
+    def test_files_are_grouped_by_room(self):
+        from apps.cabinet import services
+
+        self.login_owner()
+        self.upload(name="pol.jpg", room_new="Кухня")
+        self.upload(name="obshee.jpg")
+
+        stages = services.stage_shares(self.project.stages.order_by("number"))
+        stage = next(s for s in stages if s.pk == self.stage.pk)
+        titles = [room.title if room else None for room, _ in stage.file_groups]
+        # Без помещения — первым: это «про проект целиком».
+        self.assertEqual(titles, [None, "Кухня"])
+
+    def test_caption_can_be_fixed_later(self):
+        from apps.projects.models import StageFile
+
+        self.login_owner()
+        self.upload(caption="")
+        item = StageFile.objects.latest("id")
+        self.assertEqual(item.title, "")
+
+        self.client.post(
+            reverse("cabinet:stage_file_edit", args=[self.project.pk]),
+            {"file": item.pk, "title": "Плитка Kerama на пол", "room_new": "Санузел"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        item.refresh_from_db()
+        self.assertEqual(item.title, "Плитка Kerama на пол")
+        self.assertEqual(item.room.title, "Санузел")

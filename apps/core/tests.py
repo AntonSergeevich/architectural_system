@@ -464,3 +464,57 @@ class PressAndSocialsTests(TestCase):
     def test_no_notice_when_there_is_no_instagram(self):
         body = self.client.get(reverse("public:home")).content.decode()
         self.assertNotIn("экстремистской организацией", body)
+
+
+class ComplexityTests(TestCase):
+    """Коэффициент сложности: характер интерьера плюс обстоятельства объекта.
+
+    Учёт сложности включается галочкой в «Ценах» и по умолчанию выключен:
+    решение «считать ли сложность» — Дарьино, а не программиста.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.catalog.models import PricingSettings
+
+        call_command("seed_catalog", verbosity=0)
+        pricing = PricingSettings.get()
+        pricing.complexity_enabled = True
+        pricing.save(update_fields=["complexity_enabled"])
+
+    def test_conditions_add_up_to_the_style_factor(self):
+        """Складываются, а не перемножаются: так коэффициент можно
+        объяснить вслух — «характер 1.15, старый фонд плюс 0.15»."""
+        from apps.catalog.models import ComplexityFactor
+        from apps.catalog.pricing import calculate
+
+        style = ComplexityFactor.objects.get(code="character")
+        old_fund = ComplexityFactor.objects.get(code="old")
+        started = ComplexityFactor.objects.get(code="started")
+
+        plain = calculate(area=80, complexity=style)
+        harder = calculate(area=80, complexity=style, conditions=[old_fund, started])
+
+        self.assertEqual(plain.factor, style.factor)
+        self.assertEqual(harder.factor, style.factor + old_fund.factor + started.factor)
+        self.assertGreater(harder.design_total, plain.design_total)
+
+    def test_constructor_asks_about_the_object(self):
+        response = self.client.get(reverse("public:constructor"))
+        self.assertContains(response, "Что осложняет объект")
+        self.assertContains(response, "Ремонт уже начат без проекта")
+
+    def test_calculation_api_takes_conditions(self):
+        from apps.catalog.models import ComplexityFactor
+
+        module = ServiceModule.objects.filter(is_active=True, unit="sqm").first()
+        old_fund = ComplexityFactor.objects.get(code="old")
+
+        base = self.client.post(
+            reverse("public:calculate"), {"area": "80", "rooms": 2, "modules": [module.pk]}
+        ).json()["calc"]
+        harder = self.client.post(
+            reverse("public:calculate"),
+            {"area": "80", "rooms": 2, "modules": [module.pk], "conditions": [old_fund.pk]},
+        ).json()["calc"]
+        self.assertGreater(harder["design_total"], base["design_total"])

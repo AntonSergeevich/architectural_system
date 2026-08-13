@@ -142,6 +142,38 @@
             {% endif %}
           </div>
 
+          {% comment %}
+            Обстоятельства объекта. Отмечается сколько есть: начатый ремонт
+            и старый фонд случаются вместе, и «выбрать одно» тут нельзя.
+            Каждое добавляет работы независимо от остальных, поэтому
+            надбавки складываются — так их можно объяснить вслух.
+          {% endcomment %}
+          {% if pricing.complexity_enabled and conditions %}
+            <details class="clause" style="margin-top: var(--gap-4)">
+              <summary class="shelf__head" style="cursor: pointer">
+                Что осложняет объект
+              </summary>
+              <div class="conditions">
+                {% for item in conditions %}
+                  <label class="condition">
+                    <input type="checkbox" name="conditions" value="{{ item.pk }}"
+                           {% if item.pk in chosen_conditions %}checked{% endif %}>
+                    <span>
+                      <strong>{{ item.title }}</strong>
+                      <span class="muted">+{{ item.factor }} к коэффициенту</span>
+                      <span class="condition__why">{{ item.description }}</span>
+                    </span>
+                  </label>
+                {% endfor %}
+              </div>
+              <p class="total__note">
+                Ничего из этого не «наценка за сложность вообще» — это часы,
+                которых работа требует сверх обычного. Не отмечайте на всякий
+                случай: на встрече всё равно посмотрим объект.
+              </p>
+            </details>
+          {% endif %}
+
           <p class="shelf__head">Готовые наборы</p>
           <div class="presets">
             {% for item in presets %}

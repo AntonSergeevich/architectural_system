@@ -66,6 +66,7 @@
         // Свежая карточка приходит без пометки «свёрнута»: раскладку
         // этапов восстанавливаем сами.
         applyStages(payload.stage_id, false);
+        armAll();
       }
     }
     if (payload.rail) {
@@ -105,6 +106,7 @@
     applyStages(openStageId, false);
     paintRail();
     paintMoney();
+    armAll();
 
     var said = doc.querySelector('.message');
     if (said) {
@@ -301,6 +303,47 @@
       var field = form.querySelector('textarea');
       if (field) field.focus();
     }
+  });
+
+  // --- Спящая кнопка -------------------------------------------------------
+  // Всегда красная кнопка «Отправить» читается как «у тебя что-то
+  // не отправлено», и это ощущение висит над человеком всё время, пока он
+  // листает страницу. Кнопка спит, пока отправлять нечего, и загорается,
+  // как только появилось что отправить.
+
+  function armForm(form) {
+    var button = form.querySelector('[data-arm-button]');
+    if (!button) return;
+
+    var start = form.dataset.armState;
+    if (start === undefined) {
+      start = formState(form);
+      form.dataset.armState = start;
+    }
+    var changed = formState(form) !== start;
+    button.classList.toggle('btn--asleep', !changed);
+    button.disabled = !changed;
+  }
+
+  function formState(form) {
+    var parts = [];
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.type === 'hidden' || el.type === 'submit') return;
+      if (el.type === 'file') parts.push(el.files.length);
+      else parts.push(el.value);
+    });
+    return parts.join('\u0001');
+  }
+
+  function armAll() {
+    document.querySelectorAll('form[data-armed]').forEach(armForm);
+  }
+
+  ['input', 'change'].forEach(function (name) {
+    document.addEventListener(name, function (e) {
+      var form = e.target.closest('form[data-armed]');
+      if (form) armForm(form);
+    });
   });
 
   // --- Полоса оплаты -------------------------------------------------------
@@ -841,5 +884,6 @@
   setupStages();
   watchEditWindow();
   setInterval(watchEditWindow, 1000);
+  armAll();
   window.addEventListener('resize', paintRail);
 })();

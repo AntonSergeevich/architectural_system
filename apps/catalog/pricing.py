@@ -38,12 +38,23 @@ class Calculation:
     # сколько бы ни насчиталось по квадратам.
     fixed_design_price: Decimal | None = None
     settings: PricingSettings | None = None
+    # Обстоятельства объекта: начатый ремонт, купленные материалы, старый
+    # фонд. Каждое добавляет работы независимо от остальных.
+    conditions: list = field(default_factory=list)
 
     @property
     def factor(self):
+        """Итоговый коэффициент: характер интерьера плюс сложности объекта.
+
+        Складываются, а не перемножаются: так его можно объяснить вслух —
+        «характер 1.15, старый фонд плюс 0.10, начатый ремонт плюс 0.10,
+        итого 1.35». Перемноженные проценты не объясняются никак.
+        """
         if self.settings and not self.settings.complexity_enabled:
             return Decimal("1")
-        return self.complexity.factor if self.complexity else Decimal("1")
+        base = self.complexity.factor if self.complexity else Decimal("1")
+        extra = sum((c.factor for c in self.conditions), Decimal("0"))
+        return base + extra
 
     def _sum(self, block):
         return sum(
@@ -137,7 +148,16 @@ def quantity_for(module, months=1, stages=1):
     return Decimal("1")
 
 
-def calculate(area, rooms=1, complexity=None, modules=None, months=None, stages=None, settings=None):
+def calculate(
+    area,
+    rooms=1,
+    complexity=None,
+    modules=None,
+    months=None,
+    stages=None,
+    settings=None,
+    conditions=None,
+):
     """Посчитать стоимость для набора модулей.
 
     `area` — площадь в м², `modules` — итерируемое с ServiceModule.
@@ -159,6 +179,7 @@ def calculate(area, rooms=1, complexity=None, modules=None, months=None, stages=
         complexity=complexity,
         months=months,
         settings=settings,
+        conditions=list(conditions or []),
     )
     factor = calc.factor
 

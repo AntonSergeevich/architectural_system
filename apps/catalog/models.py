@@ -30,11 +30,11 @@ class PricingSettings(models.Model):
     """
 
     complexity_enabled = models.BooleanField(
-        "Учитывать сложность интерьера",
+        "Учитывать сложность",
         default=False,
-        help_text="Выключено — вопрос про характер интерьера не показывается, "
-        "цена одна для всех. Включается одной галочкой в любой момент, "
-        "коэффициенты и так заведены",
+        help_text="Выключено — вопросы про характер интерьера и сложность "
+        "объекта не показываются, цена одна для всех. Включается одной "
+        "галочкой в любой момент, коэффициенты и так заведены",
     )
 
     small_area_enabled = models.BooleanField("Фикс для маленьких помещений", default=True)
@@ -284,26 +284,47 @@ class PriceHistory(models.Model):
 
 
 class ComplexityFactor(models.Model):
-    """Характер интерьера → коэффициент.
+    """Коэффициент сложности — из чего он складывается.
 
     Две квартиры по 100 м² требуют разного времени, и зависит это не от
-    площади: в лаконичном решении многое уже готово в голове, авторский
-    интерьер каждый раз разрабатывается заново.
+    площади. Слагаемых два, и они разной природы.
+
+    **Характер интерьера** — выбирается одно. В лаконичном решении многое
+    уже готово в голове, авторский интерьер каждый раз разрабатывается
+    заново.
+
+    **Обстоятельства объекта** — отмечается сколько есть. Начатый без
+    проекта ремонт, купленные заранее материалы, старый фонд: каждое
+    из них добавляет работы независимо от остальных, и «выбрать одно»
+    здесь нельзя — они случаются вместе.
     """
 
+    class Kind(models.TextChoices):
+        STYLE = "style", "Характер интерьера"
+        CONDITION = "condition", "Сложность объекта"
+
     code = models.SlugField("Код", max_length=32, unique=True)
+    kind = models.CharField("Вид", max_length=16, choices=Kind.choices, default=Kind.STYLE)
     title = models.CharField("Название", max_length=150)
-    description = models.CharField("Пояснение", max_length=300, blank=True)
-    factor = models.DecimalField("Коэффициент", max_digits=4, decimal_places=2, default=Decimal("1.00"))
+    description = models.TextField("Пояснение", blank=True)
+    factor = models.DecimalField(
+        "Коэффициент",
+        max_digits=4,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        help_text="Для характера — множитель (1.15). Для сложности — надбавка (0.10)",
+    )
     is_default = models.BooleanField("По умолчанию", default=False)
     order = models.PositiveSmallIntegerField("Порядок", default=100)
 
     class Meta:
-        verbose_name = "Характер интерьера"
-        verbose_name_plural = "Характер интерьера"
-        ordering = ["order"]
+        verbose_name = "Коэффициент сложности"
+        verbose_name_plural = "Коэффициенты сложности"
+        ordering = ["kind", "order"]
 
     def __str__(self):
+        if self.kind == self.Kind.CONDITION:
+            return f"{self.title} (+{self.factor})"
         return f"{self.title} (×{self.factor})"
 
 

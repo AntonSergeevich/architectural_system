@@ -20,6 +20,7 @@ from apps.crm.models import Client, Lead
 from apps.projects.models import (
     BudgetChange,
     Message,
+    Room,
     Project,
     ProjectPayment,
     Stage,
@@ -441,6 +442,26 @@ def _tell_about_task(task):
         notify.safe(notify.task_for_client, task)
 
 
+def _room_from(request, project):
+    """Помещение из формы: выбранное из списка или названное на ходу.
+
+    Заранее список не спросить: состав помещений выясняется на обмере,
+    а половина проектов частичные — две комнаты из пяти. Поэтому новая
+    комната заводится тем же действием, что и загрузка файла в неё.
+    """
+    typed = (request.POST.get("room_new") or "").strip()
+    if typed:
+        room, _ = Room.objects.get_or_create(
+            project=project, title=typed[:100], defaults={"order": project.rooms.count() + 1}
+        )
+        return room
+
+    chosen = request.POST.get("room")
+    if chosen and chosen.isdigit():
+        return project.rooms.filter(pk=int(chosen)).first()
+    return None
+
+
 def _stage_back(request, project, stage, message="", error=""):
     """Ответ на действие внутри этапа.
 
@@ -577,9 +598,15 @@ def stage_update(request, pk):
         stage.note = request.POST["note"]
     stage.save()
 
+    room = _room_from(request, project)
+    caption = (request.POST.get("caption") or "").strip()
+
     uploaded = request.FILES.getlist("files")
     for item in uploaded:
-        StageFile.objects.create(stage=stage, file=item, title=item.name[:200])
+        # Подпись одна на всю партию: Дарья выкладывает не «файл», а мысль —
+        # «обои в гостиную, вот три варианта». Разбирать их по одному потом
+        # можно, но начинать с этого значит не выложить ничего.
+        StageFile.objects.create(stage=stage, file=item, title=caption[:200], room=room)
 
     if changed_status:
         notify.safe(notify.stage_changed, stage)
@@ -610,6 +637,27 @@ def stage_file_delete(request, pk):
     item.file.delete(save=False)
     item.delete()
     return _stage_back(request, project, stage, "Файл убран.")
+
+
+@login_required
+@owner_only
+@require_POST
+def stage_file_edit(request, pk):
+    """Подпись и помещение конкретного файла.
+
+    Подпись — не украшение: через полгода «438.JPG» не говорит ничего,
+    а «обои Loymina в гостиную» говорит всё. Правится на месте, потому
+    что подписывают файлы уже после загрузки, когда смотрят на них.
+    """
+    project = _project_or_404(pk)
+    item = get_object_or_404(StageFile, pk=request.POST.get("file"), stage__project=project)
+
+    item.title = (request.POST.get("title") or "").strip()[:200]
+    room = _room_from(request, project)
+    if room or request.POST.get("room") == "":
+        item.room = room
+    item.save(update_fields=["title", "room"])
+    return _stage_back(request, project, item.stage, "Подпись сохранена.")
 
 
 @login_required

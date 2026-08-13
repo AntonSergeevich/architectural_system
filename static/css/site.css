@@ -1148,3 +1148,24 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 
 .summary-lines { display: grid; gap: var(--gap-2); }
 .summary-line { display: flex; justify-content: space-between; gap: var(--gap-4); padding: var(--gap-2) 0; border-bottom: 1px solid var(--line-soft); }
+
+/* --- Обстоятельства объекта ------------------------------------------------
+   Начатый без проекта ремонт, купленные заранее материалы, старый фонд.
+   Это не «наценка за сложность», а часы, которых работа требует сверх
+   обычного, — и человек должен видеть, за что именно платит. */
+
+.conditions { display: grid; gap: var(--gap-3); margin-top: var(--gap-3); }
+.condition {
+  display: flex; gap: var(--gap-3); align-items: flex-start;
+  padding: var(--gap-3) var(--gap-4);
+  background: var(--surface); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-2); cursor: pointer;
+  transition: border-color .18s var(--ease);
+}
+.condition:hover { border-color: var(--brand-300); }
+.condition input { width: 22px; height: 22px; min-height: 0; flex: none; margin-top: 2px; }
+.condition > span { display: grid; gap: 2px; }
+.condition strong { font-size: var(--step--1); }
+.condition .muted { font-size: var(--step--2); color: var(--brand-500); }
+.condition__why { font-size: var(--step--2); color: var(--muted); }
+.condition:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); }

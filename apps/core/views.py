@@ -110,7 +110,8 @@ def _catalog_context():
         "extra_modules": extra,
         "groups": ModuleGroup.objects.prefetch_related("modules").all(),
         "presets": Preset.objects.filter(is_active=True).prefetch_related("modules"),
-        "complexities": ComplexityFactor.objects.all(),
+        "complexities": ComplexityFactor.objects.filter(kind=ComplexityFactor.Kind.STYLE),
+        "conditions": ComplexityFactor.objects.filter(kind=ComplexityFactor.Kind.CONDITION),
         "pricing": PricingSettings.get(),
     }
 
@@ -256,6 +257,7 @@ def constructor(request):
     context = _catalog_context()
     pricing = context["pricing"]
     complexity = default_complexity()
+    conditions = []
 
     # Стартовое состояние — только пол. Комнату собирают с нуля:
     # так каждый блок оказывается осознанным решением, а не галочкой,
@@ -284,6 +286,7 @@ def constructor(request):
             area = form.cleaned_data["area"]
             rooms = form.cleaned_data["rooms"]
             complexity = form.cleaned_data.get("complexity") or complexity
+            conditions = list(form.cleaned_data.get("conditions") or [])
             selected = list(form.cleaned_data["modules"])
             months = form.cleaned_data.get("supervision_months")
 
@@ -291,6 +294,7 @@ def constructor(request):
         area=area,
         rooms=rooms,
         complexity=complexity,
+        conditions=conditions,
         modules=selected,
         months=months,
         settings=pricing,
@@ -306,6 +310,7 @@ def constructor(request):
             "area": area,
             "rooms": rooms,
             "complexity": complexity,
+            "chosen_conditions": [c.pk for c in conditions],
             "months": calc.months,
             "selected_ids": selected_ids,
             # Отдаём словарём и печатаем через |json_script: он экранирует
@@ -362,6 +367,7 @@ def calculate_api(request):
         area=form.cleaned_data["area"],
         rooms=form.cleaned_data["rooms"],
         complexity=form.cleaned_data.get("complexity") or default_complexity(),
+        conditions=form.cleaned_data.get("conditions"),
         modules=form.cleaned_data["modules"],
         months=form.cleaned_data.get("supervision_months"),
     )
@@ -485,6 +491,7 @@ def save_quote(request):
         area=form.cleaned_data["area"],
         rooms=form.cleaned_data["rooms"],
         complexity=complexity,
+        conditions=form.cleaned_data.get("conditions"),
         modules=form.cleaned_data["modules"],
         months=form.cleaned_data.get("supervision_months"),
     )
