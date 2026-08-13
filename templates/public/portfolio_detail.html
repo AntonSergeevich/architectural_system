@@ -3,128 +3,117 @@
 {% block title %}{{ project.title }} — {{ site.owner_name }}{% endblock %}
 
 {% comment %}
-  Страница объекта. Смотрят её глазами, а не читают: сначала кадр,
-  потом факты, и только потом текст. Поэтому обложка идёт во всю ширину,
-  факты — строкой под ней, а рассказ «задача — решение — результат»
-  ниже, для тех, кому кадров оказалось мало.
+  Страница объекта. Смотрят её глазами: кадры занимают всю правую часть
+  и идут мозаикой, а рассказ стоит рядом и не заставляет листать.
+
+  Раньше здесь была обложка во весь экран, потом строка фактов, потом
+  сетка, потом текст — и до отзыва человек добирался пятым экраном.
+  Теперь всё это стоит рядом друг с другом: колонка с рассказом липкая
+  и остаётся на месте, пока справа идут фотографии.
 {% endcomment %}
 
 {% block content %}
 <section class="section section--tight">
-  <div class="wrap">
-    <p class="eyebrow">{{ project.city }}{% if project.year %} · {{ project.year }}{% endif %}</p>
-    <h1 class="object__title">{{ project.title }}</h1>
-    {% if project.summary %}<p class="lead">{{ project.summary }}</p>{% endif %}
-  </div>
-</section>
+  <div class="wrap object">
+    <div class="object__info">
+      <p class="eyebrow">{{ project.city }}{% if project.year %} · {{ project.year }}{% endif %}</p>
+      <h1 class="object__title">{{ project.title }}</h1>
+      {% if project.summary %}<p class="object__lead">{{ project.summary }}</p>{% endif %}
 
-{% if project.cover %}
-  <section class="section section--tight">
-    <div class="wrap">
-      <a class="object__cover" href="{{ project.cover.image.url }}"
-         data-lightbox="{{ project.cover.caption|default:project.title }}" data-gallery="object">
-        <img src="{{ project.cover.image.url }}" alt="{{ project.cover.caption|default:project.title }}">
-        <span class="object__zoom" aria-hidden="true">Открыть</span>
-      </a>
-    </div>
-  </section>
-{% endif %}
-
-{% if project.area or project.style or project.modules.exists %}
-  <section class="section section--tight">
-    <div class="wrap">
-      <dl class="specs">
-        {% if project.area %}
-          <div class="spec"><dt>Площадь</dt><dd>{{ project.area|floatformat:"-1" }} м²</dd></div>
-        {% endif %}
-        {% if project.year %}
-          <div class="spec"><dt>Год</dt><dd>{{ project.year }}</dd></div>
-        {% endif %}
-        {% if project.style %}
-          <div class="spec"><dt>Стиль</dt><dd>{{ project.style }}</dd></div>
-        {% endif %}
-        {% if project.city %}
-          <div class="spec"><dt>Город</dt><dd>{{ project.city }}</dd></div>
-        {% endif %}
-      </dl>
-    </div>
-  </section>
-{% endif %}
-
-{% comment %}
-  Мозаика, а не ровная сетка: одинаковые плитки превращают восемь разных
-  комнат в каталог плитки. Широкие кадры Дарья помечает сама — панораму
-  нельзя резать до квадрата, она вся про ширину.
-{% endcomment %}
-{% if project.gallery|length > 1 %}
-  <section class="section section--tight">
-    <div class="wrap">
-      <div class="mosaic">
-        {% for photo in project.gallery %}
-          {% if not forloop.first %}
-            <figure class="mosaic__item {% if photo.is_wide %}mosaic__item--wide{% endif %}">
-              <a href="{{ photo.image.url }}" data-lightbox="{{ photo.caption|default:project.title }}"
-                 data-gallery="object">
-                <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:project.title }}" loading="lazy">
-                {% if photo.is_before %}<span class="mosaic__tag">до</span>{% endif %}
-                <span class="object__zoom" aria-hidden="true">Открыть</span>
-              </a>
-              {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
-            </figure>
+      {% if project.area or project.style %}
+        <dl class="specs">
+          {% if project.area %}
+            <div class="spec"><dt>Площадь</dt><dd>{{ project.area|floatformat:"-1" }} м²</dd></div>
           {% endif %}
-        {% endfor %}
+          {% if project.style %}
+            <div class="spec"><dt>Стиль</dt><dd>{{ project.style }}</dd></div>
+          {% endif %}
+        </dl>
+      {% endif %}
+
+      {% if project.task or project.solution or project.result %}
+        <div class="object__story">
+          {% if project.task %}
+            <div class="story">
+              <p class="story__label">Задача</p>
+              {{ project.task|richtext }}
+            </div>
+          {% endif %}
+          {% if project.solution %}
+            <div class="story">
+              <p class="story__label">Решение</p>
+              {{ project.solution|richtext }}
+            </div>
+          {% endif %}
+          {% if project.result %}
+            <div class="story">
+              <p class="story__label">Результат</p>
+              {{ project.result|richtext }}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if project.modules.exists %}
+        <div class="story">
+          <p class="story__label">Что было сделано</p>
+          <ul class="object__modules">
+            {% for module in project.modules.all %}<li>{{ module.title }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if project.show_client %}
+        <div class="review review--side">
+          {% if project.client_video %}
+            {% comment %}
+              Видео не проигрывается само и не грузится целиком заранее:
+              автозапуск в чужой квартире — это громкий звук из ниоткуда,
+              а предзагрузка — чужой трафик без спроса.
+            {% endcomment %}
+            <video class="review__video" controls preload="none"
+                   {% if project.client_photo %}poster="{{ project.client_photo.url }}"{% endif %}>
+              <source src="{{ project.client_video.url }}" type="video/mp4">
+              <a href="{{ project.client_video.url }}">Скачать видеоотзыв</a>
+            </video>
+          {% endif %}
+          {% if project.client_quote %}<blockquote class="review__text">{{ project.client_quote }}</blockquote>{% endif %}
+          <p class="review__who">
+            {% if project.client_photo and not project.client_video %}
+              <img class="review__face" src="{{ project.client_photo.url }}" alt="" loading="lazy">
+            {% endif %}
+            <span>{{ project.client_name }}</span>
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="object__actions">
+        <a class="btn" href="{% url 'public:constructor' %}">Собрать похожий проект</a>
+        <a class="btn btn--ghost" href="{% url 'public:portfolio' %}">Другие объекты</a>
       </div>
     </div>
-  </section>
-{% endif %}
 
-<section class="section section--tight">
-  <div class="wrap wrap--narrow doc">
-    {% if project.task %}<h2>Задача</h2>{{ project.task|richtext }}{% endif %}
-    {% if project.solution %}<h2>Решение</h2>{{ project.solution|richtext }}{% endif %}
-    {% if project.result %}<h2>Результат</h2>{{ project.result|richtext }}{% endif %}
-
-    {% if project.modules.exists %}
-      <h2>Что было сделано</h2>
-      <ul>{% for module in project.modules.all %}<li>{{ module.title }}</li>{% endfor %}</ul>
-    {% endif %}
-  </div>
-</section>
-
-{% if project.show_client %}
-  <section class="section section--tight">
-    <div class="wrap wrap--narrow">
-      <div class="review">
-        {% if project.client_video %}
-          {% comment %}
-            Видео не проигрывается само и не грузится целиком заранее:
-            автозапуск в чужой квартире — это громкий звук из ниоткуда,
-            а предзагрузка — чужой трафик без спроса.
-          {% endcomment %}
-          <video class="review__video" controls preload="none"
-                 {% if project.client_photo %}poster="{{ project.client_photo.url }}"{% endif %}>
-            <source src="{{ project.client_video.url }}" type="video/mp4">
-            <a href="{{ project.client_video.url }}">Скачать видеоотзыв</a>
-          </video>
-        {% endif %}
-
-        {% if project.client_quote %}<blockquote class="review__text">{{ project.client_quote }}</blockquote>{% endif %}
-        <p class="review__who">
-          {% if project.client_photo and not project.client_video %}
-            <img class="review__face" src="{{ project.client_photo.url }}" alt="" loading="lazy">
-          {% endif %}
-          <span>{{ project.client_name }}{% if project.city %} · {{ project.city }}{% endif %}</span>
-        </p>
-      </div>
-    </div>
-  </section>
-{% endif %}
-
-<section class="section section--tight">
-  <div class="wrap wrap--narrow">
-    <div class="hero__actions">
-      <a class="btn" href="{% url 'public:constructor' %}">Собрать похожий проект</a>
-      <a class="btn btn--ghost" href="{% url 'public:portfolio' %}">Другие объекты</a>
+    {% comment %}
+      Мозаика, а не ровная сетка: одинаковые плитки превращают восемь
+      разных комнат в каталог плитки. Кадры сохраняют свои пропорции —
+      вертикальные остаются вертикальными, панорама занимает всю ширину.
+    {% endcomment %}
+    <div class="mosaic">
+      {% for photo in project.gallery %}
+        <figure class="mosaic__item {% if photo.is_wide %}mosaic__item--wide{% endif %}
+                       {% if forloop.first %}mosaic__item--lead{% endif %}">
+          <a href="{{ photo.image.url }}" data-lightbox="{{ photo.caption|default:project.title }}"
+             data-gallery="object">
+            <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:project.title }}"
+                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
+            {% if photo.is_before %}<span class="mosaic__tag">до</span>{% endif %}
+            <span class="object__zoom" aria-hidden="true">Открыть</span>
+          </a>
+          {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+        </figure>
+      {% empty %}
+        <p class="muted">Фотографии этого объекта скоро появятся.</p>
+      {% endfor %}
     </div>
   </div>
 </section>
