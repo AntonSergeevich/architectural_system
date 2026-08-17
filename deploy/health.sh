@@ -22,12 +22,24 @@ line "Последние 40 строк журнала"
 journalctl -u dades -n 40 --no-pager 2>&1 | tail -40
 
 line "Приложение отвечает на своём сокете"
-curl -s -o /dev/null -w 'код ответа: %{http_code}\n' --max-time 5 http://127.0.0.1:8000/ \
-    || echo "не отвечает совсем"
+CODE="$("$ROOT/deploy/probe.sh")"
+case "$CODE" in
+    200) echo "код ответа: 200 — приложение живо, 503 не из-за него" ;;
+    нет-сокета) echo "сокета /run/dades/gunicorn.sock нет — вот причина 503" ;;
+    000) echo "сокет есть, но ответа нет — приложение висит, причина в журнале выше" ;;
+    *) echo "код ответа: $CODE — приложение отвечает ошибкой, причина в журнале выше" ;;
+esac
 
 line "nginx"
 systemctl is-active nginx >/dev/null 2>&1 && echo "работает" || echo "НЕ РАБОТАЕТ"
-nginx -t 2>&1 | tail -3
+# Ключи сертификата закрыты от всех, кроме root, поэтому проверку конфига
+# запускаем через sudo. Без него nginx -t врёт: «cannot load certificate,
+# Permission denied» — это про права запускающего, а не про сайт.
+if sudo -n true 2>/dev/null; then
+    sudo nginx -t 2>&1 | tail -3
+else
+    echo "(конфиг не проверяли: нужен пароль — выполните sudo nginx -t)"
+fi
 
 line "Место на диске"
 df -h / | tail -2

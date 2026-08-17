@@ -63,9 +63,14 @@ fi
 
 # Живой сервис ещё не значит работающий сайт: приложение может отвечать
 # ошибкой на каждый запрос. Проверяем именно то, что увидит человек.
-CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8000/ || echo 000)"
+CODE="$(./deploy/probe.sh)"
 if [ "$CODE" = "200" ]; then
     echo "✓ Готово, сайт отвечает"
+elif [ "$CODE" = "нет-сокета" ]; then
+    echo "✗ Сервис запущен, но сокет /run/dades/gunicorn.sock не появился."
+    echo "  Смотрим журнал:"
+    sudo journalctl -u dades -n 40 --no-pager
+    exit 1
 else
     echo "✗ Сервис запущен, но главная отвечает кодом $CODE."
     echo "  Смотрим журнал:"
