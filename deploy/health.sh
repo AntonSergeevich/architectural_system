@@ -22,13 +22,18 @@ line "Последние 40 строк журнала"
 journalctl -u dades -n 40 --no-pager 2>&1 | tail -40
 
 line "Приложение отвечает на своём сокете"
-CODE="$("$ROOT/deploy/probe.sh")"
+PROBE_ERR="$(mktemp)"
+# Здесь, в отличие от выкатки, ничего не перезапускалось: ждать поднятия
+# незачем, нужен ответ про «сейчас». Поэтому терпения — три секунды.
+CODE="$(DADES_PROBE_WAIT=3 "$ROOT/deploy/probe.sh" 2>"$PROBE_ERR")"
 case "$CODE" in
     200) echo "код ответа: 200 — приложение живо, 503 не из-за него" ;;
     нет-сокета) echo "сокета /run/dades/gunicorn.sock нет — вот причина 503" ;;
     000) echo "сокет есть, но ответа нет — приложение висит, причина в журнале выше" ;;
     *) echo "код ответа: $CODE — приложение отвечает ошибкой, причина в журнале выше" ;;
 esac
+if [ -s "$PROBE_ERR" ]; then sed 's/^/  /' "$PROBE_ERR"; fi
+rm -f "$PROBE_ERR"
 
 line "nginx"
 systemctl is-active nginx >/dev/null 2>&1 && echo "работает" || echo "НЕ РАБОТАЕТ"

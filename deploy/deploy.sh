@@ -63,16 +63,21 @@ fi
 
 # Живой сервис ещё не значит работающий сайт: приложение может отвечать
 # ошибкой на каждый запрос. Проверяем именно то, что увидит человек.
-CODE="$(./deploy/probe.sh)"
+# Причину молчания probe.sh пишет в поток ошибок — придерживаем её, чтобы
+# показать рядом с приговором, а не раньше него.
+PROBE_ERR="$(mktemp)"
+trap 'rm -f "$PROBE_ERR"' EXIT
+CODE="$(./deploy/probe.sh 2>"$PROBE_ERR")"
+
 if [ "$CODE" = "200" ]; then
     echo "✓ Готово, сайт отвечает"
-elif [ "$CODE" = "нет-сокета" ]; then
-    echo "✗ Сервис запущен, но сокет /run/dades/gunicorn.sock не появился."
-    echo "  Смотрим журнал:"
-    sudo journalctl -u dades -n 40 --no-pager
-    exit 1
 else
-    echo "✗ Сервис запущен, но главная отвечает кодом $CODE."
+    if [ "$CODE" = "нет-сокета" ]; then
+        echo "✗ Сервис запущен, но сокет для nginx так и не появился."
+    else
+        echo "✗ Сервис запущен, но главная отвечает кодом $CODE."
+    fi
+    if [ -s "$PROBE_ERR" ]; then sed 's/^/  /' "$PROBE_ERR"; fi
     echo "  Смотрим журнал:"
     sudo journalctl -u dades -n 40 --no-pager
     echo
