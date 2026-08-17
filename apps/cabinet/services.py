@@ -203,9 +203,7 @@ def stage_payload(request, project, stage, message="", error=""):
         "stage": fresh,
         "current": current,
         "is_owner_view": bool(getattr(request.user, "is_owner", False)),
-        "presets": TaskPreset.objects.filter(is_active=True).filter(
-            Q(stage_number__isnull=True) | Q(stage_number=fresh.number)
-        ),
+        "presets": TaskPreset.for_stage(fresh),
     }
     return {
         "ok": not error,

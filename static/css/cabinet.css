@@ -846,3 +846,43 @@
 }
 .thumb__caption input:hover { border-color: var(--line); }
 .thumb__caption input:focus { background: var(--surface); border-color: var(--brand-300); }
+
+/* --- Заготовки задач -------------------------------------------------------
+   Готовыми формулировками пользуются не все и не всегда: половину Дарья
+   пропускает, а половины ей не хватает. Значит, список должен править
+   она сама — но не долгим нажатием: скрытый жест на телефоне не находит
+   никто, а на мыши его нет вовсе. Поэтому обычный переключатель. */
+
+.presets__mode {
+  background: none; border: 0; cursor: pointer; padding: 0 var(--gap-2);
+  font: inherit; font-size: var(--step--2); color: var(--brand-500);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.presets.is-editing .chip { border-style: dashed; }
+.presets.is-editing .chips { gap: var(--gap-2); }
+
+/* Проектная заготовка помечена точкой: она живёт только здесь,
+   и это стоит видеть до того, как её начнут править. */
+.chip__scope { color: var(--brand-500); font-weight: 700; }
+.chip--own { border-color: var(--brand-300); }
+
+.chip__del {
+  background: none; border: 0; cursor: pointer;
+  color: var(--muted-2); font-size: var(--step-0); line-height: 1;
+  min-width: 32px; min-height: 32px; border-radius: var(--radius-2);
+}
+.chip__del:hover { color: var(--err); background: var(--surface-2); }
+
+.preset-edit, .preset-new {
+  display: grid; gap: var(--gap-2); width: 100%;
+  padding: var(--gap-3);
+  background: var(--surface); border: 1px solid var(--brand-300);
+  border-radius: var(--radius-2);
+}
+.preset-edit[hidden], .preset-new[hidden], .preset-drop[hidden] { display: none; }
+.preset-edit textarea, .preset-new textarea { min-height: 0; }
+
+/* Заготовка вместе со своим крестиком — один элемент строки. Порознь они
+   разъезжаются по строкам, и крестик оказывается под чужой заготовкой. */
+.preset { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.preset .preset-edit { flex: 1 1 100%; }

@@ -1013,3 +1013,73 @@ class RoomTests(CabinetTestCase):
         item.refresh_from_db()
         self.assertEqual(item.title, "Плитка Kerama на пол")
         self.assertEqual(item.room.title, "Санузел")
+
+
+class PresetTests(CabinetTestCase):
+    """Заготовки задач: Дарья правит список сама.
+
+    Половиной готовых формулировок она не пользуется, а половины
+    не хватает. Список, из которого нельзя вычеркнуть лишнее,
+    перестают читать целиком.
+    """
+
+    def test_own_preset_can_be_universal_or_for_this_project_only(self):
+        from apps.projects.models import Project, TaskPreset
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:preset_add", args=[self.project.pk]),
+            {"stage": self.stage.pk, "title": "Согласовать снос с УК", "who": "owner",
+             "scope": "project"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        preset = TaskPreset.objects.get(title="Согласовать снос с УК")
+        self.assertEqual(preset.project, self.project)
+        self.assertEqual(preset.stage_number, self.stage.number)
+
+        # В чужом проекте её быть не должно.
+        other = Project.objects.create(client=self.customer, estate=self.estate, title="Другой")
+        from apps.cabinet import services
+
+        services.create_stages(other)
+        other_stage = other.stages.filter(number=self.stage.number).first()
+        self.assertNotIn(preset, TaskPreset.for_stage(other_stage))
+        self.assertIn(preset, TaskPreset.for_stage(self.stage))
+
+    def test_preset_is_edited_in_place(self):
+        from apps.projects.models import TaskPreset
+
+        preset = TaskPreset.objects.create(title="Старое", who="owner", stage_number=self.stage.number)
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:preset_edit", args=[self.project.pk]),
+            {"stage": self.stage.pk, "preset": preset.pk, "title": "Новое", "who": "client",
+             "scope": "project"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        preset.refresh_from_db()
+        self.assertEqual(preset.title, "Новое")
+        self.assertEqual(preset.who, "client")
+        self.assertEqual(preset.project, self.project)
+
+    def test_universal_preset_is_hidden_not_destroyed(self):
+        """Общую заготовку прячем: она нужна другим проектам, и вернуть
+        её должно быть можно. Проектную удаляем совсем."""
+        from apps.projects.models import TaskPreset
+
+        shared = TaskPreset.objects.create(title="Общая", stage_number=self.stage.number)
+        mine = TaskPreset.objects.create(
+            title="Только тут", stage_number=self.stage.number, project=self.project
+        )
+        self.login_owner()
+        for preset in (shared, mine):
+            self.client.post(
+                reverse("cabinet:preset_edit", args=[self.project.pk]),
+                {"stage": self.stage.pk, "preset": preset.pk, "remove": "1"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        shared.refresh_from_db()
+        self.assertFalse(shared.is_active)
+        self.assertNotIn(shared, TaskPreset.for_stage(self.stage))
+        self.assertFalse(TaskPreset.objects.filter(pk=mine.pk).exists())

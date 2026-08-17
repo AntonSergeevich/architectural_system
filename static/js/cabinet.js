@@ -58,14 +58,44 @@
   // Без JavaScript ничего не меняется: та же форма отправляется обычным
   // способом, сервер отвечает страницей.
 
+  /* Что было раскрыто до подмены карточки.
+
+     Свежая разметка приходит в исходном виде: раскрытые «Добавить задачу»
+     и «Этап: статус, заметка, файлы» захлопываются, режим правки заготовок
+     выключается. Человек в этот момент как раз работал внутри — добавлял
+     вторую заготовку, дописывал третью задачу, — и захлопнувшаяся панель
+     читается как «сбросилось». */
+  function rememberOpen(card) {
+    var keys = [];
+    if (!card) return keys;
+    card.querySelectorAll('details[data-keep]').forEach(function (box) {
+      if (box.open) keys.push(box.dataset.keep);
+    });
+    if (card.querySelector('.presets.is-editing')) keys.push('presets-editing');
+    return keys;
+  }
+
+  function restoreOpen(card, keys) {
+    if (!card || !keys.length) return;
+    card.querySelectorAll('details[data-keep]').forEach(function (box) {
+      if (keys.indexOf(box.dataset.keep) >= 0) box.open = true;
+    });
+    if (keys.indexOf('presets-editing') >= 0) {
+      var toggle = card.querySelector('[data-presets-edit]');
+      if (toggle) toggle.click();
+    }
+  }
+
   function swap(payload) {
     if (payload.stage) {
       var card = document.getElementById(payload.stage_id);
       if (card) {
+        var wasOpen = rememberOpen(card);
         card.outerHTML = payload.stage;
         // Свежая карточка приходит без пометки «свёрнута»: раскладку
         // этапов восстанавливаем сами.
         applyStages(payload.stage_id, false);
+        restoreOpen(document.getElementById(payload.stage_id), wasOpen);
         armAll();
       }
     }
@@ -302,6 +332,66 @@
     if (!close) {
       var field = form.querySelector('textarea');
       if (field) field.focus();
+    }
+  });
+
+  // --- Правка заготовок ----------------------------------------------------
+  // Переключатель, а не долгое нажатие: скрытый жест на телефоне не находит
+  // никто, а на мыши его нет вовсе. Пока правка выключена, нажатие на
+  // заготовку ставит задачу — то есть обычная работа ничем не осложнена.
+
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest('[data-presets-edit]');
+    if (toggle) {
+      e.preventDefault();
+      var box = toggle.closest('[data-presets]');
+      var on = box.classList.toggle('is-editing');
+      toggle.textContent = on ? 'готово' : 'править';
+      box.querySelectorAll('[data-preset-drop]').forEach(function (form) { form.hidden = !on; });
+      var adder = box.querySelector('[data-preset-new]');
+      if (adder) adder.hidden = !on;
+      if (!on) {
+        box.querySelectorAll('[data-preset-form]').forEach(function (form) { form.hidden = true; });
+        box.querySelectorAll('[data-preset-chip]').forEach(function (chip) { chip.hidden = false; });
+      }
+      return;
+    }
+
+    // В режиме правки нажатие на саму заготовку открывает её, а не ставит
+    // задачу: иначе «поправить» и «поставить» жили бы на одной кнопке.
+    /* Ищем внутри своей карточки этапа, а не по всей странице.
+
+       Одна и та же заготовка показана на нескольких этапах, и на странице
+       восемь карточек — семь из них свёрнуты. Поиск по документу находил
+       копию в свёрнутой карточке и открывал её там: на экране не менялось
+       ничего, кроме исчезнувшей заготовки. */
+    var chip = e.target.closest('[data-preset-chip]');
+    if (chip && chip.closest('.is-editing')) {
+      e.preventDefault();
+      var here = chip.closest('[data-presets]');
+      var id = chip.dataset.presetChip;
+      var form = here.querySelector('[data-preset-form="' + id + '"]');
+      if (!form) return;
+      chip.hidden = true;
+      var drop = here.querySelector('[data-preset-drop="' + id + '"]');
+      if (drop) drop.hidden = true;
+      form.hidden = false;
+      var field = form.querySelector('textarea');
+      if (field) field.focus();
+      return;
+    }
+
+    var cancel = e.target.closest('[data-preset-cancel]');
+    if (cancel) {
+      e.preventDefault();
+      var mine = cancel.closest('[data-presets]');
+      var pid = cancel.dataset.presetCancel;
+      var back = mine.querySelector('[data-preset-chip="' + pid + '"]');
+      var editing = mine.querySelector('[data-preset-form="' + pid + '"]');
+      var remove = mine.querySelector('[data-preset-drop="' + pid + '"]');
+      if (editing) editing.hidden = true;
+      if (back) back.hidden = false;
+      if (remove) remove.hidden = false;
     }
   });
 

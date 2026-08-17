@@ -172,25 +172,108 @@
   </div>
 
   {% if is_owner_view %}
-    <details class="adder">
+    <details class="adder" data-keep="tasks">
       <summary>Добавить задачу</summary>
 
-      {% if presets %}
-        <p class="adder__label">Готовые — нажмите, чтобы поставить:</p>
+      {% comment %}
+        Готовые формулировки. Их можно править и убирать — но не долгим
+        нажатием: скрытый жест на телефоне не находит никто, а на мыши
+        его нет вовсе. Вместо этого переключатель «править»: пока он
+        выключен, нажатие ставит задачу; включён — у каждой заготовки
+        появляются карандаш и крестик.
+      {% endcomment %}
+      <div class="presets" data-presets>
+        <p class="adder__label">
+          Готовые — нажмите, чтобы поставить:
+          <button class="presets__mode" type="button" data-presets-edit>править</button>
+        </p>
+
         <div class="chips">
           {% for preset in presets %}
-            <form method="post" action="{% url 'cabinet:task_add' project.pk %}" data-async>
+            {% comment %}
+              Заготовка и крестик — одна обёртка. Порознь они разъезжаются
+              по строкам, и на телефоне крестик оказывается под чужой
+              заготовкой: убрать не ту — вопрос одного промаха.
+            {% endcomment %}
+            <span class="preset">
+            <form method="post" action="{% url 'cabinet:task_add' project.pk %}" data-async
+                  data-preset-chip="{{ preset.pk }}">
               {% csrf_token %}
               <input type="hidden" name="stage" value="{{ stage.pk }}">
               <input type="hidden" name="preset" value="{{ preset.pk }}">
-              <button class="chip" type="submit">
+              <button class="chip {% if preset.project_id %}chip--own{% endif %}" type="submit">
                 {{ preset.title }}
                 <span class="chip__who">{{ preset.get_who_display }}</span>
+                {% if preset.project_id %}<span class="chip__scope" title="Только в этом проекте">•</span>{% endif %}
               </button>
             </form>
+
+            {% comment %} Правка заготовки — на её месте, той же формой. {% endcomment %}
+            <form class="preset-edit" method="post" data-async hidden
+                  action="{% url 'cabinet:preset_edit' project.pk %}" data-preset-form="{{ preset.pk }}">
+              {% csrf_token %}
+              <input type="hidden" name="stage" value="{{ stage.pk }}">
+              <input type="hidden" name="preset" value="{{ preset.pk }}">
+              <textarea name="title" rows="2" aria-label="Что сделать">{{ preset.title }}</textarea>
+              <div class="adder__row">
+                <select name="who" aria-label="Кто делает">
+                  <option value="owner" {% if preset.who == 'owner' %}selected{% endif %}>Дарья</option>
+                  <option value="client" {% if preset.who == 'client' %}selected{% endif %}>Заказчик</option>
+                  <option value="both" {% if preset.who == 'both' %}selected{% endif %}>Вместе</option>
+                </select>
+                <select name="scope" aria-label="Где показывать">
+                  <option value="all" {% if not preset.project_id %}selected{% endif %}>Во всех проектах</option>
+                  <option value="project" {% if preset.project_id %}selected{% endif %}>Только в этом</option>
+                </select>
+                <button class="btn" type="submit">Сохранить</button>
+                <button class="btn btn--ghost" type="button" data-preset-cancel="{{ preset.pk }}">Отмена</button>
+              </div>
+            </form>
+
+            <form class="preset-drop" method="post" data-async hidden
+                  action="{% url 'cabinet:preset_edit' project.pk %}"
+                  data-preset-drop="{{ preset.pk }}"
+                  data-confirm="Убрать заготовку «{{ preset.title }}»?">
+              {% csrf_token %}
+              <input type="hidden" name="stage" value="{{ stage.pk }}">
+              <input type="hidden" name="preset" value="{{ preset.pk }}">
+              <input type="hidden" name="remove" value="1">
+              <button class="chip__del" type="submit" title="Убрать заготовку"
+                      aria-label="Убрать заготовку">×</button>
+            </form>
+            </span>
+          {% empty %}
+            <p class="muted">Готовых формулировок на этот этап пока нет.</p>
           {% endfor %}
         </div>
-      {% endif %}
+
+        {% comment %}
+          Своя заготовка. Универсальная повторяется у всех — «подписать
+          договор», «прислать техпаспорт». Проектная нужна ровно здесь:
+          «согласовать снос перегородки с управляющей компанией», —
+          и в чужих проектах она только мешает.
+        {% endcomment %}
+        <form class="adder__form preset-new" method="post" data-async hidden
+              action="{% url 'cabinet:preset_add' project.pk %}" data-preset-new>
+          {% csrf_token %}
+          <input type="hidden" name="stage" value="{{ stage.pk }}">
+          <textarea name="title" rows="2" required
+                    placeholder="Новая заготовка — появится на этом этапе"
+                    aria-label="Что сделать"></textarea>
+          <div class="adder__row">
+            <select name="who" aria-label="Кто делает">
+              <option value="owner">Дарья</option>
+              <option value="client">Заказчик</option>
+              <option value="both">Вместе</option>
+            </select>
+            <select name="scope" aria-label="Где показывать">
+              <option value="all">Во всех проектах</option>
+              <option value="project">Только в этом проекте</option>
+            </select>
+            <button class="btn" type="submit">Сохранить заготовку</button>
+          </div>
+        </form>
+      </div>
 
       {% comment %}
         Поле многострочное намеренно: в однострочном Enter отправляет форму,
@@ -220,7 +303,7 @@
       из них, а вторая половина сделанного пропадала. Это не экономия
       клика, это потерянная работа.
     {% endcomment %}
-    <details class="adder">
+    <details class="adder" data-keep="stage">
       <summary>Этап: статус, заметка, файлы</summary>
       <form class="adder__form" method="post" enctype="multipart/form-data"
             action="{% url 'cabinet:stage_update' project.pk %}" data-drop-form data-async data-armed>

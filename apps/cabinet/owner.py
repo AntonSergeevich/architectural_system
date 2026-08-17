@@ -387,9 +387,7 @@ def project_detail(request, pk):
 
     stages = services.stage_shares(project.stages.order_by("number"))
     current = project.current_stage
-    presets = TaskPreset.objects.filter(is_active=True).filter(
-        Q(stage_number__isnull=True) | Q(stage_number=current.number if current else 0)
-    )
+    presets = TaskPreset.for_stage(current) if current else TaskPreset.objects.none()
 
     return render(
         request,
@@ -555,6 +553,70 @@ def task_toggle(request, pk):
         return redirect(f"{target}#stage-{task.stage_id}")
 
     return JsonResponse({"ok": True, "done": task.is_done, "progress": project.progress})
+
+
+@login_required
+@owner_only
+@require_POST
+def preset_add(request, pk):
+    """Своя заготовка задачи.
+
+    Заготовки — это то, что Дарья печатает по десять раз за проект.
+    Список из коробки закрывает половину случаев, вторую половину она
+    должна дописывать сама, не заходя в админку.
+    """
+    project = _project_or_404(pk)
+    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
+
+    title = " ".join((request.POST.get("title") or "").split())
+    if not title:
+        return _stage_back(request, project, stage, error="Напишите, что это за задача.")
+
+    TaskPreset.objects.create(
+        title=title[:250],
+        who=request.POST.get("who") or StageTask.Owner.OWNER,
+        stage_number=stage.number,
+        # Проектная заготовка не должна светить в чужих проектах:
+        # «согласовать снос перегородки с УК» нужна ровно здесь.
+        project=project if request.POST.get("scope") == "project" else None,
+    )
+    return _stage_back(request, project, stage, "Заготовка добавлена.")
+
+
+@login_required
+@owner_only
+@require_POST
+def preset_edit(request, pk):
+    """Поправить заготовку или убрать её.
+
+    Убирать — обязательно: половиной готовых формулировок Дарья
+    не пользуется, а список, в котором лишнее нельзя вычеркнуть,
+    перестают читать целиком.
+    """
+    project = _project_or_404(pk)
+    stage = get_object_or_404(Stage, pk=request.POST.get("stage"), project=project)
+    preset = get_object_or_404(TaskPreset, pk=request.POST.get("preset"))
+
+    if request.POST.get("remove"):
+        # Универсальную заготовку прячем, а не удаляем: она общая, и её
+        # можно вернуть галочкой в админке. Проектную удаляем совсем —
+        # она заводилась под один проект и больше нигде не нужна.
+        if preset.project_id:
+            preset.delete()
+        else:
+            preset.is_active = False
+            preset.save(update_fields=["is_active"])
+        return _stage_back(request, project, stage, "Заготовка убрана.")
+
+    title = " ".join((request.POST.get("title") or "").split())
+    if not title:
+        return _stage_back(request, project, stage, error="Напишите, что это за задача.")
+
+    preset.title = title[:250]
+    preset.who = request.POST.get("who") or preset.who
+    preset.project = project if request.POST.get("scope") == "project" else None
+    preset.save(update_fields=["title", "who", "project"])
+    return _stage_back(request, project, stage, "Заготовка поправлена.")
 
 
 @login_required

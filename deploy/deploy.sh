@@ -47,9 +47,30 @@ echo "→ Проверка боевых настроек"
 
 echo "→ Перезапуск"
 sudo systemctl restart dades
-sleep 2
-systemctl is-active --quiet dades && echo "✓ Готово" || {
+
+# Ждём, а не спим ровно две секунды: на холодном старте приложение
+# поднимается дольше, и «не успел за две секунды» — это не поломка.
+for _ in $(seq 1 15); do
+    systemctl is-active --quiet dades && break
+    sleep 1
+done
+
+if ! systemctl is-active --quiet dades; then
     echo "✗ Сервис не поднялся, смотрим журнал:"
     sudo journalctl -u dades -n 40 --no-pager
     exit 1
-}
+fi
+
+# Живой сервис ещё не значит работающий сайт: приложение может отвечать
+# ошибкой на каждый запрос. Проверяем именно то, что увидит человек.
+CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8000/ || echo 000)"
+if [ "$CODE" = "200" ]; then
+    echo "✓ Готово, сайт отвечает"
+else
+    echo "✗ Сервис запущен, но главная отвечает кодом $CODE."
+    echo "  Смотрим журнал:"
+    sudo journalctl -u dades -n 40 --no-pager
+    echo
+    echo "  Подробнее: ./deploy/health.sh"
+    exit 1
+fi

@@ -210,6 +210,19 @@ class TaskPreset(models.Model):
         blank=True,
         help_text="Пусто — подсказка появляется на любом этапе",
     )
+    # Заготовка бывает двух видов. Универсальная — «подписать договор»,
+    # «прислать техпаспорт» — повторяется у всех и живёт без проекта.
+    # Проектная — «согласовать с управляющей компанией снос перегородки» —
+    # нужна ровно здесь, и в чужих проектах она только мешает.
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="task_presets",
+        verbose_name="Только для проекта",
+        help_text="Пусто — заготовка появляется во всех проектах",
+    )
     title = models.CharField("Что сделать", max_length=250)
     who = models.CharField(
         "Кто делает", max_length=8, choices=StageTask.Owner.choices, default=StageTask.Owner.OWNER
@@ -224,6 +237,13 @@ class TaskPreset(models.Model):
 
     def __str__(self):
         return self.title
+
+    @classmethod
+    def for_stage(cls, stage):
+        """Заготовки, которые уместны на этом этапе этого проекта."""
+        return cls.objects.filter(is_active=True).filter(
+            models.Q(stage_number__isnull=True) | models.Q(stage_number=stage.number)
+        ).filter(models.Q(project__isnull=True) | models.Q(project=stage.project_id))
 
 
 class Room(models.Model):
