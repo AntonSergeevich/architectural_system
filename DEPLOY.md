@@ -174,7 +174,7 @@ sudo mkdir -p /var/www/certbot
 sudo cp deploy/nginx-http.conf /etc/nginx/sites-available/dades
 sudo ln -s /etc/nginx/sites-available/dades /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl restart nginx
 ```
 
 Здесь сайт уже должен открываться по `http://da-des.ru` — это проверка
@@ -191,7 +191,7 @@ sudo certbot certonly --webroot -w /var/www/certbot -d da-des.ru -d www.da-des.r
 
 ```bash
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/dades
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl restart nginx
 ```
 
 Последнее: включить принудительный HTTPS в приложении. До сертификата
@@ -342,6 +342,7 @@ cd /srv/dades && ./deploy/deploy.sh
 | Симптом | Куда смотреть |
 |---|---|
 | 502 Bad Gateway | `sudo journalctl -u dades -n 50` — приложение упало или не стартовало |
+| Правка конфига nginx не подействовала | `pgrep -a nginx` — если номер рабочего процесса тот же, что и до правки, конфиг не перечитан. `reload` может отчитаться успехом и ничего не сделать: `sudo systemctl restart nginx` |
 | 503 Service Temporarily Unavailable | Почти всегда nginx отбил запрос по лимиту частоты, а не приложение легло. Проверить: `sudo grep 'limiting requests' /var/log/nginx/error.log \| tail`. Если строки есть — виноват лимит: смотреть, какая зона (`dades_login` или `dades_forms`) |
 | 400 Bad Request | `DJANGO_ALLOWED_HOSTS` не содержит домен |
 | CSRF verification failed | `DJANGO_CSRF_TRUSTED_ORIGINS` без `https://` или без домена |
@@ -368,7 +369,7 @@ cd /srv/dades && ./deploy/deploy.sh
 
 ```bash
 sudo cp /srv/dades/deploy/nginx.conf /etc/nginx/sites-available/dades
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl restart nginx
 ```
 
 Откат на предыдущую версию:
