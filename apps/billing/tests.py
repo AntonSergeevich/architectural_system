@@ -178,10 +178,27 @@ class PaymentsDisabledTests(TestCase):
 
     @override_settings(PAYMENTS_ENABLED=False)
     def test_invoice_page_offers_transfer_instead(self):
+        """Без эквайринга счёт не становится тупиком.
+
+        Человек уже собрался платить: «онлайн-оплата недоступна» без
+        продолжения отправляет его никуда. Вместо кнопки — инструкция.
+        """
         response = self.client.get(self.invoice.get_absolute_url())
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Оплатить картой")
-        self.assertContains(response, "реквизиты")
+        self.assertContains(response, "Как оплатить")
+        self.assertContains(response, "назначении платежа")
+
+    @override_settings(PAYMENTS_ENABLED=False)
+    def test_own_payment_note_replaces_the_default(self):
+        from apps.core.models import SiteSettings
+
+        site = SiteSettings.get()
+        site.payment_note = "Перевод по СБП в Т-Банк на +7 913 032-29-08"
+        site.save(update_fields=["payment_note"])
+
+        response = self.client.get(self.invoice.get_absolute_url())
+        self.assertContains(response, "Перевод по СБП в Т-Банк")
 
     @override_settings(PAYMENTS_ENABLED=False)
     def test_pay_redirects_with_message(self):
