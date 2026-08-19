@@ -117,6 +117,7 @@ def project(request):
         {
             "project": obj,
             "stages": stages,
+            "blocks": services.stage_blocks(stages),
             "current": current,
             "my_tasks": my_tasks,
             "form": RevisionForm(),

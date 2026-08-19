@@ -3,24 +3,30 @@
 {% block title %}{{ project.title }} — {{ site.owner_name }}{% endblock %}
 
 {% comment %}
-  Страница объекта. Смотрят её глазами: кадры занимают всю правую часть
-  и идут мозаикой, а рассказ стоит рядом и не заставляет листать.
+  Страница объекта. Смотрят её глазами: кадры идут мозаикой и стоят
+  сразу за названием, а рассказ — под ними.
 
-  Раньше здесь была обложка во весь экран, потом строка фактов, потом
-  сетка, потом текст — и до отзыва человек добирался пятым экраном.
-  Теперь всё это стоит рядом друг с другом: колонка с рассказом липкая
-  и остаётся на месте, пока справа идут фотографии.
+  Порядок именно такой из-за телефона. Раньше на узком экране колонка
+  с рассказом просто вставала первой, и до первой фотографии человек
+  прокручивал несколько экранов текста — при том, что пришёл он смотреть.
+  Теперь текст разделён: короткое «что это» стоит сверху, кадры сразу
+  за ним, а подробности — задача, решение, результат, состав работ —
+  сложены в раскрывающиеся блоки. Кому надо, тот откроет.
+
+  Две даты в фактах — проект и реализация. Между ними бывает два года,
+  и это норма отрасли, о которой заказчик не знает: он видит «2023»
+  и думает, что интерьер устарел.
 {% endcomment %}
 
 {% block content %}
 <section class="section section--tight">
   <div class="wrap object">
-    <div class="object__info">
+    <div class="object__head">
       <p class="eyebrow">{{ project.city }}{% if project.year %} · {{ project.year }}{% endif %}</p>
       <h1 class="object__title">{{ project.title }}</h1>
       {% if project.summary %}<p class="object__lead">{{ project.summary }}</p>{% endif %}
 
-      {% if project.area or project.style %}
+      {% if project.area or project.style or project.designed_on or project.built_on %}
         <dl class="specs">
           {% if project.area %}
             <div class="spec"><dt>Площадь</dt><dd>{{ project.area|floatformat:"-1" }} м²</dd></div>
@@ -28,39 +34,80 @@
           {% if project.style %}
             <div class="spec"><dt>Стиль</dt><dd>{{ project.style }}</dd></div>
           {% endif %}
+          {% if project.designed_on %}
+            <div class="spec"><dt>Проект</dt><dd>{{ project.designed_on }}</dd></div>
+          {% endif %}
+          {% if project.built_on %}
+            <div class="spec"><dt>Реализация</dt><dd>{{ project.built_on }}</dd></div>
+          {% endif %}
         </dl>
       {% endif %}
+    </div>
 
+    {% comment %}
+      Мозаика, а не ровная сетка: одинаковые плитки превращают восемь
+      разных комнат в каталог плитки. Кадры сохраняют свои пропорции —
+      вертикальные остаются вертикальными, панорама занимает всю ширину.
+    {% endcomment %}
+    <div class="mosaic">
+      {% for photo in project.gallery %}
+        <figure class="mosaic__item {% if photo.is_wide %}mosaic__item--wide{% endif %}
+                       {% if forloop.first %}mosaic__item--lead{% endif %}">
+          <a href="{{ photo.image.url }}" data-lightbox="{{ photo.caption|default:project.title }}"
+             data-gallery="object">
+            <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:project.title }}"
+                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
+            {% if photo.is_before %}<span class="mosaic__tag">до</span>{% endif %}
+            <span class="object__zoom" aria-hidden="true">Открыть</span>
+          </a>
+          {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
+        </figure>
+      {% empty %}
+        <p class="muted">Фотографии этого объекта скоро появятся.</p>
+      {% endfor %}
+    </div>
+
+    <div class="object__story">
       {% if project.task or project.solution or project.result %}
-        <div class="object__story">
-          {% if project.task %}
-            <div class="story">
-              <p class="story__label">Задача</p>
-              {{ project.task|richtext }}
-            </div>
-          {% endif %}
-          {% if project.solution %}
-            <div class="story">
-              <p class="story__label">Решение</p>
-              {{ project.solution|richtext }}
-            </div>
-          {% endif %}
-          {% if project.result %}
-            <div class="story">
-              <p class="story__label">Результат</p>
-              {{ project.result|richtext }}
-            </div>
-          {% endif %}
-        </div>
+        <details class="fold">
+          <summary>Как это делалось</summary>
+          <div class="fold__body">
+            {% if project.task %}
+              <div class="story">
+                <p class="story__label">Задача</p>
+                {{ project.task|richtext }}
+              </div>
+            {% endif %}
+            {% if project.solution %}
+              <div class="story">
+                <p class="story__label">Решение</p>
+                {{ project.solution|richtext }}
+              </div>
+            {% endif %}
+            {% if project.result %}
+              <div class="story">
+                <p class="story__label">Результат</p>
+                {{ project.result|richtext }}
+              </div>
+            {% endif %}
+          </div>
+        </details>
       {% endif %}
 
+      {% comment %}
+        Состав работ — список из полутора десятков строк. Он отвечает
+        на важный вопрос («под ключ» это было или только чертежи), но
+        задаёт его один человек из десяти, а место занимает у всех.
+      {% endcomment %}
       {% if project.modules.exists %}
-        <div class="story">
-          <p class="story__label">Что было сделано</p>
-          <ul class="object__modules">
-            {% for module in project.modules.all %}<li>{{ module.title }}</li>{% endfor %}
-          </ul>
-        </div>
+        <details class="fold">
+          <summary>Что было сделано</summary>
+          <div class="fold__body">
+            <ul class="object__modules">
+              {% for module in project.modules.all %}<li>{{ module.title }}</li>{% endfor %}
+            </ul>
+          </div>
+        </details>
       {% endif %}
 
       {% if project.show_client %}
@@ -91,29 +138,6 @@
         <a class="btn" href="{% url 'public:constructor' %}">Собрать похожий проект</a>
         <a class="btn btn--ghost" href="{% url 'public:portfolio' %}">Другие объекты</a>
       </div>
-    </div>
-
-    {% comment %}
-      Мозаика, а не ровная сетка: одинаковые плитки превращают восемь
-      разных комнат в каталог плитки. Кадры сохраняют свои пропорции —
-      вертикальные остаются вертикальными, панорама занимает всю ширину.
-    {% endcomment %}
-    <div class="mosaic">
-      {% for photo in project.gallery %}
-        <figure class="mosaic__item {% if photo.is_wide %}mosaic__item--wide{% endif %}
-                       {% if forloop.first %}mosaic__item--lead{% endif %}">
-          <a href="{{ photo.image.url }}" data-lightbox="{{ photo.caption|default:project.title }}"
-             data-gallery="object">
-            <img src="{{ photo.image.url }}" alt="{{ photo.caption|default:project.title }}"
-                 loading="{% if forloop.first %}eager{% else %}lazy{% endif %}">
-            {% if photo.is_before %}<span class="mosaic__tag">до</span>{% endif %}
-            <span class="object__zoom" aria-hidden="true">Открыть</span>
-          </a>
-          {% if photo.caption %}<figcaption>{{ photo.caption }}</figcaption>{% endif %}
-        </figure>
-      {% empty %}
-        <p class="muted">Фотографии этого объекта скоро появятся.</p>
-      {% endfor %}
     </div>
   </div>
 </section>

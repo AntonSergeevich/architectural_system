@@ -1,8 +1,10 @@
 """Публичный сайт: страницы открываются, заявка сохраняется, куки пишутся."""
 
+import time
 from decimal import Decimal
 from unittest import mock
 
+from django.core import signing
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
@@ -11,7 +13,17 @@ from apps.catalog.models import ServiceModule
 from apps.crm.models import Lead
 
 from . import notify, views
+from .forms import LeadForm
 from .models import CookieConsent, LegalDocument, PersonalDataConsent
+
+
+def stamp(seconds_ago=30):
+    """Метка «форму открыли столько-то секунд назад».
+
+    Живой человек её получает вместе со страницей; в тестах страницу
+    никто не открывает, поэтому метку ставим руками.
+    """
+    return signing.dumps(int(time.time()) - seconds_ago, salt=LeadForm.TRAP_SALT)
 
 
 class PublicPagesTests(TestCase):
@@ -192,6 +204,7 @@ class LeadTests(TestCase):
             "rooms": 3,
             "message": "хочу яркий интерьер",
             "personal_data_consent": "on",
+            "opened_at": stamp(),
         }
         data.update(extra)
         return data
@@ -248,6 +261,58 @@ class LeadTests(TestCase):
         response = self.client.post(reverse("public:contacts"), self._payload(website="spam"))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Lead.objects.exists())
+        # Ошибка должна быть видимой: ловушка стоит на невидимом поле,
+        # и молча вернувшаяся форма — это тупик для живого человека,
+        # которому поле заполнил браузер.
+        self.assertContains(response, "Не удалось отправить заявку")
+
+    def test_instant_submit_is_rejected(self):
+        """Форму из девяти полей не заполняют за секунду."""
+        response = self.client.post(reverse("public:contacts"), self._payload(opened_at=stamp(1)))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Lead.objects.exists())
+        self.assertContains(response, "слишком быстро")
+
+    def test_post_without_stamp_is_rejected(self):
+        """Бот стучится прямо в адрес формы, не открывая страницу."""
+        payload = self._payload()
+        payload.pop("opened_at")
+        response = self.client.post(reverse("public:contacts"), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Lead.objects.exists())
+
+    def test_form_page_carries_trap_and_stamp(self):
+        page = self.client.get(reverse("public:contacts")).content.decode()
+        self.assertIn('name="website"', page)
+        self.assertIn('class="trap"', page)
+        self.assertIn('name="opened_at"', page)
+
+    def test_mailing_lands_in_spam_without_notification(self):
+        """Рассылку не отбиваем, а откладываем — и молчим о ней.
+
+        Цена ошибки несимметрична: пропущенная рассылка стоит минуты,
+        отбитая заявка — заказчика.
+        """
+        with mock.patch.object(notify, "new_lead") as sent:
+            response = self.client.post(
+                reverse("public:contacts"),
+                self._payload(message="Продвижение сайтов в топ, пишите https://spam.xyz"),
+            )
+        self.assertRedirects(response, reverse("public:thanks"))
+        lead = Lead.objects.get()
+        self.assertTrue(lead.is_spam)
+        self.assertTrue(lead.spam_reason)
+        sent.assert_not_called()
+        self.assertFalse(Lead.objects.real().exists())
+
+    def test_normal_lead_is_not_spam(self):
+        """Ссылка на планировку — обычное дело, и заявку она не портит."""
+        self.client.post(
+            reverse("public:contacts"),
+            self._payload(message="Вот планировка: https://disk.yandex.ru/i/abc"),
+        )
+        lead = Lead.objects.get()
+        self.assertFalse(lead.is_spam, lead.spam_reason)
 
 
 class ShelfTests(TestCase):
@@ -320,6 +385,7 @@ class TelegramNotifyTests(TestCase):
                     "area": "60",
                     "rooms": 2,
                     "personal_data_consent": "on",
+                    "opened_at": stamp(),
                 },
             )
         self.assertRedirects(response, reverse("public:thanks"))
@@ -417,6 +483,45 @@ class PortfolioObjectTests(TestCase):
         self.assertIn("mosaic", body)
         self.assertIn('data-lightbox', body)
         self.assertIn("mosaic__item--wide", body)
+
+    def test_photos_stand_before_the_long_text(self):
+        """На телефоне колонка с рассказом вставала первой, и до первого
+        кадра человек прокручивал несколько экранов текста. Пришёл он
+        смотреть, поэтому в разметке кадры идут раньше подробностей."""
+        body = self.client.get(self.project.get_absolute_url()).content.decode()
+        self.assertLess(body.index('class="mosaic"'), body.index('class="object__story"'))
+
+    def test_long_parts_are_folded(self):
+        """Задача, решение, результат и состав работ — под раскрытие."""
+        from apps.catalog.models import ServiceModule
+
+        self.project.task = "Три комнаты и ниша"
+        self.project.solution = "Кухня-гостиная одним объёмом"
+        self.project.save(update_fields=["task", "solution"])
+        module = ServiceModule.objects.create(
+            code="Z1", title="Рабочая документация", price=1, unit="шт", order=1
+        )
+        self.project.modules.add(module)
+
+        body = self.client.get(self.project.get_absolute_url()).content.decode()
+        self.assertIn("Как это делалось", body)
+        self.assertIn("Что было сделано", body)
+        # Текст остаётся на странице — он свёрнут, а не выброшен:
+        # его читают поисковики и те, кому подробности нужны.
+        self.assertIn("Кухня-гостиная одним объёмом", body)
+        self.assertIn("Рабочая документация", body)
+
+    def test_project_and_realization_dates(self):
+        """Между проектом и стройкой бывает два года — и это норма,
+        о которой заказчик не знает."""
+        self.project.designed_on = "январь 2023"
+        self.project.built_on = "март 2025"
+        self.project.save(update_fields=["designed_on", "built_on"])
+
+        response = self.client.get(self.project.get_absolute_url())
+        self.assertContains(response, "январь 2023")
+        self.assertContains(response, "март 2025")
+        self.assertContains(response, "Реализация")
 
     def test_client_block_hidden_without_consent(self):
         """Ни имени, ни слов, ни видео — пока заказчик не разрешил."""

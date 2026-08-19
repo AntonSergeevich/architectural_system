@@ -24,8 +24,16 @@
       {% endif %}
 
       {% for field in form %}
-        {% if field.name == 'website' %}{{ field }}
-        {% elif field.name == 'quote_token' %}{{ field }}
+        {% comment %}
+          Ловушка. Поле настоящее и на вид обычное, но уезжает за край
+          экрана и не берётся ни клавиатурой, ни скринридером: человек
+          его не заполнит никак, а бот заполняет всё, что нашёл.
+        {% endcomment %}
+        {% if field.name == 'website' %}
+          <div class="trap" aria-hidden="true">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+          </div>
+        {% elif field.name == 'quote_token' or field.name == 'opened_at' %}{{ field }}
         {% elif field.name == 'personal_data_consent' %}
           <div class="field check">
             {{ field }}

@@ -60,4 +60,50 @@
         </tbody>
       </table>
     </div>
+
+    {% comment %}
+      Спам. Отдельным ящиком внизу, а не вперемешку с заявками: система
+      ошибается в обе стороны, и человек должен видеть, что она отсеяла.
+      Удаление здесь окончательное — у рассылки нет истории, которую
+      можно потерять.
+    {% endcomment %}
+    {% if spam %}
+      <details class="adder" style="margin-top: var(--gap-7)">
+        <summary>Спам: {{ spam|length }}</summary>
+        <p class="muted">
+          Сюда попадает то, что похоже на рассылку: ссылки в сообщении,
+          слова про продвижение и займы, десяток заявок с одного адреса.
+          Уведомления по ним не приходят.
+        </p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Кто</th><th>Сообщение</th><th>Почему</th><th>Когда</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for lead in spam %}
+                <tr>
+                  <td><a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a></td>
+                  <td class="cell--text">{{ lead.message|truncatechars:120|default:"—" }}</td>
+                  <td class="muted">{{ lead.spam_reason|default:"—" }}</td>
+                  <td class="muted">{{ lead.created_at|date:"d.m H:i" }}</td>
+                  <td class="cell--actions">
+                    <form method="post" action="{% url 'cabinet:lead_spam' lead.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="restore" value="1">
+                      <button class="btn btn--ghost btn--small" type="submit">Не спам</button>
+                    </form>
+                    <form method="post" action="{% url 'cabinet:lead_delete' lead.pk %}"
+                          data-confirm="Удалить заявку насовсем?">
+                      {% csrf_token %}
+                      <button class="btn btn--ghost btn--small btn--danger" type="submit">Удалить</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% endif %}
 {% endblock %}

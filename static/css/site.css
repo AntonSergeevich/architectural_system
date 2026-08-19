@@ -323,16 +323,52 @@
 
 .object { display: grid; gap: var(--gap-6); align-items: start; }
 @media (min-width: 900px) {
-  .object { grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: var(--gap-7); }
-  /* Липкая колонка: подпись к кадрам должна быть на экране вместе
-     с кадрами, а не в начале страницы. */
-  .object__info { position: sticky; top: 96px; }
+  /* На широком экране рассказ стоит слева от кадров, на узком — под ними.
+     Порядок задаётся областями, а не порядком в разметке: в разметке
+     он такой, каким нужен телефону — название, кадры, подробности.
+     Так на узком экране человек видит фотографии сразу, а не после
+     нескольких экранов текста. */
+  .object {
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+    grid-template-areas: "head photos" "story photos";
+    gap: var(--gap-7);
+  }
+  .object__head { grid-area: head; }
+  .object__story { grid-area: story; }
+  .mosaic { grid-area: photos; }
 }
-.object__info { display: grid; gap: var(--gap-4); align-content: start; min-width: 0; }
+.object__head,
+.object__story { display: grid; gap: var(--gap-4); align-content: start; min-width: 0; }
 .object__title { font-size: var(--step-3); letter-spacing: -.04em; }
 .object__lead { color: var(--ink-2); }
 .object__modules { padding-left: 1.1em; color: var(--ink-2); font-size: var(--step--1); }
 .object__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); margin-top: var(--gap-2); }
+
+/* Раскрывающийся блок: подробности объекта — задача, решение, состав
+   работ — читает один человек из десяти, а место они занимают у всех.
+   Свёрнутый блок оставляет их на странице (и в поиске), не заставляя
+   пролистывать. */
+.fold {
+  border-top: 1px solid var(--line);
+  padding-top: var(--gap-3);
+}
+.fold > summary {
+  cursor: pointer; list-style: none;
+  font-weight: 600; color: var(--ink-2);
+  display: flex; align-items: center; gap: var(--gap-2);
+  /* 44px — палец, а не курсор: страницу смотрят с телефона. */
+  min-height: 44px;
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after {
+  content: ''; width: 8px; height: 8px; margin-left: auto;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform .2s var(--ease);
+}
+.fold[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.fold > summary:hover { color: var(--brand-500); }
+.fold__body { display: grid; gap: var(--gap-4); padding: var(--gap-2) 0 var(--gap-4); }
 
 .story { font-size: var(--step--1); color: var(--ink-2); }
 .story__label {

@@ -540,18 +540,49 @@ class ContractTests(CabinetTestCase):
 class RailTests(CabinetTestCase):
     """Шкала этапов: доля срока и договор, который ждёт подписи."""
 
-    def test_share_of_the_whole_term_is_shown(self):
+    def test_share_of_the_whole_term_is_counted(self):
         """Восемь равных точек врут: этапы разной длины.
 
         Доля считается от суммы плановых дней и в сумме даёт примерно
-        сотню — «примерно», потому что каждая доля округляется.
+        сотню — «примерно», потому что каждая доля округляется. На шкалу
+        она больше не выводится, но остаётся внутри карточки этапа.
         """
         self.login_client()
         response = self.client.get(reverse("cabinet:my_project"))
         shares = [stage.share for stage in response.context["stages"]]
         self.assertEqual(len(shares), 8)
         self.assertAlmostEqual(sum(shares), 100, delta=4)
-        self.assertContains(response, f"{shares[0]}%")
+
+    def test_rail_is_split_into_three_blocks(self):
+        """Три блока по 30, 40 и 30 — так же, как деньги в договоре."""
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        blocks = response.context["blocks"]
+
+        self.assertEqual([b["share"] for b in blocks], [30, 40, 30])
+        self.assertEqual([b["span"] for b in blocks], [3, 3, 2])
+        self.assertEqual(sum(b["span"] for b in blocks), 8)
+        for block in blocks:
+            self.assertContains(response, block["title"])
+
+    def test_stage_percent_is_not_on_the_rail(self):
+        """Доля этапа — обещание, которого никто не давал.
+
+        Подбор материалов бывает и десять дней, и месяц: усреднённые
+        проценты на шкале превращаются в спор, а не в понимание.
+        """
+        self.login_client()
+        response = self.client.get(reverse("cabinet:my_project"))
+        self.assertNotContains(response, "rail__share")
+
+    def test_odd_stage_number_still_lands_in_a_block(self):
+        """Нетиповой этап не должен выпасть: скобки стоят над точками."""
+        from apps.cabinet import services
+
+        stages = services.stage_shares(self.project.stages.order_by("number"))
+        stages.append(Stage(project=self.project, number=42, title="Особый", planned_days=1))
+        blocks = services.stage_blocks(stages)
+        self.assertEqual(sum(b["span"] for b in blocks), len(stages))
 
     def test_contract_waiting_marks_its_stage(self):
         contract = Contract.objects.create(
@@ -1083,3 +1114,62 @@ class PresetTests(CabinetTestCase):
         self.assertFalse(shared.is_active)
         self.assertNotIn(shared, TaskPreset.for_stage(self.stage))
         self.assertFalse(TaskPreset.objects.filter(pk=mine.pk).exists())
+
+
+class SpamTests(CabinetTestCase):
+    """Спам не должен занимать место в воронке и исчезать без следа."""
+
+    def setUp(self):
+        from apps.crm.models import Lead
+
+        self.junk_client = Client.objects.create(name="Seo Master", email="seo@spam.xyz")
+        self.junk = Lead.objects.create(
+            client=self.junk_client,
+            source="сайт",
+            message="продвижение сайтов https://spam.xyz",
+            is_spam=True,
+            spam_reason="ссылки в сообщении",
+        )
+
+    def test_spam_is_out_of_the_funnel(self):
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:leads"))
+        self.assertNotIn(self.junk, response.context["leads"])
+        self.assertIn(self.junk, response.context["spam"])
+
+    def test_delete_removes_lead_and_its_client(self):
+        """Карточка, заведённая рассылкой, уходит вместе с заявкой.
+
+        Иначе спам оседает в списке заказчиков, и разбирать его там
+        уже никто не будет.
+        """
+        from apps.crm.models import Lead
+
+        self.login_owner()
+        self.client.post(reverse("cabinet:lead_delete", args=[self.junk.pk]))
+        self.assertFalse(Lead.objects.filter(pk=self.junk.pk).exists())
+        self.assertFalse(Client.objects.filter(pk=self.junk_client.pk).exists())
+
+    def test_delete_keeps_client_with_projects(self):
+        """Заявку удаляем, живого заказчика — никогда."""
+        from apps.crm.models import Lead
+
+        self.login_owner()
+        self.client.post(reverse("cabinet:lead_delete", args=[self.lead.pk]))
+        self.assertFalse(Lead.objects.filter(pk=self.lead.pk).exists())
+        self.assertTrue(Client.objects.filter(pk=self.customer.pk).exists())
+
+    def test_not_spam_returns_lead_to_the_funnel(self):
+        self.login_owner()
+        self.client.post(reverse("cabinet:lead_spam", args=[self.junk.pk]), {"restore": "1"})
+        self.junk.refresh_from_db()
+        self.assertFalse(self.junk.is_spam)
+        self.assertEqual(self.junk.spam_reason, "")
+
+    def test_client_cannot_delete_leads(self):
+        from apps.crm.models import Lead
+
+        self.login_client()
+        response = self.client.post(reverse("cabinet:lead_delete", args=[self.junk.pk]))
+        self.assertNotEqual(response.status_code, 200)
+        self.assertTrue(Lead.objects.filter(pk=self.junk.pk).exists())

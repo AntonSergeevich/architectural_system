@@ -65,5 +65,34 @@
       </div>
       <button class="btn" type="submit">Сохранить</button>
     </form>
+
+    {% comment %}
+      Спам и удаление — внизу и вне основной формы: это действия про
+      «этой заявки не должно быть», и стоять рядом с «сохранить» они
+      не должны.
+    {% endcomment %}
+    <div class="lead__end">
+      {% if lead.is_spam %}
+        <p class="muted">
+          Заявка лежит в спаме{% if lead.spam_reason %}: {{ lead.spam_reason }}{% endif %}.
+          Уведомления по ней не приходили.
+        </p>
+        <form method="post" action="{% url 'cabinet:lead_spam' lead.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="restore" value="1">
+          <button class="btn btn--ghost" type="submit">Это не спам</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'cabinet:lead_spam' lead.pk %}">
+          {% csrf_token %}
+          <button class="btn btn--ghost" type="submit">Это спам</button>
+        </form>
+      {% endif %}
+      <form method="post" action="{% url 'cabinet:lead_delete' lead.pk %}"
+            data-confirm="Удалить заявку насовсем? Вернуть будет нельзя">
+        {% csrf_token %}
+        <button class="btn btn--ghost btn--danger" type="submit">Удалить заявку</button>
+      </form>
+    </div>
 </div>
 {% endblock %}

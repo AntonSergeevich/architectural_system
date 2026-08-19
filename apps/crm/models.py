@@ -152,6 +152,20 @@ class Property(models.Model):
         return self.measured_area or self.area
 
 
+class LeadQuerySet(models.QuerySet):
+    def real(self):
+        """Заявки от людей.
+
+        Воронка живёт вниманием: как только в ней появляется мусор,
+        её перестают открывать целиком — а вместе с мусором перестают
+        замечать и живые заявки.
+        """
+        return self.filter(is_spam=False)
+
+    def spam(self):
+        return self.filter(is_spam=True)
+
+
 class Lead(models.Model):
     """Заявка.
 
@@ -189,12 +203,24 @@ class Lead(models.Model):
     # каждый по колонке — значит мигрировать базу ради текста на сайте.
     answers = models.JSONField("Анкета", default=dict, blank=True)
 
+    # --- Спам ----------------------------------------------------------------
+    # Сайт в поиске — значит, вместе с людьми приходят рассылки. Отбивать
+    # их насмерть нельзя: цена ошибки несимметрична. Пропущенная рассылка
+    # стоит минуты, отбитая заявка — заказчика. Поэтому подозрительное
+    # не исчезает, а ложится в отдельный ящик: без уведомления, без места
+    # в воронке, но с возможностью посмотреть и вернуть.
+    is_spam = models.BooleanField("Похоже на спам", default=False)
+    spam_reason = models.CharField("Почему", max_length=200, blank=True)
+    ip = models.GenericIPAddressField("Адрес", null=True, blank=True)
+
     next_action = models.CharField("Следующий шаг", max_length=200, default="Связаться")
     next_action_at = models.DateTimeField("Когда", default=timezone.now)
     last_touch_at = models.DateTimeField("Последнее касание", null=True, blank=True)
     lost_reason = models.CharField("Причина отказа", max_length=250, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = LeadQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Заявка"

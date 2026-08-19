@@ -1,11 +1,15 @@
 """Формы публичного сайта."""
 
+import time
+
 from django import forms
+from django.core import signing
 from django.core.exceptions import ValidationError
 
 from apps.catalog.models import ComplexityFactor, ServiceModule
 from apps.crm.models import Property
 
+from . import spam
 from .utils import normalize_phone
 
 
@@ -57,22 +61,66 @@ class LeadForm(ConsentMixin, forms.Form):
     message = forms.CharField(label="Что хотите рассказать", widget=forms.Textarea, required=False)
     quote_token = forms.CharField(widget=forms.HiddenInput, required=False)
 
-    # Ловушка для ботов: поле спрятано стилями, человек его не заполнит.
-    website = forms.CharField(required=False, widget=forms.HiddenInput)
+    # --- Отсев ботов ---------------------------------------------------------
+    # Ловушка. Обычное на вид текстовое поле, спрятанное стилями: человек
+    # его не видит и не заполнит, бот заполняет всё, что нашёл в разметке.
+    # Именно текстовое, а не type="hidden": скрытые поля рассыльщики давно
+    # научились пропускать, а видимое поле с заманчивым именем — нет.
+    website = forms.CharField(
+        label="Сайт",
+        required=False,
+        widget=forms.TextInput(attrs={"autocomplete": "off", "tabindex": "-1"}),
+    )
+    # Секундомер. В поле лежит подписанное время открытия формы: подделать
+    # его нельзя, а отправка через две секунды после открытия означает,
+    # что форму не читали.
+    opened_at = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    TRAP_SALT = "lead-form"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Метку ставим на каждый показ формы, в том числе после ошибки:
+        # человек, который правит одно поле, не должен упираться
+        # в «форма устарела».
+        self.fields["opened_at"].initial = signing.dumps(int(time.time()), salt=self.TRAP_SALT)
 
     def clean_phone(self):
         return normalize_phone(self.cleaned_data.get("phone"))
-
-    def clean_website(self):
-        if self.cleaned_data.get("website"):
-            raise ValidationError("Не удалось отправить заявку")
-        return ""
 
     def clean(self):
         data = super().clean()
         if not data.get("phone") and not data.get("email") and not data.get("messenger"):
             raise ValidationError("Оставьте хотя бы один способ связи — иначе я не смогу ответить")
+        self._check_trap(data)
         return data
+
+    def _check_trap(self, data):
+        """Ловушка и секундомер.
+
+        Ошибки кладём в общий список формы, а не на поля: оба поля
+        на экране не показываются, и ошибка на них была бы невидимой —
+        человек увидел бы форму, вернувшуюся молча. Такое случается
+        по-настоящему: браузер иногда заполняет ловушку сам.
+        """
+        if data.get("website"):
+            self.add_error(None, "Не удалось отправить заявку. Напишите мне в мессенджер")
+            return
+
+        try:
+            opened = signing.loads(
+                data.get("opened_at") or "", salt=self.TRAP_SALT, max_age=spam.MAX_SECONDS
+            )
+        except signing.BadSignature:
+            self.add_error(
+                None, "Форма открыта слишком давно. Обновите страницу и отправьте ещё раз"
+            )
+            return
+
+        if time.time() - opened < spam.MIN_SECONDS:
+            self.add_error(
+                None, "Заявка отправлена слишком быстро. Проверьте поля и отправьте ещё раз"
+            )
 
 
 class CalculatorForm(forms.Form):

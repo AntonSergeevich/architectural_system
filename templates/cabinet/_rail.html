@@ -5,55 +5,79 @@
   этапов текстом на этот вопрос не отвечает: его надо прочитать целиком
   и сложить в голове. Стрелка отвечает мгновенно, ещё до чтения.
 
-  Над точкой — доля этапа в общем сроке. Без неё восемь равных шагов
-  читаются как восемь равных сроков, и после третьего этапа начинается
-  «мы застряли», хотя по времени пройдена ровно половина.
+  Над точками — три блока со скобками: 30, 40 и 30 процентов. Восемь
+  этапов подряд неохватны, их считают равными, и после третьего человек
+  решает, что мы стоим. Три блока запоминаются с одного взгляда, а доли
+  в них честные: ровно так же в договоре разложены деньги.
+
+  Долю каждого этапа отдельно на шкалу не выводим. Она всегда усреднённая
+  — подбор материалов бывает и десять дней, и месяц, — а написанные «14%»
+  читаются как обещание, которого никто не давал.
 
   Нажатие на этап раскрывает его карточку ниже. Без JavaScript ссылка
   остаётся ссылкой на якорь: карточки просто все открыты.
 {% endcomment %}
 <div class="rail" data-rail>
-  <div class="rail__track" aria-hidden="true">
-    <span class="rail__fill" data-rail-fill></span>
+  {% comment %}
+    Скобки стоят в такой же сетке, как и точки: у блока ровно столько
+    колонок, сколько под ним этапов. Поэтому они не разъезжаются
+    ни при какой ширине экрана и при любом наборе этапов.
+  {% endcomment %}
+  <div class="rail__blocks">
+    {% for block in blocks %}
+      <div class="rail__block {% if block.is_done %}is-done{% endif %}
+                  {% if block.is_current %}is-current{% endif %}"
+           style="grid-column: span {{ block.span }}">
+        <span class="rail__block-head">
+          <span class="rail__block-title">{{ block.title }}</span>
+          <span class="rail__block-share">{{ block.share }}%</span>
+        </span>
+        <span class="rail__bracket" aria-hidden="true"></span>
+      </div>
+    {% endfor %}
   </div>
 
-  <ol class="rail__items">
-    {% for stage in stages %}
-      <li class="rail__item
-                 {% if stage.status == 'done' %}is-done{% endif %}
-                 {% if current and stage.pk == current.pk %}is-current{% endif %}
-                 {% if stage.waiting_on == 'client' %}is-waiting{% endif %}
-                 {% if stage.waiting_contract %}has-contract{% endif %}"
-          {% if current and stage.pk == current.pk %}data-rail-current{% endif %}>
-        <a class="rail__link" href="#stage-{{ stage.pk }}" data-rail-link="stage-{{ stage.pk }}">
-          <span class="rail__dot">
-            {% comment %}
-              Доля висит над точкой изнутри неё: точка — единственный
-              элемент шкалы со своей системой координат, и привязка
-              к ней не разъезжается ни при какой ширине экрана.
-            {% endcomment %}
-            <span class="rail__share" title="Доля этапа в общем сроке">{{ stage.share }}%</span>
-            {% if stage.status == 'done' %}
-              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                <path d="M3 8.5 6.4 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.2"
-                      stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            {% else %}{{ stage.number }}{% endif %}
-            {% if stage.waiting_contract %}
-              <span class="rail__flag" title="Договор ждёт подписи" aria-hidden="true"></span>
-            {% endif %}
-          </span>
-          <span class="rail__title">{{ stage.title }}</span>
-          <span class="rail__meta">
-            {% if stage.waiting_contract %}договор
-            {% elif stage.waiting_on == 'client' %}ждём вас
-            {% elif stage.status == 'done' %}готово
-            {% elif stage.status == 'in_progress' %}в работе
-            {% elif stage.status == 'review' %}на согласовании
-            {% else %}впереди{% endif %}
-          </span>
-        </a>
-      </li>
-    {% endfor %}
-  </ol>
+  {% comment %}
+    Линия и точки лежат в своей обёртке: линия позиционируется от неё,
+    и высота скобок сверху перестаёт на неё влиять.
+  {% endcomment %}
+  <div class="rail__scale">
+    <div class="rail__track" aria-hidden="true">
+      <span class="rail__fill" data-rail-fill></span>
+    </div>
+
+    <ol class="rail__items">
+      {% for stage in stages %}
+        <li class="rail__item
+                   {% if stage.status == 'done' %}is-done{% endif %}
+                   {% if current and stage.pk == current.pk %}is-current{% endif %}
+                   {% if stage.waiting_on == 'client' %}is-waiting{% endif %}
+                   {% if stage.waiting_contract %}has-contract{% endif %}"
+            {% if current and stage.pk == current.pk %}data-rail-current{% endif %}>
+          <a class="rail__link" href="#stage-{{ stage.pk }}" data-rail-link="stage-{{ stage.pk }}">
+            <span class="rail__dot">
+              {% if stage.status == 'done' %}
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                  <path d="M3 8.5 6.4 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% else %}{{ stage.number }}{% endif %}
+              {% if stage.waiting_contract %}
+                <span class="rail__flag" title="Договор ждёт подписи" aria-hidden="true"></span>
+              {% endif %}
+            </span>
+            <span class="rail__title">{{ stage.title }}</span>
+            <span class="rail__meta">
+              {% if stage.waiting_contract %}договор
+              {% elif stage.waiting_on == 'client' %}ждём вас
+              {% elif stage.status == 'done' %}готово
+              {% elif stage.status == 'in_progress' %}в работе
+              {% elif stage.status == 'review' %}на согласовании
+              {% else %}впереди{% endif %}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
 </div>

@@ -74,6 +74,13 @@
         <p class="muted">Проектов ещё нет.</p>
       {% endfor %}
 
+      {% comment %}
+        Объекты больше не живут отдельным разделом. Показывать список
+        квартир заказчику незачем: в работе всё равно открывают проект,
+        а объект существует ради площади и числа комнат, по которым
+        считается смета. Поэтому он появляется ровно там, где нужен, —
+        внутри «завести проект», и только пока его нет.
+      {% endcomment %}
       <details class="adder" {% if not client.projects.all %}open{% endif %}>
         <summary>Завести проект</summary>
         {% if client.properties.all %}
@@ -90,44 +97,27 @@
             <button class="btn" type="submit">Завести проект</button>
             <p class="muted">Этапы разложатся сами — по нормативам из «Как я работаю».</p>
           </form>
-        {% else %}
-          <p class="muted">Сначала добавьте объект: проект заводится на объект.</p>
         {% endif %}
+
+        <details class="adder adder--sub" {% if not client.properties.all %}open{% endif %}>
+          <summary>{% if client.properties.all %}Ещё один объект{% else %}Объект: с него начинается проект{% endif %}</summary>
+          <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}"
+            data-async data-refresh="#projects">
+            {% csrf_token %}
+            <div class="grid grid--3">
+              {% field estate_form.city %}
+              {% field estate_form.address %}
+              {% field estate_form.kind %}
+              {% field estate_form.area %}
+              {% field estate_form.rooms %}
+            </div>
+            <button class="btn btn--ghost" type="submit">Добавить объект</button>
+            <p class="muted">Площадь и число помещений — по ним считается смета.</p>
+          </form>
+        </details>
       </details>
     </section>
 
-    <section class="panel" id="estates">
-      <header class="panel__head"><h2>Объекты</h2></header>
-      {% for estate in client.properties.all %}
-        <article class="row">
-          <div class="row__main">
-            <span class="row__title">{{ estate }}</span>
-            <p class="muted">
-              {{ estate.get_kind_display }} · {{ estate.area|floatformat:"-1" }} м²
-              · {{ estate.rooms }} помещений{% if estate.address %} · {{ estate.address }}{% endif %}
-            </p>
-          </div>
-        </article>
-      {% empty %}
-        <p class="muted">Объектов нет.</p>
-      {% endfor %}
-
-      <details class="adder">
-        <summary>Добавить объект</summary>
-        <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}"
-          data-async data-refresh="#estates">
-          {% csrf_token %}
-          <div class="grid grid--3">
-            {% field estate_form.city %}
-            {% field estate_form.address %}
-            {% field estate_form.kind %}
-            {% field estate_form.area %}
-            {% field estate_form.rooms %}
-          </div>
-          <button class="btn" type="submit">Добавить</button>
-        </form>
-      </details>
-    </section>
   </div>
 
   <aside class="cabgrid__side">

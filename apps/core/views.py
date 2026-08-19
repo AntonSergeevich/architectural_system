@@ -23,7 +23,7 @@ from apps.catalog.pricing import calculate, default_complexity, default_preset
 from apps.contracts.models import ClauseQuestion, Contract, ContractAck
 from apps.crm.models import Client, Lead, Property, Quote, QuoteItem
 
-from . import notify
+from . import notify, spam
 from .forms import CalculatorForm, LeadForm
 from .models import (
     Article,
@@ -435,11 +435,26 @@ def _save_lead(request, data):
             desired_move_in=data.get("desired_move_in", ""),
         )
 
+    # Похоже ли на рассылку. Считаем до создания заявки, потому что от
+    # ответа зависит и уведомление, и место заявки в кабинете.
+    ip = _client_ip(request) or None
+    recent = 0
+    if ip:
+        recent = Lead.objects.filter(
+            ip=ip, created_at__gte=timezone.now() - timedelta(hours=1)
+        ).count()
+    is_spam, reason = spam.verdict(
+        message=data.get("message", ""), name=data["name"], same_ip_hour=recent
+    )
+
     lead = Lead.objects.create(
         client=client,
         estate=prop,
         source="сайт",
         message=data.get("message", ""),
+        is_spam=is_spam,
+        spam_reason=reason,
+        ip=ip,
         answers={
             "complexity": data["complexity"].code if data.get("complexity") else None,
             "decides_alone": bool(data.get("decides_alone")),
@@ -457,7 +472,7 @@ def _save_lead(request, data):
         contact=data["phone"] or data["email"] or data.get("messenger", ""),
         document_version=consent_doc.version if consent_doc else "",
         source="заявка с сайта",
-        ip=_client_ip(request),
+        ip=ip or "",
     )
 
     token = data.get("quote_token")
@@ -467,10 +482,15 @@ def _save_lead(request, data):
     # Уведомление в Telegram. Оно НЕ имеет права уронить заявку: заявка
     # уже в базе, и упавший мессенджер не должен превращаться в ошибку
     # у человека, который только что заполнил форму.
-    try:
-        notify.new_lead(lead)
-    except Exception:  # noqa: BLE001 — здесь важно поймать вообще всё
-        logger.exception("Не удалось отправить уведомление о заявке %s", lead.pk)
+    #
+    # Про спам не пишем вовсе. Уведомление о рассылке хуже самой рассылки:
+    # телефон звонит, Дарья открывает — а там ничего. Двух таких сообщений
+    # хватает, чтобы перестать открывать все остальные.
+    if not is_spam:
+        try:
+            notify.new_lead(lead)
+        except Exception:  # noqa: BLE001 — здесь важно поймать вообще всё
+            logger.exception("Не удалось отправить уведомление о заявке %s", lead.pk)
 
     return lead
 

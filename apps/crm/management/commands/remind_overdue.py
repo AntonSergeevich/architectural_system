@@ -39,7 +39,7 @@ class Command(BaseCommand):
             return
 
         overdue = (
-            Lead.objects.select_related("client")
+            Lead.objects.real().select_related("client")
             .exclude(status__in=[Lead.Status.WON, Lead.Status.LOST])
             .filter(next_action_at__lt=timezone.now())
             .order_by("next_action_at")

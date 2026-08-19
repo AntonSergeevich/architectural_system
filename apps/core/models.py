@@ -181,6 +181,19 @@ class PortfolioProject(models.Model):
     area = models.DecimalField("Площадь, м²", max_digits=7, decimal_places=1, null=True, blank=True)
     style = models.CharField("Стиль", max_length=120, blank=True)
 
+    # Две даты, а не одна. Проект и стройка разнесены во времени сильно:
+    # альбом сдан в январе, интерьер снят через два года — и это не изъян,
+    # а норма отрасли, которую заказчик обычно не знает. Написанные рядом,
+    # они честно объясняют, почему «свежих» объектов у любого дизайнера
+    # мало. Текстом, а не датой: «зима 2023» — законный ответ, а требовать
+    # выбрать день ради подписи «январь 2023» незачем.
+    designed_on = models.CharField(
+        "Проект", max_length=60, blank=True, help_text="Как в подписи: «январь 2023»"
+    )
+    built_on = models.CharField(
+        "Реализация", max_length=60, blank=True, help_text="Когда объект сдан: «март 2025»"
+    )
+
     summary = models.CharField("Коротко", max_length=300, blank=True)
     task = models.TextField("Задача", blank=True)
     solution = models.TextField("Решение", blank=True)

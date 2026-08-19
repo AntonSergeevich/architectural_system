@@ -75,16 +75,60 @@
 .rail {
   position: relative;
   margin-bottom: var(--gap-6);
-  padding: var(--gap-6) 0 var(--gap-4);
+  padding: var(--gap-4) 0;
   overflow-x: auto;
   scrollbar-width: thin;
 }
+
+/* --- Три блока над этапами -------------------------------------------------
+   Восемь точек подряд неохватны: их считают равными шагами, и после
+   третьего человек решает, что мы стоим. Скобка собирает этапы в блок
+   и подписывает его долей — той же, что в договоре: 30, 40 и 30.
+
+   Сетка у скобок такая же, как у точек, и блок занимает ровно столько
+   колонок, сколько под ним этапов. Поэтому скобка стоит над своими
+   точками при любой ширине экрана и любом наборе этапов. */
+
+.rail__blocks {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(108px, 1fr);
+  gap: var(--gap-2);
+  min-width: 860px;
+  margin-bottom: var(--gap-2);
+}
+.rail__block { display: grid; gap: var(--gap-1); align-content: end; }
+.rail__block-head {
+  display: flex; gap: var(--gap-2); align-items: baseline; justify-content: center;
+  flex-wrap: wrap;
+}
+.rail__block-title {
+  font-size: var(--step--2); font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.rail__block-share { font-size: var(--step--1); font-weight: 700; color: var(--ink-2); }
+
+/* Сама скобка: рамка без низа, с загнутыми вниз концами. Рисуется одним
+   элементом — линия сверху и два коротких уса по краям. */
+.rail__bracket {
+  display: block; height: 10px;
+  border: 2px solid var(--line);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+.rail__block.is-current .rail__bracket { border-color: var(--brand-300); }
+.rail__block.is-current .rail__block-title,
+.rail__block.is-current .rail__block-share { color: var(--brand-600); }
+.rail__block.is-done .rail__bracket { border-color: var(--brand-500); }
+.rail__block.is-done .rail__block-share { color: var(--brand-500); }
+
+/* Линия и точки — в своей обёртке: высота скобок сверху на них больше
+   не влияет, и линия остаётся ровно по центрам кружков. */
+.rail__scale { position: relative; padding-top: var(--gap-2); }
 /* Шкала — главный экран кабинета, а не подпись к нему: этап открывается
    нажатием на неё, и промахиваться по ней пальцем нельзя. Отсюда точка
    в 44px и запас сверху под долю срока.
    22px — половина точки: линия проходит ровно через её центр. */
 .rail__track {
-  position: absolute; left: 0; right: 0; top: calc(var(--gap-6) + 22px);
+  position: absolute; left: 0; right: 0; top: calc(var(--gap-2) + 22px);
   height: 3px; background: var(--line); border-radius: 2px;
   min-width: 860px;
 }
@@ -124,17 +168,6 @@
               background .25s var(--ease), color .25s var(--ease);
 }
 
-/* Доля этапа в общем сроке — над точкой. «Обмеры» и «рабочая документация»
-   выглядят одинаковыми шагами, хотя это день и месяц; без доли третий этап
-   из восьми читается как «прошло меньше половины», и начинается разговор
-   «мы стоим». */
-.rail__share {
-  position: absolute; bottom: calc(100% + 6px); left: 50%;
-  transform: translateX(-50%);
-  font-size: var(--step--2); color: var(--muted); font-weight: 600;
-  white-space: nowrap;
-}
-
 /* Договор ждёт подписи — точка на кружке. Это единственное на шкале,
    что требует действия прямо сейчас, и оно должно быть заметно
    до чтения подписей. */
@@ -169,7 +202,6 @@
   border-color: var(--brand-500); color: var(--brand-600);
 }
 .rail__link.is-open .rail__title { color: var(--ink); font-weight: 700; }
-.rail__link.is-open .rail__share { color: var(--brand-500); }
 
 /* Ножка от точки вниз — начало связи. Продолжает её сама карточка
    этапа своей меткой сверху. */
@@ -886,3 +918,30 @@
    разъезжаются по строкам, и крестик оказывается под чужой заготовкой. */
 .preset { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
 .preset .preset-edit { flex: 1 1 100%; }
+
+/* --- Спам и удаление заявки ------------------------------------------------
+   Рассылки приходят пачками, и разбирают их одним движением: посмотреть
+   строку и нажать. Поэтому кнопки стоят прямо в строке таблицы, а сама
+   строка показывает начало сообщения — по нему всё и понятно. */
+
+.btn--small { min-height: 36px; padding: var(--gap-2) var(--gap-4); font-size: var(--step--1); }
+.cell--text { max-width: 32ch; color: var(--ink-2); }
+.cell--actions { display: flex; gap: var(--gap-2); flex-wrap: wrap; }
+
+/* Конец карточки заявки: «это спам» и «удалить» стоят вместе и отдельно
+   от «сохранить» — это действия про то, что заявки быть не должно. */
+.lead__end {
+  display: flex; flex-wrap: wrap; gap: var(--gap-3); align-items: center;
+  margin-top: var(--gap-7); padding-top: var(--gap-5);
+  border-top: 1px solid var(--line);
+}
+.lead__end p { flex-basis: 100%; margin: 0; }
+
+/* Вложенная гармошка: объект внутри «завести проект». Отбита слева
+   линией — иначе два «плюсика» подряд читаются как один список. */
+.adder--sub {
+  margin-top: var(--gap-5);
+  padding-left: var(--gap-4);
+  border-left: 2px solid var(--line);
+}
+.adder--sub > summary { font-size: var(--step--1); color: var(--muted); }

@@ -197,12 +197,15 @@
   }
 
   document.addEventListener('submit', function (e) {
-    var form = e.target.closest('form[data-async]');
-    if (!form || !window.fetch) return;
-    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+    // Переспрос — отдельно от асинхронной отправки: удаление заявки уходит
+    // обычной формой с перезагрузкой, и раньше вопрос ей не задавался вовсе.
+    var guarded = e.target.closest('form[data-confirm]');
+    if (guarded && !window.confirm(guarded.dataset.confirm)) {
       e.preventDefault();
       return;
     }
+    var form = e.target.closest('form[data-async]');
+    if (!form || !window.fetch) return;
     e.preventDefault();
     send(form);
   });

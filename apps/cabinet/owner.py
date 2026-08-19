@@ -54,7 +54,9 @@ def leads(request):
     Просроченные касания идут первыми: заявка без сделанного следующего
     шага — это и есть «потерянная заявка».
     """
-    qs = list(Lead.objects.select_related("client", "estate").order_by("next_action_at"))
+    qs = list(
+        Lead.objects.real().select_related("client", "estate").order_by("next_action_at")
+    )
     # Колонки готовим здесь, а не в шаблоне: словарь по ключу-переменной
     # шаблонный язык не умеет, и обход этого превращается в самодельные фильтры.
     columns = [
@@ -69,8 +71,65 @@ def leads(request):
             "overdue": [lead for lead in qs if lead.is_overdue],
             "columns": columns,
             "leads": qs,
+            # Спам стоит внизу отдельным списком, а не исчезает молча:
+            # молчаливое удаление однажды съест живую заявку, и узнать
+            # об этом будет неоткуда.
+            "spam": list(
+                Lead.objects.spam().select_related("client").order_by("-created_at")[:50]
+            ),
         },
     )
+
+
+@login_required
+@owner_only
+@require_POST
+def lead_delete(request, pk):
+    """Удалить заявку.
+
+    Здесь именно удаление, а не архив, как у заказчика: у рассылки нет
+    истории, которую можно потерять. Вместе с заявкой уходит и карточка
+    заказчика, если она была заведена этой же заявкой и больше ни с чем
+    не связана — иначе спам оседает в списке заказчиков, и там его уже
+    никто не разбирает.
+    """
+    lead = get_object_or_404(Lead.objects.select_related("client"), pk=pk)
+    client = lead.client
+    lead.delete()
+
+    empty = (
+        not client.leads.exists()
+        and not client.projects.exists()
+        and not client.quotes.exists()
+        and client.user_id is None
+    )
+    if empty:
+        client.delete()
+        messages.success(request, "Заявка и карточка удалены.")
+    else:
+        messages.success(request, "Заявка удалена.")
+    return redirect("cabinet:leads")
+
+
+@login_required
+@owner_only
+@require_POST
+def lead_spam(request, pk):
+    """Пометить заявку спамом или вернуть её в воронку.
+
+    Система ошибается в обе стороны, и обе поправимы одним нажатием —
+    поэтому решение и остаётся за человеком.
+    """
+    lead = get_object_or_404(Lead, pk=pk)
+    lead.is_spam = request.POST.get("restore") != "1"
+    if not lead.is_spam:
+        lead.spam_reason = ""
+    lead.save(update_fields=["is_spam", "spam_reason"])
+    if lead.is_spam:
+        messages.success(request, "Заявка убрана в спам.")
+        return redirect("cabinet:leads")
+    messages.success(request, "Заявка вернулась в воронку.")
+    return redirect("cabinet:lead_detail", pk=lead.pk)
 
 
 @login_required
@@ -106,7 +165,7 @@ def dashboard(request):
     Список всего подряд человек всё равно не читает — он его пролистывает
     и закрывает.
     """
-    leads_qs = list(Lead.objects.select_related("client").order_by("next_action_at"))
+    leads_qs = list(Lead.objects.real().select_related("client").order_by("next_action_at"))
     projects_qs = list(
         Project.objects.select_related("client", "estate")
         .exclude(status=Project.Status.DONE)
@@ -396,6 +455,7 @@ def project_detail(request, pk):
             "section": "projects",
             "project": project,
             "stages": stages,
+            "blocks": services.stage_blocks(stages),
             "current": current,
             "presets": presets,
             "task_form": TaskForm(),

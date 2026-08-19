@@ -17,8 +17,13 @@ class ClientAdmin(admin.ModelAdmin):
 
 @admin.register(Lead)
 class LeadAdmin(admin.ModelAdmin):
-    list_display = ("client", "status", "next_action", "next_action_at", "created_at")
-    list_filter = ("status",)
+    list_display = ("client", "status", "is_spam", "next_action", "next_action_at", "created_at")
+    list_filter = ("status", "is_spam")
+    actions = ["mark_spam"]
+
+    @admin.action(description="Пометить спамом")
+    def mark_spam(self, request, queryset):
+        queryset.update(is_spam=True)
     search_fields = ("client__name", "client__phone")
     date_hierarchy = "next_action_at"
 

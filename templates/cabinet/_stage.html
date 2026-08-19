@@ -23,7 +23,14 @@
         займёт и за что я плачу» приходится собирать из трёх мест экрана.
       {% endcomment %}
       <p class="stage__facts muted">
-        {{ stage.planned_days|workdays }} · {{ stage.share }}% всего срока
+        {{ stage.planned_days|workdays }}
+        {% comment %}
+          Доля — блока, а не этапа. Доля этапа всегда усреднённая: подбор
+          материалов бывает и на десять дней, и на месяц. Написанная
+          в карточке, она превращается в обещание, которого никто
+          не давал, и в спор о том, почему прошло больше.
+        {% endcomment %}
+        · блок «{{ stage.block }}», {{ stage.block_share }}% срока и денег
         {% if stage.paid %} · оплачено {{ stage.paid|money }}{% endif %}
       </p>
     </div>

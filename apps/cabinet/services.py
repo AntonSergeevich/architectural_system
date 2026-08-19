@@ -200,6 +200,7 @@ def stage_payload(request, project, stage, message="", error=""):
     context = {
         "project": project,
         "stages": stages,
+        "blocks": stage_blocks(stages),
         "stage": fresh,
         "current": current,
         "is_owner_view": bool(getattr(request.user, "is_owner", False)),
@@ -220,6 +221,53 @@ def stage_response(request, project, stage, message="", error=""):
     return JsonResponse(stage_payload(request, project, stage, message, error))
 
 
+# --- Три блока работы -------------------------------------------------------
+# Восемь этапов — это подробно, но неохватно: заказчик видит восемь шагов,
+# считает их равными и после третьего решает, что мы стоим. Поэтому этапы
+# собраны в три блока, и доли стоят на блоках, а не на этапах.
+#
+# Почему не на этапах. Доля этапа всегда усреднённая: подбор материалов
+# бывает и на десять дней, и на месяц — на сложном объекте всё выбирают
+# по третьему разу. Написанные на шкале «14%» превращаются в обещание,
+# которого никто не давал, и в спор о том, почему прошло больше.
+# На блоке доля честная: она из договора, где деньги разложены ровно так же
+# — 30, 40 и 30 процентов.
+STAGE_BLOCKS = (
+    ("Обмер, бриф, планировки", 30, (1, 2, 3)),
+    ("Образ и материалы", 40, (4, 5, 6)),
+    ("Чертежи и сдача", 30, (7, 8)),
+)
+
+
+def stage_blocks(stages):
+    """Блоки для шкалы: подпись, доля и сколько этапов накрывает скобка.
+
+    Этап с незнакомым номером (проект собран не по типовому набору)
+    попадает в последний блок, а не выпадает вовсе: скобки стоят над
+    точками, и потерянный этап сдвинул бы всю шкалу.
+    """
+    rows = []
+    for title, share, numbers in STAGE_BLOCKS:
+        rows.append({"title": title, "share": share, "numbers": numbers, "stages": []})
+
+    for stage in stages:
+        row = next((r for r in rows if stage.number in r["numbers"]), rows[-1])
+        row["stages"].append(stage)
+
+    out = []
+    for row in rows:
+        if not row["stages"]:
+            continue
+        row["span"] = len(row["stages"])
+        # Блок пройден, когда пройдены все его этапы; идёт — если хотя бы
+        # один в работе. Это то же, что человек видит по точкам, только
+        # одним словом.
+        row["is_done"] = all(s.status == "done" for s in row["stages"])
+        row["is_current"] = not row["is_done"] and any(s.status != "waiting" for s in row["stages"])
+        out.append(row)
+    return out
+
+
 def stage_shares(stages):
     """Сколько времени занимает каждый этап — в долях от всего срока.
 
@@ -228,11 +276,23 @@ def stage_shares(stages):
     «мы застряли»: заказчик видит восемь равных шагов и считает, что после
     третьего должно пройти три восьмых времени. Доля возвращает шкале
     честный масштаб, не ломая её вида.
+
+    На саму шкалу доля этапа больше не выводится — там стоят блоки. Она
+    осталась внутри карточки этапа: там это ответ на вопрос «а это надолго»,
+    заданный про один конкретный этап, а не обещание всему проекту.
     """
     stages = list(stages)
     total = sum(stage.planned_days for stage in stages) or 1
+    blocks = {
+        number: (title, share)
+        for title, share, numbers in STAGE_BLOCKS
+        for number in numbers
+    }
     for stage in stages:
         stage.share = round(stage.planned_days * 100 / total)
+        stage.block, stage.block_share = blocks.get(
+            stage.number, (STAGE_BLOCKS[-1][0], STAGE_BLOCKS[-1][1])
+        )
         # Договор и деньги этапа — рядом с самим этапом, а не в общем
         # списке где-то сбоку: вопрос «за что я плачу» задаётся именно
         # в тот момент, когда смотришь, что на этапе делается.
