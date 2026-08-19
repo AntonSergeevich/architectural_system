@@ -1173,3 +1173,78 @@ class SpamTests(CabinetTestCase):
         response = self.client.post(reverse("cabinet:lead_delete", args=[self.junk.pk]))
         self.assertNotEqual(response.status_code, 200)
         self.assertTrue(Lead.objects.filter(pk=self.junk.pk).exists())
+
+
+class ProjectStartTests(CabinetTestCase):
+    """Проект и объект заводятся одной формой.
+
+    Двухшаговость давала тупик: у нового заказчика список объектов пуст,
+    выбирать не из чего, а форма нового объекта пряталась ниже кнопки.
+    """
+
+    def setUp(self):
+        self.fresh = Client.objects.create(name="Пётр", phone="+79130000009")
+
+    def test_new_client_sees_object_fields_not_an_empty_list(self):
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:client_detail", args=[self.fresh.pk]))
+        self.assertContains(response, "new_area")
+        self.assertFalse(response.context["project_form"].has_estates)
+
+    def test_project_and_estate_are_created_together(self):
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_project", args=[self.fresh.pk]),
+            {
+                "new_city": "Красноярск",
+                "new_address": "Взлётка, 12",
+                "new_kind": "new",
+                "new_area": "62",
+                "new_rooms": "3",
+                "title": "Квартира на Взлётке",
+                "agreed_amount": "250000",
+                "status": Project.Status.QUEUED,
+            },
+        )
+        project = Project.objects.get(client=self.fresh)
+        self.assertEqual(project.estate.area, Decimal("62"))
+        self.assertEqual(project.estate.rooms, 3)
+        self.assertEqual(project.estate.client, self.fresh)
+        # Этапы раскладываются сами — иначе проект заведут без них.
+        self.assertEqual(project.stages.count(), 8)
+
+    def test_existing_estate_is_reused(self):
+        estate = Property.objects.create(client=self.fresh, area=Decimal("40"), rooms=2)
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:client_project", args=[self.fresh.pk]),
+            {"estate": estate.pk, "title": "Студия", "agreed_amount": "100000",
+             "status": Project.Status.QUEUED},
+        )
+        project = Project.objects.get(client=self.fresh)
+        self.assertEqual(project.estate, estate)
+        self.assertEqual(Property.objects.filter(client=self.fresh).count(), 1)
+
+    def test_without_estate_and_area_the_reason_is_named(self):
+        """«Проверьте поля» без указания поля заставляет угадывать."""
+        self.login_owner()
+        response = self.client.post(
+            reverse("cabinet:client_project", args=[self.fresh.pk]),
+            {"title": "Ничего", "agreed_amount": "0", "status": Project.Status.QUEUED},
+            follow=True,
+        )
+        self.assertFalse(Project.objects.filter(client=self.fresh).exists())
+        self.assertContains(response, "нужна хотя бы площадь")
+
+    def test_choosing_and_typing_at_once_is_refused(self):
+        """Молча предпочесть одно нельзя: вместо правки вышел бы дубль."""
+        estate = Property.objects.create(client=self.fresh, area=Decimal("40"), rooms=2)
+        self.login_owner()
+        response = self.client.post(
+            reverse("cabinet:client_project", args=[self.fresh.pk]),
+            {"estate": estate.pk, "new_area": "62", "new_rooms": "3",
+             "title": "Спор", "agreed_amount": "0", "status": Project.Status.QUEUED},
+            follow=True,
+        )
+        self.assertFalse(Project.objects.filter(client=self.fresh).exists())
+        self.assertContains(response, "оставьте что-то одно")

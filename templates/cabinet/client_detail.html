@@ -75,46 +75,50 @@
       {% endfor %}
 
       {% comment %}
-        Объекты больше не живут отдельным разделом. Показывать список
-        квартир заказчику незачем: в работе всё равно открывают проект,
-        а объект существует ради площади и числа комнат, по которым
-        считается смета. Поэтому он появляется ровно там, где нужен, —
-        внутри «завести проект», и только пока его нет.
+        Объект заводится здесь же, а не отдельным шагом. Раньше их было
+        два: сначала добавить объект, потом завести на него проект, —
+        и на новом заказчике это упиралось в тупик. Список объектов пуст,
+        выбирать не из чего, а форма нового объекта пряталась ниже кнопки
+        «Завести проект»: человек доходил до пустого списка и решал,
+        что создавать негде.
+
+        Пустой список теперь не показывается вовсе: если объектов нет,
+        сразу видны поля нового. Если есть — список и рядом «или новый».
       {% endcomment %}
       <details class="adder" {% if not client.projects.all %}open{% endif %}>
         <summary>Завести проект</summary>
-        {% if client.properties.all %}
-          <form class="adder__form" method="post" action="{% url 'cabinet:client_project' client.pk %}"
-            data-async data-refresh="#projects">
-            {% csrf_token %}
-            <div class="grid grid--3">
-              {% field project_form.estate %}
-              {% field project_form.title %}
-              {% field project_form.agreed_amount %}
-              {% field project_form.starts_at %}
-              {% field project_form.status %}
-            </div>
-            <button class="btn" type="submit">Завести проект</button>
-            <p class="muted">Этапы разложатся сами — по нормативам из «Как я работаю».</p>
-          </form>
-        {% endif %}
+        <form class="adder__form" method="post" action="{% url 'cabinet:client_project' client.pk %}"
+          data-async data-refresh="#projects">
+          {% csrf_token %}
 
-        <details class="adder adder--sub" {% if not client.properties.all %}open{% endif %}>
-          <summary>{% if client.properties.all %}Ещё один объект{% else %}Объект: с него начинается проект{% endif %}</summary>
-          <form class="adder__form" method="post" action="{% url 'cabinet:client_estate' client.pk %}"
-            data-async data-refresh="#projects">
-            {% csrf_token %}
-            <div class="grid grid--3">
-              {% field estate_form.city %}
-              {% field estate_form.address %}
-              {% field estate_form.kind %}
-              {% field estate_form.area %}
-              {% field estate_form.rooms %}
+          {% if project_form.has_estates %}
+            <div class="pickone">
+              {% field project_form.estate %}
+              <p class="pickone__or">или заведите новый — заполните поля ниже</p>
             </div>
-            <button class="btn btn--ghost" type="submit">Добавить объект</button>
+          {% endif %}
+
+          <fieldset class="subform">
+            <legend>{% if project_form.has_estates %}Новый объект{% else %}Объект{% endif %}</legend>
+            <div class="grid grid--3">
+              {% field project_form.new_city %}
+              {% field project_form.new_address %}
+              {% field project_form.new_kind %}
+              {% field project_form.new_area %}
+              {% field project_form.new_rooms %}
+            </div>
             <p class="muted">Площадь и число помещений — по ним считается смета.</p>
-          </form>
-        </details>
+          </fieldset>
+
+          <div class="grid grid--3">
+            {% field project_form.title %}
+            {% field project_form.agreed_amount %}
+            {% field project_form.starts_at %}
+            {% field project_form.status %}
+          </div>
+          <button class="btn" type="submit">Завести проект</button>
+          <p class="muted">Этапы разложатся сами — по нормативам из «Как я работаю».</p>
+        </form>
       </details>
     </section>
 

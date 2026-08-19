@@ -39,7 +39,6 @@ from .forms import (
     MessageForm,
     PaymentForm,
     ProjectForm,
-    PropertyForm,
     TaskForm,
 )
 
@@ -255,7 +254,6 @@ def client_detail(request, pk):
             "client": client,
             "form": ClientForm(instance=client),
             "notes_form": ClientNotesForm(instance=client),
-            "estate_form": PropertyForm(),
             "access_form": AccessForm(initial={"email": client.email, "full_name": client.name}),
             "project_form": ProjectForm(client=client),
             # Пароль показывается ровно один раз, сразу после выдачи:
@@ -334,23 +332,6 @@ def client_archive(request, pk):
 @login_required
 @owner_only
 @require_POST
-def client_estate(request, pk):
-    """Объект заказчика: без него проект завести не на чем."""
-    client = get_object_or_404(Client, pk=pk)
-    form = PropertyForm(request.POST)
-    if form.is_valid():
-        estate = form.save(commit=False)
-        estate.client = client
-        estate.save()
-        messages.success(request, "Объект добавлен.")
-    else:
-        messages.error(request, "Проверьте данные объекта.")
-    return redirect("cabinet:client_detail", pk=pk)
-
-
-@login_required
-@owner_only
-@require_POST
 def client_access(request, pk):
     """Выдать заказчику доступ в кабинет.
 
@@ -393,16 +374,24 @@ def client_access(request, pk):
 @owner_only
 @require_POST
 def client_project(request, pk):
-    """Завести проект заказчику. Этапы раскладываются сами."""
+    """Завести проект заказчику. Объект и этапы появляются вместе с ним.
+
+    Объект создаётся здесь же, если его вписали руками: раньше это был
+    отдельный шаг, и на новом заказчике он превращался в тупик — список
+    объектов пуст, а форма нового пряталась ниже кнопки.
+    """
     client = get_object_or_404(Client, pk=pk)
     form = ProjectForm(request.POST, client=client)
     if not form.is_valid():
-        messages.error(request, "Проверьте поля проекта: нужен объект.")
+        # Говорим, что именно не так: «проверьте поля» без указания
+        # поля заставляет угадывать.
+        problems = "; ".join(
+            str(error) for errors in form.errors.values() for error in errors
+        )
+        messages.error(request, problems or "Проверьте поля проекта.")
         return redirect("cabinet:client_detail", pk=pk)
 
-    project = form.save(commit=False)
-    project.client = client
-    project.save()
+    project = form.save()
     created = services.create_stages(project)
     messages.success(request, f"Проект заведён, этапов разложено: {created}.")
     return redirect("cabinet:project_detail", pk=project.pk)

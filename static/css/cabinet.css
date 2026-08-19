@@ -937,11 +937,25 @@
 }
 .lead__end p { flex-basis: 100%; margin: 0; }
 
-/* Вложенная гармошка: объект внутри «завести проект». Отбита слева
-   линией — иначе два «плюсика» подряд читаются как один список. */
-.adder--sub {
-  margin-top: var(--gap-5);
-  padding-left: var(--gap-4);
-  border-left: 2px solid var(--line);
+/* --- Объект внутри «завести проект» ----------------------------------------
+   Объект и проект заводятся одной формой. Двухшаговость здесь давала тупик:
+   у нового заказчика список объектов пуст, выбирать не из чего, а форма
+   нового объекта пряталась ниже кнопки отправки — человек доходил
+   до пустого списка и решал, что создавать негде.
+
+   Поэтому выбор и создание стоят рядом и видны сразу, а не по очереди. */
+
+.pickone { display: grid; gap: var(--gap-1); }
+.pickone__or {
+  font-size: var(--step--2); color: var(--muted); margin: 0;
 }
-.adder--sub > summary { font-size: var(--step--1); color: var(--muted); }
+.subform {
+  border: 1px solid var(--line); border-radius: var(--radius-2);
+  padding: var(--gap-4); margin: 0;
+  display: grid; gap: var(--gap-3);
+}
+.subform legend {
+  padding: 0 var(--gap-2); margin-left: calc(var(--gap-2) * -1);
+  font-size: var(--step--2); font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+}

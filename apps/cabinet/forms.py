@@ -88,12 +88,6 @@ class ClientNotesForm(forms.ModelForm):
         help_texts = {"notes": ""}
 
 
-class PropertyForm(forms.ModelForm):
-    class Meta:
-        model = Property
-        fields = ["city", "address", "kind", "area", "rooms"]
-
-
 class AccessForm(forms.Form):
     """Выдача доступа заказчику.
 
@@ -150,10 +144,32 @@ class AccessForm(forms.Form):
 class ProjectForm(forms.ModelForm):
     """Проект: объект, сумма договорённости, дата старта.
 
+    Объект заводится здесь же, а не отдельным шагом. Раньше было два
+    действия: сначала добавить объект, потом завести на него проект, —
+    и это упиралось в тупик. Заказчик новый, объектов у него нет,
+    список пуст, а форма нового объекта пряталась ниже кнопки
+    «Завести проект»: человек доходил до пустого списка и решал,
+    что создавать негде. Проект и объект появляются вместе — так они
+    и появляются в жизни.
+
     Этапы не спрашиваем — они раскладываются сами по нормативам
     из «Как я работаю». Просить перечислить их руками значит
     гарантировать, что проект заведут без этапов.
     """
+
+    # Поля нового объекта. Префикс new_ нужен, чтобы они не спорили
+    # с полями самого проекта: `city` есть и там, и там.
+    new_city = forms.CharField(label="Город", max_length=80, required=False, initial="Красноярск")
+    new_address = forms.CharField(label="Адрес", max_length=250, required=False)
+    new_kind = forms.ChoiceField(
+        label="Тип", choices=Property.Kind.choices, required=False, initial=Property.Kind.NEW
+    )
+    new_area = forms.DecimalField(
+        label="Площадь, м²", max_digits=7, decimal_places=1, required=False, min_value=1
+    )
+    new_rooms = forms.IntegerField(
+        label="Помещений", required=False, min_value=1, max_value=50, initial=1
+    )
 
     class Meta:
         model = Project
@@ -162,9 +178,51 @@ class ProjectForm(forms.ModelForm):
 
     def __init__(self, *args, client=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.client = client
         if client is not None:
             self.fields["estate"].queryset = client.properties.all()
         self.fields["title"].required = False
+        # Объект не обязателен как поле: он либо выбран из списка, либо
+        # вписан рядом. Что именно из двух — проверяет clean().
+        self.fields["estate"].required = False
+        self.fields["estate"].empty_label = "— выбрать из заведённых —"
+
+    @property
+    def has_estates(self):
+        """Есть ли из чего выбирать. Пустой список показывать нельзя."""
+        return bool(self.client and self.client.properties.exists())
+
+    def clean(self):
+        data = super().clean()
+        chosen, typed = data.get("estate"), data.get("new_area")
+        if not chosen and not typed:
+            raise forms.ValidationError(
+                "Выберите объект или впишите новый: нужна хотя бы площадь"
+            )
+        # Заполнено и то и другое — молча предпочесть одно нельзя: человек
+        # думал, что правит выбранный объект, а получил бы второй такой же.
+        if chosen and typed:
+            raise forms.ValidationError(
+                "Выбран объект из списка и вписан новый — оставьте что-то одно"
+            )
+        return data
+
+    def save(self, commit=True):
+        """Сохранить проект, заведя объект, если его вписали руками."""
+        project = super().save(commit=False)
+        project.client = self.client
+        if not project.estate_id:
+            project.estate = Property.objects.create(
+                client=self.client,
+                city=self.cleaned_data.get("new_city") or "Красноярск",
+                address=self.cleaned_data.get("new_address", ""),
+                kind=self.cleaned_data.get("new_kind") or Property.Kind.NEW,
+                area=self.cleaned_data["new_area"],
+                rooms=self.cleaned_data.get("new_rooms") or 1,
+            )
+        if commit:
+            project.save()
+        return project
 
 
 class TaskForm(forms.ModelForm):
