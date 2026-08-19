@@ -623,3 +623,39 @@ class ComplexityTests(TestCase):
             {"area": "80", "rooms": 2, "modules": [module.pk], "conditions": [old_fund.pk]},
         ).json()["calc"]
         self.assertGreater(harder["design_total"], base["design_total"])
+
+
+class EnvFileTests(TestCase):
+    """Чтение .env: файл один, а читают его двое — systemd и manage.py."""
+
+    def _write(self, text):
+        import tempfile
+        from pathlib import Path
+
+        path = Path(tempfile.mkdtemp()) / ".env"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_last_line_wins(self):
+        """Ключ, записанный дважды, берётся по последней строке.
+
+        Ровно так его понимает systemd. Разойдись поведение — служба
+        работала бы с одним значением, а проверка в терминале
+        показывала бы другое, и найти это почти невозможно.
+        """
+        from config.settings import read_env_file
+
+        values = read_env_file(self._write("EMAIL_HOST_PASSWORD=\nEMAIL_HOST_PASSWORD=секрет\n"))
+        self.assertEqual(values["EMAIL_HOST_PASSWORD"], "секрет")
+
+    def test_quotes_belong_to_the_record(self):
+        from config.settings import read_env_file
+
+        values = read_env_file(self._write('DEFAULT_FROM_EMAIL="Дарья <a@b.ru>"\n'))
+        self.assertEqual(values["DEFAULT_FROM_EMAIL"], "Дарья <a@b.ru>")
+
+    def test_comments_and_junk_are_skipped(self):
+        from config.settings import read_env_file
+
+        values = read_env_file(self._write("# комментарий\n\nПРОСТО СТРОКА\nA=1\n"))
+        self.assertEqual(values, {"A": "1"})

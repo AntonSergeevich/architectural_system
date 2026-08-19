@@ -25,20 +25,39 @@ def env_list(name, default=""):
 
 # Локальный .env читаем сами: лишняя зависимость ради пятнадцати строк
 # кода не нужна, а на сервере переменные всё равно приходят из systemd.
-_env_file = BASE_DIR / ".env"
-if _env_file.exists():
-    for _line in _env_file.read_text(encoding="utf-8").splitlines():
-        _line = _line.strip()
-        if not _line or _line.startswith("#") or "=" not in _line:
+def read_env_file(path):
+    """Прочитать .env в словарь.
+
+    Ключ, записанный дважды, берётся по последней строке — так же, как
+    его понимает systemd со своим EnvironmentFile. Совпадение здесь
+    обязательно: файл один, а читают его двое — служба через systemd
+    и команды `manage.py` через этот код. Разойдись они, и получится
+    худшее из возможного: сайт работает с одним значением, а проверка
+    в терминале показывает другое.
+    """
+    values = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
             continue
-        _key, _value = _line.split("=", 1)
-        _value = _value.strip()
+        key, value = line.split("=", 1)
+        value = value.strip()
         # Значение может быть записано в кавычках — так его пишут, когда
         # внутри есть пробелы или угловые скобки. Кавычки при этом
         # относятся к записи, а не к значению.
-        if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in "\"'":
-            _value = _value[1:-1]
-        os.environ.setdefault(_key.strip(), _value)
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        values[key.strip()] = value
+    return values
+
+
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    # setdefault, а не присваивание: настоящие переменные окружения
+    # сильнее файла. Их подставляет systemd, и подменять их файлом
+    # значит получить на бою не то, что задано в юните.
+    for _key, _value in read_env_file(_env_file).items():
+        os.environ.setdefault(_key, _value)
 
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", "django-insecure-dev-only-change-me")

@@ -361,6 +361,7 @@ cd /srv/dades && ./deploy/deploy.sh
 | 400 Bad Request | `DJANGO_ALLOWED_HOSTS` не содержит домен |
 | CSRF verification failed | `DJANGO_CSRF_TRUSTED_ORIGINS` без `https://` или без домена |
 | Нет стилей | Не выполнен `collectstatic` либо нет прав: `sudo chmod o+x /srv /srv/dades` |
+| `SMTPSenderRefused: send AUTH command first` | Пустой `EMAIL_HOST_PASSWORD`: без пароля Django не авторизуется вовсе, а Яндекс без авторизации письмо не примет. Правится существующая строка, а не дописывается вторая: `sed -i 's\|^EMAIL_HOST_PASSWORD=.*\|EMAIL_HOST_PASSWORD=<пароль>\|' .env` |
 | Письма не уходят | Порт и режим шифрования: 465 — SSL, 587 — STARTTLS. Проверить `EMAIL_HOST_PASSWORD` — для Яндекса нужен пароль приложения |
 | Оплата не отмечается | `sudo journalctl -u dades \| grep GetPlatinum`. Если в журнале «подпись не сошлась» — система уже сверилась через `/status`, счёт закроется сам либо по крону `sync_payments` |
 | Миграции падают на правах | `GRANT ALL ON SCHEMA public TO dades;` из пункта 3 |
