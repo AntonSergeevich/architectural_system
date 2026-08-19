@@ -46,6 +46,29 @@ else
     echo "(конфиг не проверяли: нужен пароль — выполните sudo nginx -t)"
 fi
 
+# 503 в браузере при живом приложении — это почти всегда nginx, отбивший
+# запрос по лимиту частоты. В журнале ошибок такая строка выглядит как
+# «limiting requests, excess: ... zone=dades_login», и без неё причину
+# 503 не найти: в журнале самого приложения запроса просто нет.
+line "Отказы nginx по лимиту частоты"
+if sudo -n true 2>/dev/null; then
+    HITS="$(sudo grep -c 'limiting requests' /var/log/nginx/error.log 2>/dev/null || echo 0)"
+    echo "в текущем журнале: $HITS"
+    sudo grep 'limiting requests' /var/log/nginx/error.log 2>/dev/null | tail -3
+else
+    echo "(нужен пароль, выполните:"
+    echo "   sudo grep 'limiting requests' /var/log/nginx/error.log | tail)"
+fi
+
+line "Ответы 5xx и 429 за сегодня"
+if sudo -n true 2>/dev/null; then
+    sudo awk '{print $9}' /var/log/nginx/access.log 2>/dev/null \
+        | grep -E '^(429|5[0-9][0-9])$' | sort | uniq -c | sort -rn | head -5
+    echo "(пусто — значит таких ответов не было)"
+else
+    echo "(нужен пароль: sudo awk '{print \$9}' /var/log/nginx/access.log | grep -E '429|5..' | sort | uniq -c)"
+fi
+
 line "Место на диске"
 df -h / | tail -2
 echo "Медиа: $(du -sh "$ROOT/media" 2>/dev/null | cut -f1)"

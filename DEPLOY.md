@@ -342,12 +342,34 @@ cd /srv/dades && ./deploy/deploy.sh
 | Симптом | Куда смотреть |
 |---|---|
 | 502 Bad Gateway | `sudo journalctl -u dades -n 50` — приложение упало или не стартовало |
+| 503 Service Temporarily Unavailable | Почти всегда nginx отбил запрос по лимиту частоты, а не приложение легло. Проверить: `sudo grep 'limiting requests' /var/log/nginx/error.log \| tail`. Если строки есть — виноват лимит: смотреть, какая зона (`dades_login` или `dades_forms`) |
 | 400 Bad Request | `DJANGO_ALLOWED_HOSTS` не содержит домен |
 | CSRF verification failed | `DJANGO_CSRF_TRUSTED_ORIGINS` без `https://` или без домена |
 | Нет стилей | Не выполнен `collectstatic` либо нет прав: `sudo chmod o+x /srv /srv/dades` |
 | Письма не уходят | Порт и режим шифрования: 465 — SSL, 587 — STARTTLS. Проверить `EMAIL_HOST_PASSWORD` — для Яндекса нужен пароль приложения |
 | Оплата не отмечается | `sudo journalctl -u dades \| grep GetPlatinum`. Если в журнале «подпись не сошлась» — система уже сверилась через `/status`, счёт закроется сам либо по крону `sync_payments` |
 | Миграции падают на правах | `GRANT ALL ON SCHEMA public TO dades;` из пункта 3 |
+
+### Почему 503 приходил заказчику
+
+Ссылка на кабинет открывается человеком, который ещё не вошёл, — Django
+отправляет его на `/accounts/vhod/`. Эта страница стояла под ограничением
+частоты вместе с попытками входа, и при исчерпании лимита nginx отдавал
+голое `503 Service Temporarily Unavailable`. Для заказчика это «сайт лёг»,
+хотя сайт работал.
+
+Лимит теперь считает только POST — то есть сами попытки входа и отправки
+заявки, а не открытие страниц. Смотреть форму не вредно никому, перебор
+паролей идёт запросами POST. Отбитый запрос получает код 429 и русскую
+страницу «Слишком много попыток подряд» вместо английского 503.
+
+Файл страницы — `deploy/_429.html`, он отдаётся прямо из репозитория,
+поэтому после обновления конфига ничего копировать не нужно:
+
+```bash
+sudo cp /srv/dades/deploy/nginx.conf /etc/nginx/sites-available/dades
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 Откат на предыдущую версию:
 
