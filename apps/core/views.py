@@ -187,6 +187,17 @@ def about(request):
     return render(request, "public/about.html", {"press": _press()})
 
 
+def publications(request):
+    """Публикации в изданиях.
+
+    Отдельная страница, но не отдельный пункт меню. Шестая ссылка
+    в шапке размывает первые пять, а публикации — это доказательство,
+    и работает оно там, где человек сомневается: на главной и в «Обо мне».
+    Оттуда сюда и приходят, по обложке.
+    """
+    return render(request, "public/publications.html", {"press": _press()})
+
+
 def services(request):
     return render(request, "public/services.html", _catalog_context())
 

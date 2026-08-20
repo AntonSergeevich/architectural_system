@@ -544,15 +544,46 @@ class PressAndSocialsTests(TestCase):
         call_command("seed_legal", verbosity=0)
 
     def test_press_section_appears_only_when_there_is_press(self):
+        """Пустая «Пресса» говорит громче, чем её отсутствие."""
         from .models import PressMention
 
         body = self.client.get(reverse("public:home")).content.decode()
-        self.assertNotIn("Обо мне пишут", body)
+        self.assertNotIn("Меня зовут писать", body)
 
         PressMention.objects.create(outlet="Красивые дома", title="Квартира с характером")
         body = self.client.get(reverse("public:home")).content.decode()
-        self.assertIn("Обо мне пишут", body)
+        self.assertIn("Меня зовут писать", body)
         self.assertIn("Квартира с характером", body)
+
+    def test_publications_page_shows_the_issue_and_reading(self):
+        """Свой файл надёжнее чужой ссылки: издания переезжают."""
+        from .models import PressMention
+
+        item = PressMention.objects.create(
+            outlet="ДОМ снаружи и внутри",
+            issue="№273, август 2026",
+            title="Как офактурить интерьер",
+            url="https://example.com/dom273",
+        )
+        response = self.client.get(reverse("public:publications"))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn("№273, август 2026", body)
+        self.assertIn("Как офактурить интерьер", body)
+        # Файла нет — читают на сайте издания.
+        self.assertIn("https://example.com/dom273", body)
+        self.assertEqual(item.read_url, "https://example.com/dom273")
+
+    def test_publications_are_not_a_menu_item(self):
+        """Шестая ссылка в шапке размывает первые пять: сюда приходят
+        с главной, по обложке, и из подвала."""
+        from .models import PressMention
+
+        PressMention.objects.create(outlet="ДОМ", title="Как офактурить интерьер")
+        body = self.client.get(reverse("public:home")).content.decode()
+        nav = body[body.index('<nav class="nav"'):body.index("</nav>")]
+        self.assertNotIn(reverse("public:publications"), nav)
+        self.assertIn(reverse("public:publications"), body)
 
     def test_instagram_is_published_with_the_legal_notice(self):
         """Упоминание Instagram без пометки — нарушение, а не мелочь."""

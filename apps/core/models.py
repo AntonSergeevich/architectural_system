@@ -370,12 +370,30 @@ class PressMention(models.Model):
     """
 
     outlet = models.CharField("Издание", max_length=150)
+    issue = models.CharField(
+        "Номер", max_length=80, blank=True, help_text="Как на обложке: «№273, август 2026»"
+    )
     title = models.CharField("Заголовок публикации", max_length=250)
     url = models.URLField("Ссылка", blank=True)
     date = models.DateField("Дата", default=timezone.localdate)
     quote = models.TextField("Цитата", blank=True, help_text="Фрагмент, который стоит показать")
     logo = models.ImageField("Логотип издания", upload_to="press/", blank=True)
-    cover = models.ImageField("Обложка или разворот", upload_to="press/", blank=True)
+    # Обложка — главное здесь. Логотип издания говорит «нас упоминали»,
+    # а обложка бумажного номера говорит «я это держала в руках»: это
+    # разные по силе утверждения, и второе не подделаешь.
+    cover = models.ImageField("Обложка номера", upload_to="press/", blank=True)
+    spread = models.ImageField(
+        "Разворот со статьёй",
+        upload_to="press/",
+        blank=True,
+        help_text="Скан или снимок страницы: видно, что публикация настоящая",
+    )
+    file = models.FileField(
+        "PDF статьи или номера",
+        upload_to="press/pdf/",
+        blank=True,
+        help_text="Чтобы можно было прочитать целиком, не выходя с сайта",
+    )
     is_published = models.BooleanField("Опубликовано", default=True)
     order = models.PositiveSmallIntegerField("Порядок", default=100)
 
@@ -386,6 +404,20 @@ class PressMention(models.Model):
 
     def __str__(self):
         return f"{self.outlet}: {self.title}"
+
+    def get_absolute_url(self):
+        return reverse("public:publications")
+
+    @property
+    def read_url(self):
+        """Куда ведёт «читать»: сначала свой файл, потом чужой сайт.
+
+        Свой PDF надёжнее ссылки: издания переезжают, меняют адреса
+        и закрывают архивы, а публикация должна пережить это.
+        """
+        if self.file:
+            return self.file.url
+        return self.url or ""
 
 
 # --- Три блока работы -------------------------------------------------------

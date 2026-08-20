@@ -94,9 +94,22 @@ class PortfolioProjectAdmin(admin.ModelAdmin):
 
 @admin.register(PressMention)
 class PressMentionAdmin(admin.ModelAdmin):
-    list_display = ("outlet", "title", "date", "is_published", "order")
+    list_display = ("outlet", "issue", "title", "date", "is_published", "order")
     list_editable = ("is_published", "order")
     list_filter = ("outlet",)
+    fieldsets = (
+        ("Публикация", {"fields": ("outlet", "issue", "title", "date", "quote")}),
+        (
+            "Что показать",
+            {
+                "fields": ("cover", "spread", "file", "url", "logo"),
+                "description": "Обложка номера — главное здесь. Логотип издания говорит "
+                "«нас упоминали», обложка — «я держала это в руках». Свой PDF надёжнее "
+                "ссылки: издания переезжают и закрывают архивы",
+            },
+        ),
+        ("Показ", {"fields": ("is_published", "order")}),
+    )
 
 
 @admin.register(Objection)

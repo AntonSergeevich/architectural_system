@@ -15,6 +15,7 @@ urlpatterns = [
     path("voprosy/", views.objections, name="objections"),
     path("portfolio/", views.portfolio, name="portfolio"),
     path("portfolio/<slug:slug>/", views.portfolio_detail, name="portfolio_detail"),
+    path("publikacii/", views.publications, name="publications"),
     path("poleznoe/", views.articles, name="articles"),
     path("poleznoe/<slug:slug>/", views.article, name="article"),
     path("kontakty/", views.contacts, name="contacts"),

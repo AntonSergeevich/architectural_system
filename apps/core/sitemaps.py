@@ -12,6 +12,7 @@ class StaticSitemap(Sitemap):
         return [
             "public:home",
             "public:about",
+            "public:publications",
             "public:services",
             "public:constructor",
             "public:how",

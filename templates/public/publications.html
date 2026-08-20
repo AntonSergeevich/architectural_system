@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Публикации — {{ site.owner_name }}{% endblock %}
+{% block description %}Статьи {{ site.owner_name }} в изданиях о дизайне интерьера.{% endblock %}
+
+{% comment %}
+  Публикации. Чужой голос убеждает не так, как свой: «журнал написал»
+  и «я о себе написала» — разные утверждения.
+
+  Главное здесь — обложка бумажного номера и снимок разворота. Логотип
+  издания говорит «нас упоминали», обложка говорит «я держала это
+  в руках»: второе не подделаешь, и именно оно работает.
+{% endcomment %}
+
+{% block content %}
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="eyebrow">Пресса</p>
+    <h1>Публикации</h1>
+    <p class="lead">
+      Статьи, которые у меня заказывали редакции. Это не реклама и не
+      отзывы: журнал зовёт того, чью работу считает профессиональной,
+      и решение принимает не заказчик, а редактор.
+    </p>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="pubs">
+      {% for item in press %}
+        {% comment %}
+          Раскладка зависит от того, что есть: без обложки колонка под
+          неё не резервируется, иначе текст жмётся в узкую полосу рядом
+          с пустотой.
+        {% endcomment %}
+        <article class="pub{% if not item.cover %} pub--nocover{% endif %}{% if not item.spread %} pub--nospread{% endif %}">
+          {% if item.cover %}
+            <a class="pub__cover" href="{{ item.cover.url }}"
+               data-lightbox="{{ item.outlet }}{% if item.issue %}, {{ item.issue }}{% endif %}"
+               data-gallery="press">
+              <img src="{{ item.cover.url }}" alt="{{ item.outlet }} — обложка" loading="lazy">
+            </a>
+          {% endif %}
+
+          <div class="pub__body">
+            <p class="pub__outlet">
+              {{ item.outlet }}{% if item.issue %} · {{ item.issue }}{% else %} · {{ item.date|date:"F Y" }}{% endif %}
+            </p>
+            <h2 class="pub__title">{{ item.title }}</h2>
+            {% if item.quote %}<blockquote class="pub__quote">{{ item.quote }}</blockquote>{% endif %}
+
+            <div class="pub__actions">
+              {% if item.file %}
+                <a class="btn btn--ghost" href="{{ item.file.url }}" target="_blank" rel="noopener">
+                  Читать статью
+                </a>
+              {% elif item.url %}
+                <a class="btn btn--ghost" href="{{ item.url }}" target="_blank" rel="noopener">
+                  Читать на сайте издания
+                </a>
+              {% endif %}
+              {% if item.spread %}
+                <a class="btn btn--ghost" href="{{ item.spread.url }}"
+                   data-lightbox="{{ item.title }}" data-gallery="press">Посмотреть разворот</a>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if item.spread %}
+            <a class="pub__spread" href="{{ item.spread.url }}"
+               data-lightbox="{{ item.title }}" data-gallery="press">
+              <img src="{{ item.spread.url }}" alt="{{ item.title }} — разворот" loading="lazy">
+            </a>
+          {% endif %}
+        </article>
+      {% empty %}
+        <p class="muted">Публикации появятся здесь.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap wrap--narrow">
+    <p class="lead">Хотите такой же разбор своей квартиры — но не в журнале, а вживую?</p>
+    <p>
+      <a class="btn" href="{% url 'public:constructor' %}">Собрать проект</a>
+      <a class="btn btn--ghost" href="{% url 'public:contacts' %}">Написать мне</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

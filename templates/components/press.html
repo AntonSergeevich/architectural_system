@@ -1,7 +1,13 @@
 {% comment %}
-  Пресса. Чужой голос убеждает не так, как свой: «журнал написал» и
-  «я о себе написала» — разные утверждения. Поэтому раздел стоит отдельно
-  от отзывов и не смешивается с ними.
+  Пресса на главной и в «Обо мне». Чужой голос убеждает не так, как свой:
+  «журнал написал» и «я о себе написала» — разные утверждения. Поэтому
+  раздел стоит отдельно от отзывов и не смешивается с ними.
+
+  Показываем обложки, а не логотипы. Логотип издания говорит «нас
+  упоминали»; обложка бумажного номера говорит «я держала это в руках».
+  Обложка к тому же красивая — на неё нажимают, и так человек попадает
+  на страницу публикаций, которой намеренно нет в меню: шестая ссылка
+  в шапке размывает первые пять.
 
   Если публикаций нет, раздел не выводится вовсе: пустая «Пресса»
   говорит громче, чем её отсутствие.
@@ -10,26 +16,31 @@
 <section class="section section--tight" data-reveal>
   <div class="wrap">
     <p class="eyebrow">Пресса</p>
-    <h2>Обо мне пишут</h2>
+    <h2>Меня зовут писать</h2>
+    <p class="lead">
+      Редакция приглашает того, чью работу считает профессиональной, —
+      и решает это не заказчик, а редактор.
+    </p>
 
-    <div class="press" style="margin-top: var(--gap-6)">
+    <div class="covers" style="margin-top: var(--gap-6)">
       {% for item in press %}
-        {% if item.url %}
-          <a class="press__item" href="{{ item.url }}" target="_blank" rel="noopener">
-        {% else %}
-          <div class="press__item">
-        {% endif %}
-          {% if item.logo %}
-            <img class="press__logo" src="{{ item.logo.url }}" alt="{{ item.outlet }}" loading="lazy">
+        <a class="covers__item" href="{% url 'public:publications' %}">
+          {% if item.cover %}
+            <span class="covers__pic"><img src="{{ item.cover.url }}" alt="{{ item.outlet }}" loading="lazy"></span>
+          {% elif item.logo %}
+            <span class="covers__pic covers__pic--logo"><img src="{{ item.logo.url }}" alt="{{ item.outlet }}" loading="lazy"></span>
           {% else %}
-            <span class="press__outlet">{{ item.outlet }}</span>
+            <span class="covers__pic covers__pic--text">{{ item.outlet }}</span>
           {% endif %}
-          <span class="press__title">{{ item.title }}</span>
-          {% if item.quote %}<span class="press__quote">«{{ item.quote }}»</span>{% endif %}
-          <span class="press__date">{{ item.date|date:"F Y" }}</span>
-        {% if item.url %}</a>{% else %}</div>{% endif %}
+          <span class="covers__outlet">{{ item.outlet }}{% if item.issue %} · {{ item.issue }}{% endif %}</span>
+          <span class="covers__title">{{ item.title }}</span>
+        </a>
       {% endfor %}
     </div>
+
+    <p style="margin-top: var(--gap-5)">
+      <a class="btn btn--ghost" href="{% url 'public:publications' %}">Все публикации</a>
+    </p>
   </div>
 </section>
 {% endif %}

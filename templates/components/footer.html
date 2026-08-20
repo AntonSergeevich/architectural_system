@@ -13,6 +13,7 @@
       <a href="{% url 'public:constructor' %}">Собрать проект</a>
       <a href="{% url 'public:portfolio' %}">Работы</a>
       <a href="{% url 'public:how' %}">Как я работаю</a>
+      <a href="{% url 'public:publications' %}">Публикации</a>
       <a href="{% url 'public:articles' %}">Полезное</a>
       {% if user.is_authenticated %}
         <a href="{% url 'cabinet:home' %}">Мой кабинет</a>
