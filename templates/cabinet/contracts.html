@@ -6,10 +6,14 @@
     <h2>Шаблоны</h2>
     <div class="grid grid--3">
       {% for template in templates %}
-        <a class="card" href="{% url 'cabinet:contract_edit' template.pk %}">
-          <p class="card__title">{{ template.title }}</p>
+        <div class="card">
+          <a class="card__title" href="{% url 'cabinet:contract_edit' template.pk %}">{{ template.title }}</a>
           <p class="card__muted">Редакция {{ template.version }} · пунктов: {{ template.clauses.count }}</p>
-        </a>
+          <p style="margin-top: var(--gap-3)">
+            <a class="btn btn--ghost btn--small" href="{% url 'cabinet:contract_print' template.pk %}"
+               target="_blank">Посмотреть целиком · PDF</a>
+          </p>
+        </div>
       {% endfor %}
     </div>
 

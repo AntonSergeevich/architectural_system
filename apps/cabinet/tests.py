@@ -1248,3 +1248,173 @@ class ProjectStartTests(CabinetTestCase):
         )
         self.assertFalse(Project.objects.filter(client=self.fresh).exists())
         self.assertContains(response, "оставьте что-то одно")
+
+
+class OwnServiceTests(CabinetTestCase):
+    """Своя услуга в прайсе — без разработчика."""
+
+    def test_owner_adds_a_service(self):
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Подбор света отдельно", "block": "extra", "unit": "fixed",
+             "price": "12000", "duration_days": "3"},
+        )
+        module = ServiceModule.objects.get(title="Подбор света отдельно")
+        # Код выдаётся сам: человеку он не нужен ни разу.
+        self.assertTrue(module.code.startswith("S"))
+        self.assertEqual(module.short_title, "Подбор света отдельно")
+        self.assertTrue(module.is_active)
+
+    def test_codes_do_not_collide(self):
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        for title in ("Первая", "Вторая"):
+            self.client.post(
+                reverse("cabinet:price_add"),
+                {"title": title, "block": "extra", "unit": "fixed", "price": "1000",
+                 "duration_days": "0"},
+            )
+        codes = set(ServiceModule.objects.filter(code__startswith="S").values_list("code", flat=True))
+        self.assertEqual(len(codes), 2)
+
+    def test_client_cannot_add_services(self):
+        self.login_client()
+        response = self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Чужая", "block": "extra", "unit": "fixed", "price": "1", "duration_days": "0"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+
+
+class ContractTemplateTests(CabinetTestCase):
+    """Договор: переименовать пункт, добавить, убрать и показать юристу."""
+
+    def setUp(self):
+        from apps.contracts.models import ContractClause
+
+        self.template = ContractTemplate.objects.first()
+        self.clause = self.template.clauses.first() or ContractClause.objects.create(
+            template=self.template, number="1.1", title="Предмет", text="Текст"
+        )
+
+    def _payload(self, **extra):
+        data = {
+            "version": self.template.version,
+            "intro": self.template.intro,
+            "outro": self.template.outro,
+            f"number_{self.clause.pk}": self.clause.number,
+            f"title_{self.clause.pk}": self.clause.title,
+            f"text_{self.clause.pk}": self.clause.text,
+            f"plain_{self.clause.pk}": self.clause.plain_text,
+        }
+        data.update(extra)
+        return data
+
+    def test_clause_can_be_renamed(self):
+        """Живой случай: юрист сказал назвать пункт иначе."""
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:contract_edit", args=[self.template.pk]),
+            self._payload(**{f"title_{self.clause.pk}": "Предмет договора и его границы"}),
+        )
+        self.clause.refresh_from_db()
+        self.assertEqual(self.clause.title, "Предмет договора и его границы")
+
+    def test_clause_can_be_added_and_removed(self):
+        from apps.contracts.models import ContractClause
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:contract_edit", args=[self.template.pk]),
+            self._payload(new_number="9.9", new_title="Новый пункт", new_text="Текст нового пункта"),
+        )
+        added = ContractClause.objects.get(template=self.template, number="9.9")
+        self.assertEqual(added.title, "Новый пункт")
+
+        self.client.post(
+            reverse("cabinet:contract_edit", args=[self.template.pk]),
+            self._payload(**{f"remove_{added.pk}": "1"}),
+        )
+        self.assertFalse(ContractClause.objects.filter(pk=added.pk).exists())
+
+    def test_empty_new_clause_creates_nothing(self):
+        from apps.contracts.models import ContractClause
+
+        before = ContractClause.objects.filter(template=self.template).count()
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:contract_edit", args=[self.template.pk]),
+            self._payload(new_number="", new_title="", new_text="   "),
+        )
+        self.assertEqual(ContractClause.objects.filter(template=self.template).count(), before)
+
+    def test_print_page_is_a_document(self):
+        """Договор одним листом: без меню кабинета и с кнопкой печати."""
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:contract_print", args=[self.template.pk]))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        self.assertIn("window.print()", body)
+        self.assertIn(self.template.title, body)
+        self.assertNotIn('class="cabnav"', body)
+
+    def test_client_cannot_open_the_template(self):
+        self.login_client()
+        response = self.client.get(reverse("cabinet:contract_print", args=[self.template.pk]))
+        self.assertNotEqual(response.status_code, 200)
+
+
+class LeadBoardTests(CabinetTestCase):
+    """Воронка доской: перенос карточки меняет статус и ничего больше."""
+
+    def test_move_changes_status(self):
+        from apps.crm.models import Lead
+
+        self.login_owner()
+        when = self.lead.next_action_at
+        response = self.client.post(
+            reverse("cabinet:lead_move", args=[self.lead.pk]),
+            {"status": Lead.Status.CALL},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, Lead.Status.CALL)
+        # Дата следующего шага — про «когда», а столбец про «где».
+        # Молча сдвигать срок из-за переноса нельзя.
+        self.assertEqual(self.lead.next_action_at, when)
+        self.assertIsNotNone(self.lead.last_touch_at)
+
+    def test_unknown_column_is_refused(self):
+        self.login_owner()
+        before = self.lead.status
+        response = self.client.post(
+            reverse("cabinet:lead_move", args=[self.lead.pk]),
+            {"status": "выдумка"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.status, before)
+
+    def test_board_renders_columns_with_codes(self):
+        """Столбцу нужен код статуса: по нему скрипт и понимает, куда несут."""
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:leads"))
+        body = response.content.decode()
+        self.assertIn('data-column="new"', body)
+        self.assertIn('data-lead="', body)
+        self.assertIn("data-move-url", body)
+
+    def test_client_cannot_move_leads(self):
+        self.login_client()
+        response = self.client.post(
+            reverse("cabinet:lead_move", args=[self.lead.pk]), {"status": "won"}
+        )
+        self.assertNotEqual(response.status_code, 200)

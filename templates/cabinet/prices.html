@@ -1,5 +1,5 @@
 {% extends "cabinet/base_cabinet.html" %}
-{% load richtext %}
+{% load richtext forms %}
 {% block title %}Цены{% endblock %}
 {% block cabinet %}
     <h1>Цены</h1>
@@ -101,6 +101,35 @@
       </div>
       <button class="btn" type="submit">Сохранить</button>
     </form>
+
+    {% comment %}
+      Своя услуга. Каталог заведён под то, как Дарья работает сегодня,
+      но работа меняется: появляется услуга, которой год назад не было.
+      Ждать разработчика ради строки в прайсе — значит не завести её вовсе.
+
+      Форма отдельная, а не внутри общей: там правятся десятки чисел разом,
+      и однажды новая услуга завелась бы просто от нажатия «сохранить».
+    {% endcomment %}
+    <details class="adder" style="margin-top: var(--gap-6)">
+      <summary>Добавить свою услугу</summary>
+      <form class="adder__form" method="post" action="{% url 'cabinet:price_add' %}">
+        {% csrf_token %}
+        <div class="grid grid--3">
+          {% field service_form.title %}
+          {% field service_form.short_title %}
+          {% field service_form.block %}
+          {% field service_form.unit %}
+          {% field service_form.price %}
+          {% field service_form.duration_days %}
+        </div>
+        {% field service_form.description %}
+        <button class="btn" type="submit">Завести услугу</button>
+        <p class="muted">
+          Появится в прайсе и в конструкторе. Код система выдаст сама —
+          он нужен ей, а не вам.
+        </p>
+      </form>
+    </details>
 
     <h2 style="margin-top: var(--gap-7)">Коэффициенты сложности</h2>
     <div class="summary-lines">

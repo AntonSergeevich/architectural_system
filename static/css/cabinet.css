@@ -991,3 +991,81 @@
   .stage__sealed, .stage__sealed-line { transition: none; }
   .stage__sealed-line { transform: scaleX(1); }
 }
+
+/* --- Воронка заявок доской -------------------------------------------------
+   Заявки разбирают пачкой, и каждый заход внутрь карточки ради одного поля
+   «статус» стоит трёх нажатий и потери места в списке. Доска позволяет
+   переносить рукой: мышью — сразу, пальцем — после удержания, потому что
+   тем же движением доска прокручивается.
+
+   Столбцов семь, в экран они не помещаются и не должны: сжатые до
+   нечитаемости колонки хуже прокрутки. */
+
+.board {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr);
+  gap: var(--gap-4);
+  overflow-x: auto; scrollbar-width: thin;
+  padding-bottom: var(--gap-3);
+  min-width: 0;
+}
+.board__col {
+  background: var(--paper-alt); border: 1px solid var(--line);
+  border-radius: var(--radius-2); padding: var(--gap-4);
+  display: grid; gap: var(--gap-3); align-content: start;
+  min-height: 180px;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+.board__head { display: flex; align-items: baseline; gap: var(--gap-2); }
+.board__label { font-weight: 700; font-size: var(--step--1); }
+.board__count { font-size: var(--step--2); color: var(--muted); }
+.board__drop { display: grid; gap: var(--gap-2); align-content: start; min-height: 60px; }
+.board__empty { font-size: var(--step--2); color: var(--muted-2); margin: 0; }
+.board__hint { font-size: var(--step--2); color: var(--muted); margin-top: var(--gap-3); }
+
+/* Столбец под рукой: подсвечен тот, куда упадёт карточка. */
+.board.is-dragging .board__col { background: var(--surface); }
+.board__col.is-target {
+  border-color: var(--brand-400); background: var(--brand-50);
+}
+
+/* Карточка-домик: заявка — это чей-то будущий дом, и выглядеть она должна
+   соответственно. Знак тот же, что в шапке сайта. */
+.house-card {
+  display: flex; gap: var(--gap-3); align-items: flex-start;
+  /* Выделение текста при перетаскивании только мешает: карточку тащат
+     целиком, а не читают по буквам. */
+  user-select: none; -webkit-user-select: none;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-2); padding: var(--gap-3);
+  cursor: grab; touch-action: pan-y;
+  box-shadow: var(--shadow-1);
+}
+.house-card:active { cursor: grabbing; }
+.house-card__mark { flex: none; color: var(--brand-500); margin-top: 2px; }
+.house-card__body { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.house-card__name { font-weight: 600; font-size: var(--step--1); text-decoration: none; }
+.house-card__step {
+  font-size: var(--step--2); color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.house-card__when { font-size: var(--step--2); color: var(--muted); flex: none; }
+.house-card.is-overdue .house-card__when { color: var(--err); font-weight: 700; }
+
+/* Карточка в руке. Летит за курсором поверх всего, слегка повёрнутая —
+   так видно, что она поднята, а не приклеена к столбцу. */
+.house-card--dragging {
+  position: fixed; top: 0; left: 0; z-index: 60;
+  pointer-events: none; box-shadow: var(--shadow-lift);
+  border-color: var(--brand-400);
+}
+.house-card--ghost { opacity: .3; }
+/* Приземление: короткая подсветка, чтобы глаз нашёл карточку в новом
+   столбце. Без неё она просто «оказывается» где-то. */
+.house-card--landed { animation: landed .7s var(--ease); }
+@keyframes landed {
+  0%   { border-color: var(--brand-500); background: var(--brand-50); }
+  100% { border-color: var(--line); background: var(--surface); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .house-card--landed { animation: none; }
+}

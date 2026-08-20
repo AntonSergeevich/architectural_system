@@ -12,6 +12,7 @@ from django import forms
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
+from apps.catalog.models import ServiceModule
 from apps.crm.models import Client, Property
 from apps.projects.models import BudgetChange, Project, ProjectPayment, StageTask
 
@@ -86,6 +87,63 @@ class ClientNotesForm(forms.ModelForm):
         # видите только вы». Повторять это ещё дважды вокруг поля незачем.
         labels = {"notes": ""}
         help_texts = {"notes": ""}
+
+
+class ServiceForm(forms.ModelForm):
+    """Своя услуга в прайсе.
+
+    Каталог заведён под то, как Дарья работает сегодня, но работа
+    меняется: появляется услуга, которой год назад не было. Ждать
+    разработчика ради строки в прайсе — значит не завести её вовсе.
+
+    Кода услуги здесь нет намеренно. Он нужен системе (по нему связаны
+    пресеты и старые КП), но человеку он не нужен ни разу — поэтому
+    выдаётся сам.
+    """
+
+    class Meta:
+        model = ServiceModule
+        fields = ["title", "short_title", "block", "unit", "price", "duration_days", "description"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+        help_texts = {
+            "short_title": "Как подписать блок в конструкторе. Пусто — возьмётся название",
+            "duration_days": "Сколько рабочих дней занимает. Ноль — если не про сроки",
+            "description": "Что входит. Показывается в конструкторе при раскрытии блока",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].required = False
+        self.fields["short_title"].required = False
+
+    def save(self, commit=True):
+        module = super().save(commit=False)
+        if not module.code:
+            module.code = self.next_code()
+        if not module.short_title:
+            module.short_title = module.title[:60]
+        # В конец списка своего блока: новая услуга не должна вклиниваться
+        # между уже привычными строками.
+        last = ServiceModule.objects.filter(block=module.block).order_by("-order").first()
+        module.order = (last.order + 10) if last else 100
+        if commit:
+            module.save()
+        return module
+
+    @staticmethod
+    def next_code():
+        """Свободный код вида S1, S2, S3.
+
+        Буква своя, не пересекается с каталожными A1 и B1: так по коду
+        сразу видно, что услуга заведена руками, а не пришла из семян.
+        """
+        taken = set(
+            ServiceModule.objects.filter(code__startswith="S").values_list("code", flat=True)
+        )
+        n = 1
+        while f"S{n}" in taken:
+            n += 1
+        return f"S{n}"
 
 
 class AccessForm(forms.Form):

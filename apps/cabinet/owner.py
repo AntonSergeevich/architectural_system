@@ -38,6 +38,7 @@ from .forms import (
     ContractUploadForm,
     MessageForm,
     PaymentForm,
+    ServiceForm,
     ProjectForm,
     TaskForm,
 )
@@ -59,7 +60,11 @@ def leads(request):
     # Колонки готовим здесь, а не в шаблоне: словарь по ключу-переменной
     # шаблонный язык не умеет, и обход этого превращается в самодельные фильтры.
     columns = [
-        (label, [lead for lead in qs if lead.status == status])
+        {
+            "status": status,
+            "label": label,
+            "items": [lead for lead in qs if lead.status == status],
+        }
         for status, label in Lead.Status.choices
     ]
     return render(
@@ -78,6 +83,35 @@ def leads(request):
             ),
         },
     )
+
+
+@login_required
+@owner_only
+@require_POST
+def lead_move(request, pk):
+    """Перенести заявку в другой столбец воронки.
+
+    Перетаскивание вместо выпадающего списка не про красоту. Воронку
+    разбирают пачкой — пять заявок подряд, — и каждый переход внутрь
+    карточки ради одного поля стоит трёх нажатий и потери места в списке.
+    Перенос рукой делает то же самое одним движением.
+
+    Дата следующего шага при этом не трогается: она про «когда», а столбец
+    про «где», и молча сдвигать срок из-за переноса нельзя.
+    """
+    lead = get_object_or_404(Lead.objects.select_related("client"), pk=pk)
+    status = request.POST.get("status", "")
+    if status not in dict(Lead.Status.choices):
+        return JsonResponse({"ok": False, "error": "Неизвестный столбец"}, status=400)
+
+    lead.status = status
+    lead.last_touch_at = timezone.now()
+    lead.save(update_fields=["status", "last_touch_at"])
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"ok": True, "status": status, "title": lead.get_status_display()})
+    messages.success(request, f"«{lead.client.name}» — {lead.get_status_display().lower()}.")
+    return redirect("cabinet:leads")
 
 
 @login_required
@@ -1112,8 +1146,34 @@ def prices(request):
             "modules": modules,
             "complexities": ComplexityFactor.objects.all(),
             "pricing": pricing,
+            "service_form": ServiceForm(),
         },
     )
+
+
+@login_required
+@owner_only
+@require_POST
+def price_add(request):
+    """Завести свою услугу.
+
+    Отдельным адресом, а не внутри общей формы цен: там форма правит
+    десятки чисел разом, и подмешивать к ней создание новой строки
+    значит однажды создать услугу, нажав «сохранить» после правки цен.
+    """
+    form = ServiceForm(request.POST)
+    if not form.is_valid():
+        problems = "; ".join(str(e) for errors in form.errors.values() for e in errors)
+        messages.error(request, problems or "Проверьте поля услуги.")
+        return redirect("cabinet:prices")
+
+    module = form.save()
+    messages.success(
+        request,
+        f"Услуга «{module.title}» заведена. Она уже на сайте — "
+        "снимите галочку «На сайте», если показывать пока рано.",
+    )
+    return redirect("cabinet:prices")
 
 
 @login_required
@@ -1133,22 +1193,72 @@ def contracts(request):
 @login_required
 @owner_only
 def contract_edit(request, pk):
-    """Правка шаблона договора и расшифровок «на человеческом языке»."""
+    """Правка шаблона договора: тексты, расшифровки и сами пункты.
+
+    Пункт можно переименовать, перенумеровать, добавить и убрать.
+    Раньше правились только тексты, и это упиралось в живой случай:
+    юрист говорит «назовите пункт иначе» — а назвать иначе нельзя.
+    """
     template = get_object_or_404(ContractTemplate.objects.prefetch_related("clauses"), pk=pk)
     if request.method == "POST":
         template.intro = request.POST.get("intro", template.intro)
         template.outro = request.POST.get("outro", template.outro)
         template.version = request.POST.get("version", template.version)
         template.save()
+
+        removed = 0
         for clause in template.clauses.all():
+            if f"remove_{clause.pk}" in request.POST:
+                clause.delete()
+                removed += 1
+                continue
+            clause.number = request.POST.get(f"number_{clause.pk}", clause.number).strip()
+            clause.title = request.POST.get(f"title_{clause.pk}", clause.title).strip()
             clause.text = request.POST.get(f"text_{clause.pk}", clause.text)
             clause.plain_text = request.POST.get(f"plain_{clause.pk}", clause.plain_text)
             clause.is_important = f"important_{clause.pk}" in request.POST
-            clause.save(update_fields=["text", "plain_text", "is_important"])
-        messages.success(request, "Договор сохранён.")
+            clause.save()
+
+        # Новый пункт добавляется этой же формой: отдельная страница ради
+        # трёх полей — это лишний переход посреди работы с текстом.
+        new_text = (request.POST.get("new_text") or "").strip()
+        if new_text:
+            last = template.clauses.order_by("-order").first()
+            ContractClause.objects.create(
+                template=template,
+                number=(request.POST.get("new_number") or "").strip() or "—",
+                title=(request.POST.get("new_title") or "").strip(),
+                text=new_text,
+                plain_text=(request.POST.get("new_plain") or "").strip(),
+                is_important="new_important" in request.POST,
+                order=(last.order + 10) if last else 100,
+            )
+
+        note = "Договор сохранён."
+        if removed:
+            note += f" Убрано пунктов: {removed}."
+        messages.success(request, note)
         return redirect("cabinet:contract_edit", pk=pk)
 
     return render(request, "cabinet/contract_edit.html", {"template": template, "section": "contracts"})
+
+
+@login_required
+@owner_only
+def contract_print(request, pk):
+    """Договор одним листом — для печати и для юриста.
+
+    Своего генератора PDF здесь нет намеренно: любой браузер умеет
+    «Сохранить как PDF» из окна печати, и это тот же файл, только без
+    лишней библиотеки в проекте и без второй вёрстки, которая
+    разъезжается с первой.
+    """
+    template = get_object_or_404(ContractTemplate.objects.prefetch_related("clauses"), pk=pk)
+    return render(
+        request,
+        "cabinet/contract_print.html",
+        {"template": template, "site": SiteSettings.get()},
+    )
 
 
 @login_required

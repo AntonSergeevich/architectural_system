@@ -19,9 +19,25 @@
         <textarea id="intro" name="intro">{{ template.intro }}</textarea>
       </div>
 
+      {% comment %}
+        Номер и заголовок правятся, как и текст. Случай живой: юрист
+        говорит «назовите пункт иначе» — и переименовать должно быть
+        можно, не заводя разработчика.
+      {% endcomment %}
       {% for clause in template.clauses.all %}
         <div class="clause {% if clause.is_important %}is-important{% endif %}">
-          <p><span class="clause__num">{{ clause.number }}</span> <strong>{{ clause.title }}</strong></p>
+          <div class="adder__row">
+            <div class="field" style="flex: 0 0 110px">
+              <label for="number_{{ clause.pk }}">Номер</label>
+              <input type="text" id="number_{{ clause.pk }}" name="number_{{ clause.pk }}"
+                     value="{{ clause.number }}">
+            </div>
+            <div class="field" style="flex: 1 1 240px">
+              <label for="title_{{ clause.pk }}">Заголовок пункта</label>
+              <input type="text" id="title_{{ clause.pk }}" name="title_{{ clause.pk }}"
+                     value="{{ clause.title }}">
+            </div>
+          </div>
           <div class="field">
             <label for="text_{{ clause.pk }}">Текст пункта</label>
             <textarea id="text_{{ clause.pk }}" name="text_{{ clause.pk }}">{{ clause.text }}</textarea>
@@ -35,15 +51,62 @@
                    {% if clause.is_important %}checked{% endif %}>
             <label for="important_{{ clause.pk }}">Важный — подсветить</label>
           </div>
+          <div class="check">
+            <input type="checkbox" name="remove_{{ clause.pk }}" id="remove_{{ clause.pk }}">
+            <label for="remove_{{ clause.pk }}" class="clause__drop">Убрать пункт при сохранении</label>
+          </div>
         </div>
       {% endfor %}
+
+      {% comment %}
+        Новый пункт добавляется этой же формой: отдельная страница ради
+        трёх полей — лишний переход посреди работы с текстом. Пустой
+        текст ничего не создаёт, поэтому блок можно просто не трогать.
+      {% endcomment %}
+      <details class="adder">
+        <summary>Добавить пункт</summary>
+        <div class="adder__form">
+          <div class="adder__row">
+            <div class="field" style="flex: 0 0 110px">
+              <label for="new_number">Номер</label>
+              <input type="text" id="new_number" name="new_number" placeholder="4.5">
+            </div>
+            <div class="field" style="flex: 1 1 240px">
+              <label for="new_title">Заголовок</label>
+              <input type="text" id="new_title" name="new_title" placeholder="Например: авторский надзор">
+            </div>
+          </div>
+          <div class="field">
+            <label for="new_text">Текст пункта</label>
+            <textarea id="new_text" name="new_text" rows="3"></textarea>
+          </div>
+          <div class="field">
+            <label for="new_plain">На человеческом языке</label>
+            <textarea id="new_plain" name="new_plain" rows="2"></textarea>
+          </div>
+          <div class="check">
+            <input type="checkbox" name="new_important" id="new_important">
+            <label for="new_important">Важный — подсветить</label>
+          </div>
+        </div>
+      </details>
 
       <div class="field" style="margin-top: var(--gap-5)">
         <label for="outro">Заключительная часть</label>
         <textarea id="outro" name="outro">{{ template.outro }}</textarea>
       </div>
 
-      <button class="btn" type="submit">Сохранить</button>
+      <div class="adder__row" style="margin-top: var(--gap-5)">
+        <button class="btn" type="submit">Сохранить</button>
+        <a class="btn btn--ghost" href="{% url 'cabinet:contract_print' template.pk %}" target="_blank">
+          Посмотреть целиком · PDF
+        </a>
+      </div>
+      <p class="muted">
+        «Посмотреть целиком» открывает договор одним листом, как его увидит
+        человек. Оттуда же он печатается и сохраняется в PDF — это и есть
+        файл, который можно отправить юристу.
+      </p>
     </form>
 </div>
 {% endblock %}

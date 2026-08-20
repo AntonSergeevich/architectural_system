@@ -1,4 +1,5 @@
 {% extends "cabinet/base_cabinet.html" %}
+{% load static %}
 {% block title %}Заявки{% endblock %}
 
 {% block cabinet %}
@@ -19,25 +20,59 @@
       </div>
     {% endif %}
 
-    <div class="grid grid--3" style="margin-top: var(--gap-6)">
-      {% for label, items in columns %}
-        <div class="card">
-          <p class="card__title">{{ label }} <span class="card__muted">{{ items|length }}</span></p>
-          <div class="summary-lines">
-            {% for lead in items %}
-              <div class="summary-line">
-                <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
-                <span class="card__muted" {% if lead.is_overdue %}style="color: var(--err)"{% endif %}>
-                  {{ lead.next_action_at|date:"d.m" }}
-                </span>
-              </div>
+    {% comment %}
+      Воронка — доска, а не список. Заявки разбирают пачкой: пять подряд,
+      и каждый переход внутрь карточки ради одного поля «статус» стоит
+      трёх нажатий и потери места в списке. Перенос рукой делает то же
+      самое одним движением.
+
+      Домик на карточке — тот же знак, что в шапке: заявка — это чей-то
+      будущий дом, и выглядеть она должна соответственно.
+
+      Без JavaScript доска остаётся читаемой: карточка — ссылка внутрь,
+      а статус там правится выпадающим списком, как и раньше.
+    {% endcomment %}
+    {% comment %}
+      Адрес переноса — на самой доске, с нулём вместо номера заявки:
+      собирать его в скрипте из кусков значит однажды разойтись
+      с urls.py и узнать об этом от Дарьи.
+    {% endcomment %}
+    <div class="board" data-board data-move-url="{% url 'cabinet:lead_move' 0 %}"
+         style="margin-top: var(--gap-6)">
+      {% for column in columns %}
+        <section class="board__col" data-column="{{ column.status }}">
+          <header class="board__head">
+            <span class="board__label">{{ column.label }}</span>
+            <span class="board__count" data-count>{{ column.items|length }}</span>
+          </header>
+          <div class="board__drop">
+            {% for lead in column.items %}
+              <article class="house-card {% if lead.is_overdue %}is-overdue{% endif %}"
+                       data-lead="{{ lead.pk }}" data-status="{{ column.status }}">
+                <svg class="house-card__mark" viewBox="0 0 120 120" width="22" height="22"
+                     fill="none" stroke="currentColor" stroke-width="8"
+                     stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                  <path d="M60 30 L100 60 V90 Q100 106 84 106 H36 Q20 106 20 90 V60 Z"/>
+                  <path d="M60 30 V14"/>
+                  <rect x="48" y="64" width="24" height="26" rx="6" stroke="none" fill="currentColor"/>
+                </svg>
+                <div class="house-card__body">
+                  <a class="house-card__name" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+                  <span class="house-card__step">{{ lead.next_action }}</span>
+                </div>
+                <span class="house-card__when">{{ lead.next_action_at|date:"d.m" }}</span>
+              </article>
             {% empty %}
-              <p class="card__muted">Пусто</p>
+              <p class="board__empty">Пусто</p>
             {% endfor %}
           </div>
-        </div>
+        </section>
       {% endfor %}
     </div>
+    <p class="board__hint">
+      Карточку можно перетащить в другой столбец — на телефоне нажмите
+      и подержите. Название открывает заявку целиком.
+    </p>
 
     <h2 style="margin-top: var(--gap-7)">Все заявки</h2>
     <div class="table-scroll">
@@ -106,4 +141,8 @@
         </div>
       </details>
     {% endif %}
+{% endblock %}
+
+{% block cabinet_scripts %}
+<script src="{% static 'js/leads.js' %}" defer></script>
 {% endblock %}
