@@ -16,15 +16,28 @@
    элемент во flex со space-between оказывается посреди шапки. */
 .header__inner .nav { margin-left: auto; }
 
-/* Логотип: знак «ДА» плюс подпись. Знак наследует currentColor, поэтому
-   работает в шапке, в подвале и в обеих темах без второго файла. */
+/* Логотип: дом-плод плюс подпись. Знак одноцветный и наследует
+   currentColor, поэтому работает в шапке, в подвале, в обеих темах
+   и на терракотовой плашке без второго файла. */
 .logo {
   display: inline-flex; align-items: center; gap: var(--gap-3);
   text-decoration: none; color: var(--ink); line-height: 1.1;
 }
 .logo__mark { color: var(--brand-500); flex: none; transition: transform .25s var(--ease); }
-.footer .logo__mark { width: 48px; height: 31px; }
+.footer .logo__mark { width: 36px; height: 36px; }
 .logo:hover .logo__mark { transform: translateY(-1px); }
+
+/* Лист на макушке качается при наведении. Знак и без того уходит чуть
+   вверх; лист добавляет к движению живость, которой у ровной фигуры
+   быть не может. */
+.logo__leaf {
+  transform-box: fill-box; transform-origin: left bottom;
+  transition: transform .35s var(--ease);
+}
+.logo:hover .logo__leaf { transform: rotate(-12deg); }
+@media (prefers-reduced-motion: reduce) {
+  .logo__mark, .logo__leaf { transition: none; }
+}
 .logo__text { display: grid; }
 .logo__name {
   font-family: var(--font-display); font-weight: 800;
@@ -209,18 +222,36 @@
 .quick .btn { width: 100%; }
 .quick__note { font-size: var(--step--2); color: var(--muted); margin: var(--gap-4) 0 0; }
 
-/* --- Набросок ------------------------------------------------------------- */
+/* --- Набросок: арка, а в ней комната ---------------------------------------
+   Линии прорисовываются одна за другой — так же, как их рисуют от руки.
+   Растение качается всегда: одно живое место на рисунке делает статичным
+   всё остальное, и это ровно то, что нужно.
+
+   Нажатие включает торшер. Это не украшение ради украшения: человек,
+   который поиграл со страницей десять секунд, уже не «просматривает
+   сайт», а находится в нём. */
 
 .hero__art { color: var(--ink-2); }
 @media (max-width: 979px) { .hero__art { display: none; } }
+
+/* Вся картинка — кнопка: так свет включается откуда угодно, и то же
+   действие достаётся клавиатуре. Кнопке возвращён вид обычной картинки. */
+.art__stage {
+  display: block; width: 100%; padding: 0; border: 0; background: none;
+  font: inherit; color: inherit; cursor: pointer;
+  border-radius: var(--radius-3);
+}
+.art__stage:focus-visible { outline: 2px solid var(--brand-400); outline-offset: 6px; }
+/* Без JS кнопка ничего не делает, поэтому и на кнопку не похожа:
+   курсор обычный, из обхода клавиатурой она исключена в разметке. */
+html:not(.js) .art__stage { cursor: default; }
 
 .art { width: 100%; height: auto; display: block; }
 .art__line { opacity: .55; }
 .art__line--soft { opacity: .3; }
 
-/* Линии прорисовываются одна за другой — так же, как их рисуют от руки.
-   Длина штриха заведомо больше любого пути в рисунке, поэтому один
-   и тот же набор чисел годится для всех. */
+/* Длина штриха заведомо больше любого пути в рисунке, поэтому один
+   и тот же набор чисел годится для всех линий. */
 .js .art__line {
   stroke-dasharray: 1400;
   stroke-dashoffset: 1400;
@@ -229,29 +260,72 @@
 }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
-/* Пар — единственное, что движется постоянно. Он и делает сцену живой. */
-.art__vapor {
-  opacity: 0;
-  stroke: var(--brand-500);
-  transform-origin: center bottom;
-  animation: vapor 3.4s ease-in-out infinite;
-  animation-delay: calc(2s + var(--v) * .55s);
+/* Заливки — арка, солнце, плоды — проявляются, а не рисуются: у пятна
+   нет линии, которую можно вести. */
+.art__arch { fill: var(--brand-500); opacity: 0; animation: arch-in 1.4s var(--ease) .2s forwards; }
+.art__sun  { fill: var(--brand-500); opacity: 0; animation: sun-in 1.2s var(--ease) .5s forwards; }
+.art__fruit, .art__shade {
+  fill: var(--brand-500); opacity: 0;
+  animation: fruit-in 1s var(--ease) .9s forwards;
+  transition: opacity .7s var(--ease), fill .7s var(--ease);
 }
-@keyframes vapor {
-  0%   { opacity: 0; transform: translateY(6px) scaleY(.85); }
-  25%  { opacity: .55; }
-  70%  { opacity: .3; }
-  100% { opacity: 0; transform: translateY(-26px) scaleY(1.15); }
+@keyframes arch-in { to { opacity: .13; } }
+@keyframes sun-in { from { opacity: 0; transform: translateY(10px); } to { opacity: .9; transform: none; } }
+@keyframes fruit-in { to { opacity: 1; } }
+
+/* Растение качается от горшка, а не от середины: ветка гнётся там,
+   где выходит из земли. */
+.art__leaves {
+  transform-box: fill-box; transform-origin: bottom center;
+  animation: sway 7s ease-in-out infinite;
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50%      { transform: rotate(1.6deg); }
 }
 
-/* Мурчание кота — второе живое место на рисунке. Поднимается так же,
-   как пар над чашкой, только вбок: звук идёт от кота, а не из него. */
+/* --- Свет ------------------------------------------------------------------
+   Всё, что меняется при включённом торшере, собрано здесь: абажур
+   загорается, комната теплеет, на свет выходит кот. */
+
+.art__glow {
+  fill: var(--brand-300);
+  opacity: 0;
+  filter: blur(26px);
+  transition: opacity .7s var(--ease);
+}
+.art__stage[aria-pressed="true"] .art__glow { opacity: .45; }
+/* Свет включают, когда за окном темнеет. Солнце не гаснет совсем —
+   оно просто перестаёт быть главным.
+
+   Меняем fill-opacity, а не opacity: opacity уже занят анимацией
+   появления с forwards, и она сильнее любого обычного правила. */
+.art__sun { transition: fill-opacity .8s var(--ease); }
+.art__stage[aria-pressed="true"] .art__sun { fill-opacity: .45; }
+.art__stage[aria-pressed="true"] .art__shade { opacity: 1; fill: var(--brand-400); }
+.art__stage[aria-pressed="true"] .art__line { opacity: .72; }
+.art__stage[aria-pressed="true"] .art__line--soft { opacity: .4; }
+
+/* Кот появляется не сразу: сначала свет, и только потом на него выходят.
+   Одновременно было бы фокусом, а так — маленькой историей. */
+.art__cat {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .5s var(--ease) .45s, transform .5s var(--ease) .45s;
+}
+.art__stage[aria-pressed="true"] .art__cat { opacity: .75; transform: none; }
+.art__whiskers { opacity: .45; }
+
+/* Мурчание — второе живое место на рисунке, и появляется оно вместе
+   с котом. Звук идёт от кота, поэтому поднимается вбок. */
 .art__purr {
   opacity: 0;
   fill: var(--brand-500);
   font-family: var(--font-display); font-weight: 700;
+}
+.art__stage[aria-pressed="true"] .art__purr {
   animation: purr 4.2s ease-in-out infinite;
-  animation-delay: calc(2.4s + var(--p) * 1.4s);
+  animation-delay: calc(1.2s + var(--p) * 1.4s);
 }
 @keyframes purr {
   0%   { opacity: 0; transform: translate(0, 8px); }
@@ -262,8 +336,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .js .art__line { stroke-dashoffset: 0; animation: none; }
-  .art__vapor { opacity: .4; animation: none; }
-  .art__purr { opacity: .45; animation: none; }
+  .art__arch { opacity: .13; animation: none; }
+  .art__sun { opacity: .9; animation: none; }
+  .art__fruit, .art__shade { opacity: 1; animation: none; }
+  .art__leaves { animation: none; }
+  .art__cat { transition: opacity .2s linear; }
+  .art__stage[aria-pressed="true"] .art__purr { animation: none; opacity: .45; }
 }
 
 /* --- Цифры ---------------------------------------------------------------- */
@@ -1205,3 +1283,29 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .condition .muted { font-size: var(--step--2); color: var(--brand-500); }
 .condition__why { font-size: var(--step--2); color: var(--muted); }
 .condition:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); }
+
+/* --- «Такой комнаты в проекте нет» -----------------------------------------
+   Страница 404. Человек попал сюда не по своей вине: ссылка устарела
+   или в адресе потерялась буква. Поэтому здесь не код ошибки крупными
+   цифрами, а три открытые двери — и одна закрытая, которую можно
+   приоткрыть. За ней ничего нет: это единственная честная шутка,
+   которую здесь можно себе позволить. */
+
+.lost { display: grid; gap: var(--gap-6); align-items: center; }
+@media (min-width: 860px) {
+  .lost { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: var(--gap-7); }
+}
+.lost__words { display: grid; gap: var(--gap-4); }
+.lost__doors { display: flex; flex-wrap: wrap; gap: var(--gap-3); }
+.lost__art { width: 100%; max-width: 320px; height: auto; color: var(--ink-2); justify-self: center; }
+.lost__frame { opacity: .45; }
+
+/* Дверь открывается от косяка, а не от середины: петли слева. */
+.lost__door {
+  transform-box: fill-box; transform-origin: left center;
+  transition: transform .6s var(--ease);
+}
+.lost__art:hover .lost__door { transform: perspective(600px) rotateY(-24deg); }
+@media (prefers-reduced-motion: reduce) {
+  .lost__door { transition: none; }
+}

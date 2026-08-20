@@ -185,6 +185,36 @@
     lightbox(links, Math.max(links.indexOf(link), 0));
   });
 
+  // --- Торшер на рисунке ---------------------------------------------------
+  // Нажатие включает свет: загорается абажур, комната теплеет, и на свет
+  // выходит кот. Состояние держится в aria-pressed — оттуда его берут
+  // и стили, и скринридер, так что второго источника правды нет.
+  //
+  // Свет сам гаснет через полминуты. Не ради экономии, а ради второго
+  // раза: погасшая лампа снова приглашает нажать, а горящая навсегда
+  // через минуту становится просто фоном.
+  var stage = document.querySelector('[data-art]');
+  if (stage) {
+    var offTimer = null;
+    // Скрипт есть — значит, нажатие работает, и кнопке место в обходе
+    // клавиатурой.
+    stage.removeAttribute('tabindex');
+
+    stage.addEventListener('click', function () {
+      var lit = stage.getAttribute('aria-pressed') === 'true';
+      stage.setAttribute('aria-pressed', String(!lit));
+      stage.setAttribute('aria-label', lit ? 'Включить торшер на рисунке' : 'Погасить торшер');
+
+      clearTimeout(offTimer);
+      if (!lit) {
+        offTimer = setTimeout(function () {
+          stage.setAttribute('aria-pressed', 'false');
+          stage.setAttribute('aria-label', 'Включить торшер на рисунке');
+        }, 30000);
+      }
+    });
+  }
+
   // --- Куки ---------------------------------------------------------------
   // Форма и без JS работает обычным POST с редиректом. Здесь только убираем
   // перезагрузку страницы, если скрипты доступны.

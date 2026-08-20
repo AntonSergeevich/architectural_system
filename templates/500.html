@@ -1,0 +1,39 @@
+{% comment %}
+  Страница «сломалось у меня». Без наследования от base.html намеренно:
+  если упало приложение, шаблон базы может упасть следом — и человек
+  увидит совсем пустой экран вместо объяснения.
+{% endcomment %}
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ошибка на сайте</title>
+<style>
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: #FAF6F0; color: #23201D; padding: 24px;
+    font: 17px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .box { max-width: 34rem; }
+  h1 { font-size: 30px; letter-spacing: -.03em; margin: 0 0 16px; }
+  p { margin: 0 0 14px; color: #4A443E; }
+  a { color: #B23A2B; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #17150F; color: #F2ECE2; }
+    p { color: #D6CDBF; }
+    a { color: #D96A55; }
+  }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Что-то сломалось на моей стороне</h1>
+    <p>Это не вы. Страница не открылась из-за ошибки на сайте — о ней
+      уже известно, я разберусь.</p>
+    <p>Если это было важно и срочно, напишите мне напрямую:
+      <a href="tel:+79130322908">+7 913 032-29-08</a>.</p>
+    <p><a href="/">Вернуться на главную</a></p>
+  </div>
+</body>
+</html>

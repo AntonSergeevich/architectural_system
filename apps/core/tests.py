@@ -659,3 +659,35 @@ class EnvFileTests(TestCase):
 
         values = read_env_file(self._write("# комментарий\n\nПРОСТО СТРОКА\nA=1\n"))
         self.assertEqual(values, {"A": "1"})
+
+
+class HeroAndLogoTests(TestCase):
+    """Знак, рисунок и страница «не найдено»."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_hero_can_be_switched_on(self):
+        """Картинка — кнопка: свет включается и с клавиатуры тоже."""
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn("data-art", body)
+        self.assertIn('aria-pressed="false"', body)
+        # Без JS кнопка ничего не делает — и в обход клавиатурой не лезет.
+        self.assertIn('tabindex="-1"', body)
+
+    def test_arch_and_cat_are_in_the_picture(self):
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn("art__cat", body)
+        self.assertIn("art__glow", body)
+        self.assertIn("art__leaves", body)
+
+    def test_not_found_page_offers_open_doors(self):
+        """Код ошибки крупными цифрами человеку ничего не даёт."""
+        response = self.client.get("/net-takoy-stranicy/")
+        self.assertEqual(response.status_code, 404)
+        body = response.content.decode()
+        self.assertIn("Такой комнаты в проекте нет", body)
+        self.assertIn(reverse("public:portfolio"), body)
+        self.assertIn(reverse("public:contacts"), body)

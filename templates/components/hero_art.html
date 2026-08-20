@@ -1,100 +1,114 @@
 {% comment %}
-Иллюстрация первого экрана: линейный набросок интерьера.
+Иллюстрация первого экрана: арка, а в ней комната.
 
-Почему набросок, а не фотография. Фотография чужого интерьера обещает
+Почему рисунок, а не фотография. Фотография чужого интерьера обещает
 конкретную картинку, которой у заказчика не будет, — а мы как раз
-и говорим, что дом будет про него, а не про референс. Линия обещает
+говорим, что дом будет про него, а не про референс. Линия обещает
 только атмосферу. Плюс это буквально то, с чего начинается работа
 Дарьи: ручной эскиз.
 
-Линии прорисовываются при загрузке — так же, как их рисуют от руки,
-одну за другой. Пар над чашкой поднимается бесконечно: он и делает
-сцену живой, всё остальное статично.
+Почему арка. Это первое, что человек рисует, когда думает про
+архитектуру, и первое, что делает проём тёплым. Форма перекликается
+со знаком в шапке — сайт читается как одна вещь, а не как набор картинок.
 
-Анимация целиком отключается при prefers-reduced-motion: рисунок
-просто сразу нарисован.
+Линии прорисовываются при загрузке, одна за другой, как их рисуют
+от руки. Растение качается всегда — оно и делает сцену живой.
+
+А ещё картинку можно потрогать: нажатие включает торшер. Загорается
+свет, комната теплеет — и на свет приходит кот. Это не украшение
+ради украшения: человек, который поиграл со страницей десять секунд,
+уже не «просматривает сайт», а находится в нём.
+
+Анимация целиком отключается при prefers-reduced-motion, а сама
+картинка на узких экранах не показывается вовсе.
 {% endcomment %}
-<svg class="art" viewBox="0 0 520 470" fill="none" aria-hidden="true" focusable="false"
-     stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+{% comment %}
+  tabindex="-1" снимается скриптом. Без JS нажатие ничего не включает,
+  и вести к нему клавиатуру значит обещать действие, которого нет.
+{% endcomment %}
+<button class="art__stage" type="button" data-art aria-pressed="false" tabindex="-1"
+        aria-label="Включить торшер на рисунке">
+  <svg class="art" viewBox="0 0 560 470" fill="none" aria-hidden="true" focusable="false"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
-  <g class="art__scene">
-    <path class="art__line" style="--i:0" d="M28 424 H492"/>
-    <path class="art__line" style="--i:1" d="M64 60 H150 V172 H64 Z"/>
-    <path class="art__line art__line--soft" style="--i:2" d="M78 140 L98 108 L114 132 L128 116 L136 140"/>
+    {% comment %} Солнце за аркой — единственное пятно цвета в полную силу. {% endcomment %}
+    <circle class="art__sun" cx="452" cy="140" r="46" stroke="none"/>
 
-    <path class="art__line" style="--i:3" d="M452 424 V186"/>
-    <path class="art__line" style="--i:4" d="M420 186 H484 L470 142 H434 Z"/>
-    <path class="art__line art__line--soft" style="--i:5" d="M436 424 H468"/>
-
-    <path class="art__line" style="--i:6" d="M84 424 L92 372 H132 L140 424"/>
-    <path class="art__line art__line--soft" style="--i:7" d="M112 372 C112 342 96 330 86 322"/>
-    <path class="art__line art__line--soft" style="--i:8" d="M112 372 C112 336 128 320 142 312"/>
-    <path class="art__line art__line--soft" style="--i:9" d="M112 372 C112 350 114 332 112 316"/>
-
-    <path class="art__line" style="--i:10" d="M166 356 V300 Q166 268 198 268 H392 Q424 268 424 300 V356"/>
-    <path class="art__line" style="--i:11" d="M160 300 Q146 300 146 316 V356"/>
-    <path class="art__line" style="--i:12" d="M430 300 Q444 300 444 316 V356"/>
-    <path class="art__line" style="--i:13" d="M146 356 H444 V386 H146 Z"/>
-    <path class="art__line" style="--i:14" d="M160 386 V408"/>
-    <path class="art__line" style="--i:15" d="M430 386 V408"/>
-    <path class="art__line art__line--soft" style="--i:16" d="M292 268 V356"/>
-
-    <path class="art__line" style="--i:17" d="M246 232 Q222 236 220 262 Q218 292 232 316"/>
-    <path class="art__line" style="--i:18" d="M232 316 Q246 336 282 336 Q322 336 340 316"/>
-    <path class="art__line" style="--i:19" d="M340 316 Q356 300 348 288 Q340 278 318 282"/>
-    <path class="art__line" style="--i:20" d="M232 316 Q226 344 240 356"/>
-
-    <path class="art__line" style="--i:21" d="M262 186 Q288 186 292 210 Q296 234 274 240 Q250 244 244 222 Q240 200 262 186 Z"/>
-    <path class="art__line" style="--i:22" d="M256 186 Q252 166 270 162 Q290 158 294 176 Q296 190 284 194"/>
-    <path class="art__line art__line--soft" style="--i:23" d="M288 168 Q306 160 310 174 Q313 186 300 190"/>
-
-    <path class="art__line" style="--i:24" d="M244 246 Q262 266 292 272"/>
-    <path class="art__line" style="--i:25" d="M292 272 H326 V290 Q326 302 309 302 Q292 302 292 290 Z"/>
-    <path class="art__line" style="--i:26" d="M326 276 Q340 278 339 288 Q338 297 327 297"/>
-    <path class="art__line art__line--soft" style="--i:27" d="M286 306 H332"/>
+    {% comment %} Сама арка: мягкая заливка, поверх неё — линия. {% endcomment %}
+    <path class="art__arch" stroke="none"
+          d="M150 424 V226 A130 130 0 0 1 410 226 V424 Z"/>
 
     {% comment %}
-      Лицо. Ради него весь рисунок и держится: без него на диване сидит
-      фигура, а с ним — человек, которому в этой комнате хорошо. Ровно то,
-      что обещает заголовок.
+      Тёплый свет от торшера. Лежит под всей сценой, поэтому не заслоняет
+      линий: свет в комнате падает на предметы, а не поверх них.
     {% endcomment %}
-    <g class="art__face">
-      <path class="art__line" style="--i:28" d="M256 208 q4 -6 8 0"/>
-      <path class="art__line" style="--i:28" d="M275 207 q4 -6 8 0"/>
-      <path class="art__line" style="--i:29" d="M263 219 q6 7 12 -1"/>
-      <path class="art__line art__line--soft" style="--i:30" d="M252 216 q2 3 0 6"/>
-      <path class="art__line art__line--soft" style="--i:30" d="M287 214 q2 3 0 6"/>
+    <ellipse class="art__glow" cx="170" cy="330" rx="150" ry="140" stroke="none"/>
+
+    <g class="art__scene">
+      <path class="art__line" style="--i:0" d="M150 424 V226 A130 130 0 0 1 410 226 V424"/>
+      <path class="art__line" style="--i:1" d="M40 424 H520"/>
+
+      {% comment %} Окно в глубине арки. {% endcomment %}
+      <path class="art__line" style="--i:2" d="M232 168 h96 v120 h-96 z"/>
+      <path class="art__line art__line--soft" style="--i:3" d="M280 168 V288 M232 228 H328"/>
+
+      {% comment %} Кресло — под окном, по центру арки. {% endcomment %}
+      <path class="art__line" style="--i:5" d="M248 424 V392 M352 424 V392"/>
+      <path class="art__line" style="--i:4"
+            d="M240 392 h120 a10 10 0 0 0 10 -10 v-34 a14 14 0 0 0 -14 -14 h-112 a14 14 0 0 0 -14 14 v34 a10 10 0 0 0 10 10 z"/>
+      <path class="art__line" style="--i:6"
+            d="M250 334 v-52 a16 16 0 0 1 16 -16 h68 a16 16 0 0 1 16 16 v52"/>
+    </g>
+
+    {% comment %} Торшер. По нему и нажимают — поэтому он рисуется первым делом. {% endcomment %}
+    <g class="art__lamp">
+      <path class="art__line" style="--i:2" d="M120 424 V300"/>
+      <path class="art__line" style="--i:3" d="M98 424 h44"/>
+      <path class="art__shade" d="M94 300 h52 l-16 -34 h-20 z" stroke="none"/>
+      <path class="art__line" style="--i:4" d="M94 300 h52 l-16 -34 h-20 z"/>
     </g>
 
     {% comment %}
-      Кот у горшка с растением. Он ничего не объясняет и не продаёт —
-      он просто мурлычет, и от этого комната становится обжитой.
-      Звук поднимается так же, как пар над чашкой: это единственные две
-      вещи на рисунке, которые не стоят на месте.
+      Растение. Качается только листва: горшок стоит на полу и качаться
+      ему не с чего.
     {% endcomment %}
-    <g class="art__cat">
-      <path class="art__line" style="--i:29" d="M46 401 C39 410 39 418 41 424 H71 C73 418 73 410 66 401"/>
-      <path class="art__line" style="--i:29" d="M56 379 a11 11 0 1 1 -0.1 0 Z"/>
-      <path class="art__line" style="--i:30" d="M48 383 L45 370 L55.5 379.5"/>
-      <path class="art__line" style="--i:30" d="M64 383 L67 370 L56.5 379.5"/>
-      <path class="art__line" style="--i:31" d="M71 424 C83 424 86 411 78 405 C74 402 70 405 71 409"/>
-      <path class="art__line art__line--soft" style="--i:31" d="M50 424 V413 M62 424 V413"/>
-      <path class="art__line" style="--i:32" d="M51 385 q1.5 2 3 0 M59 385 q1.5 2 3 0"/>
-      <path class="art__line" style="--i:32" d="M53.5 390 h5 l-2.5 2.5 Z"/>
-      <path class="art__line" style="--i:32" d="M56 392.5 v1.5 q-3 3 -5.5 0 M56 394 q3 3 5.5 0"/>
-      <path class="art__line art__line--soft" style="--i:33" d="M44 388 H34 M44 393 H35 M68 388 H78 M68 393 H77"/>
+    <g class="art__plant">
+      <path class="art__line" style="--i:7" d="M410 424 l6 -50 h48 l6 50"/>
+      <g class="art__leaves">
+        <path class="art__line" style="--i:8" d="M440 374 c-4 -44 -18 -60 -36 -70"/>
+        <path class="art__line" style="--i:9" d="M440 374 c4 -52 22 -68 42 -78"/>
+        <circle class="art__fruit" cx="402" cy="296" r="10" stroke="none"/>
+        <circle class="art__fruit" cx="486" cy="288" r="9" stroke="none"/>
+      </g>
     </g>
-  </g>
 
-  <g class="art__steam" stroke-width="1.4">
-    <path class="art__vapor" style="--v:0" d="M302 262 q-9 -16 0 -28 q9 -13 0 -24"/>
-    <path class="art__vapor" style="--v:1" d="M314 264 q-7 -13 0 -22 q7 -10 0 -18"/>
-    <path class="art__vapor" style="--v:2" d="M291 264 q-6 -11 0 -18 q6 -9 0 -15"/>
-  </g>
+    {% comment %}
+      Кот приходит на свет. Он ничего не объясняет и не продаёт — он просто
+      мурлычет, и от этого комната становится обжитой. Пока торшер не горит,
+      кота нет: это и есть награда за нажатие.
+    {% endcomment %}
+    {% comment %}
+      Смещение кота задано внешней группой, а не самим котом: его
+      собственный transform меняется стилями, когда он выходит на свет,
+      и место жительства кота ему доверять нельзя.
+    {% endcomment %}
+    <g transform="translate(120,0)">
+     <g class="art__cat">
+      <path d="M46 401 C39 410 39 418 41 424 H71 C73 418 73 410 66 401"/>
+      <path d="M56 379 a11 11 0 1 1 -0.1 0 Z"/>
+      <path d="M48 383 L45 370 L55.5 379.5"/>
+      <path d="M64 383 L67 370 L56.5 379.5"/>
+      <path d="M71 424 C83 424 86 411 78 405 C74 402 70 405 71 409"/>
+      <path d="M51 385 q1.5 2 3 0 M59 385 q1.5 2 3 0"/>
+      <path d="M53.5 390 h5 l-2.5 2.5 Z"/>
+      <path d="M56 392.5 v1.5 q-3 3 -5.5 0 M56 394 q3 3 5.5 0"/>
+      <path class="art__whiskers" d="M44 388 H34 M44 393 H35 M68 388 H78 M68 393 H77"/>
+     </g>
+    </g>
 
-  <g class="art__purrs" stroke="none" fill="currentColor" aria-hidden="true">
-    <text class="art__purr" style="--p:0" x="24" y="356" font-size="13">мрр-мррр</text>
-    <text class="art__purr" style="--p:1" x="36" y="330" font-size="11">мррр</text>
-    <text class="art__purr" style="--p:2" x="48" y="308" font-size="10">мр</text>
-  </g>
-</svg>
+    <g class="art__purrs" stroke="none">
+      <text class="art__purr" style="--p:0" x="146" y="356" font-size="13">мрр-мррр</text>
+      <text class="art__purr" style="--p:1" x="158" y="330" font-size="11">мррр</text>
+    </g>
+  </svg>
+</button>

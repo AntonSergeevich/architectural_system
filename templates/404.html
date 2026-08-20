@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Такой страницы нет — {{ site.owner_name }}{% endblock %}
+
+{% comment %}
+  Страница «не найдено». Обычно на ней пишут «404» и оставляют человека
+  в тупике — при том, что человек сюда попал не по своей вине: ссылка
+  устарела, адрес переписан, буква потерялась.
+
+  Здесь вместо кода ошибки — дверь, а рядом три двери, которые открыты.
+  Дверь чуть приоткрывается, если на неё навести: за ней ничего нет,
+  и это единственная честная шутка, которую здесь можно себе позволить.
+{% endcomment %}
+
+{% block content %}
+<section class="section">
+  <div class="wrap lost">
+    <div class="lost__words">
+      <p class="eyebrow">Страница 404</p>
+      <h1>Такой комнаты в проекте нет</h1>
+      <p class="lead">
+        Ссылка устарела или в адресе потерялась буква. Ничего не сломалось —
+        просто дверь ведёт в стену. Вот те, что открыты:
+      </p>
+      <div class="lost__doors">
+        <a class="btn" href="{% url 'public:portfolio' %}">Работы</a>
+        <a class="btn btn--ghost" href="{% url 'public:constructor' %}">Собрать проект</a>
+        <a class="btn btn--ghost" href="{% url 'public:contacts' %}">Написать мне</a>
+      </div>
+    </div>
+
+    <svg class="lost__art" viewBox="0 0 260 300" fill="none" aria-hidden="true" focusable="false"
+         stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 276 H240"/>
+      <path class="lost__frame" d="M70 276 V70 a60 60 0 0 1 120 0 V276"/>
+      <g class="lost__door">
+        <path d="M78 276 V72 a52 52 0 0 1 104 0 V276 Z" fill="var(--paper)"/>
+        <circle cx="164" cy="180" r="5" fill="currentColor" stroke="none"/>
+      </g>
+    </svg>
+  </div>
+</section>
+{% endblock %}
