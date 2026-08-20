@@ -35,6 +35,7 @@ from .models import (
     PressMention,
     SiteSettings,
     StageNorm,
+    group_by_block,
 )
 from .utils import working_deadline
 
@@ -191,13 +192,17 @@ def services(request):
 
 
 def how(request):
+    stages = list(StageNorm.objects.all())
     return render(
         request,
         "public/how.html",
         {
-            "stages": StageNorm.objects.all(),
-            "total_days": sum(s.working_days for s in StageNorm.objects.all()),
-            "client_days": sum(s.client_days for s in StageNorm.objects.all()),
+            "stages": stages,
+            # Те же три блока, что и на шкале в кабинете: человек, который
+            # прочитал страницу до заказа, потом узнаёт их в своём проекте.
+            "blocks": group_by_block(stages),
+            "total_days": sum(s.working_days for s in stages),
+            "client_days": sum(s.client_days for s in stages),
         },
     )
 

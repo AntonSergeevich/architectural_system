@@ -680,7 +680,7 @@ class HeroAndLogoTests(TestCase):
     def test_arch_and_cat_are_in_the_picture(self):
         body = self.client.get(reverse("public:home")).content.decode()
         self.assertIn("art__cat", body)
-        self.assertIn("art__glow", body)
+        self.assertIn("art__stage", body)
         self.assertIn("art__leaves", body)
 
     def test_not_found_page_offers_open_doors(self):
@@ -691,3 +691,51 @@ class HeroAndLogoTests(TestCase):
         self.assertIn("Такой комнаты в проекте нет", body)
         self.assertIn(reverse("public:portfolio"), body)
         self.assertIn(reverse("public:contacts"), body)
+
+
+class ProcessBlocksTests(TestCase):
+    """Три блока 30 / 40 / 30 — одни и те же на сайте и в кабинете."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_how_page_shows_three_arches(self):
+        response = self.client.get(reverse("public:how"))
+        blocks = response.context["blocks"]
+        self.assertEqual([b["share"] for b in blocks], [30, 40, 30])
+        self.assertEqual([len(b["stages"]) for b in blocks], [3, 3, 2])
+        for block in blocks:
+            self.assertContains(response, block["title"])
+
+    def test_cabinet_and_site_share_one_definition(self):
+        """Две копии разбивки однажды разъедутся, и стороны увидят разное."""
+        from apps.cabinet import services
+        from apps.core.models import STAGE_BLOCKS
+
+        self.assertIs(services.STAGE_BLOCKS, STAGE_BLOCKS)
+
+    def test_stage_with_unknown_number_lands_in_the_last_block(self):
+        from apps.core.models import StageNorm, group_by_block
+
+        stages = list(StageNorm.objects.all())
+        stages.append(StageNorm(number=42, title="Особый"))
+        blocks = group_by_block(stages)
+        self.assertEqual(sum(len(b["stages"]) for b in blocks), len(stages))
+        self.assertEqual(blocks[-1]["stages"][-1].title, "Особый")
+
+
+class EmptyRoomTests(TestCase):
+    """Пустая комната в конструкторе — ответ на «за что я плачу»."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_constructor_explains_what_stays(self):
+        body = self.client.get(reverse("public:constructor")).content.decode()
+        self.assertIn("house__bare", body)
+        self.assertIn("Пустая комната", body)
+        self.assertIn("кроме пола", body)

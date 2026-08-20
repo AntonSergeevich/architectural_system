@@ -14,6 +14,41 @@
   </div>
 </section>
 
+{% comment %}
+  Три блока перед списком этапов. Восемь пунктов подряд — это подробно,
+  но неохватно: их читают как восемь равных шагов и после третьего решают,
+  что дело стоит. Три арки запоминаются с одного взгляда, а ширина у них
+  честная — ровно те доли, что и в договоре: 30, 40 и 30 процентов.
+
+  Те же блоки заказчик потом видит на шкале в своём кабинете: страница
+  и кабинет должны говорить одно и то же.
+{% endcomment %}
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="arches">
+      {% for block in blocks %}
+        <div class="arch" style="--share: {{ block.share }}">
+          <div class="arch__vault">
+            <span class="arch__share">{{ block.share }}%</span>
+            <span class="arch__title">{{ block.title }}</span>
+          </div>
+          <ol class="arch__stages">
+            {% for stage in block.stages %}
+              <li><span class="arch__num">{{ stage.number }}</span>{{ stage.title }}</li>
+            {% endfor %}
+          </ol>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="arches__note">
+      Проценты — доля блока и во времени, и в деньгах: так же разложена
+      оплата в договоре. Внутри блока этапы идут по порядку, но своих
+      процентов у них нет — подбор материалов бывает и на десять дней,
+      и на месяц, и обещать здесь среднее было бы нечестно.
+    </p>
+  </div>
+</section>
+
 <section class="section section--tight">
   <div class="wrap">
     <div class="steps">

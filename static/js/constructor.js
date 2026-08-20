@@ -159,6 +159,18 @@
     // дом, в который въехали.
     var windows = house.querySelector('.slot[data-part="windows"]');
     if (windows) windows.classList.toggle('has-light', !!filled.windows && !!filled.light);
+
+    // Комната, из которой убрали всё, что можно убрать. Остаётся пол —
+    // обмер, бриф и планировки: без них чертить нечего и мерить нечем.
+    // Показать это важнее, чем показать заполненную комнату: человек
+    // пришёл выяснить, за что платит, и «вот что остаётся» — прямой
+    // ответ на этот вопрос.
+    var optional = 0;
+    selected.forEach(function (id) {
+      var m = byId[id];
+      if (m && !m.required) optional += 1;
+    });
+    house.classList.toggle('is-bare', optional === 0);
   }
 
   // --- Пересчёт -----------------------------------------------------------

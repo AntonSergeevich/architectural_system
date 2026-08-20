@@ -83,7 +83,16 @@
     </div>
   {% endfor %}
 
-  {% comment %} Задачи — то самое «что сейчас должно быть сделано». {% endcomment %}
+  {% comment %}
+    Задачи — то самое «что сейчас должно быть сделано». Когда закрывается
+    последняя, этап на секунду говорит об этом вслух: работа, доведённая
+    до конца, должна быть замечена, иначе список задач превращается
+    в бесконечную ленту, где ничего не заканчивается.
+  {% endcomment %}
+  <p class="stage__sealed" data-sealed hidden>
+    <span class="stage__sealed-line" aria-hidden="true"></span>
+    Этап собран
+  </p>
   <div class="tasks">
     {% for task in stage.tasks.all %}
       <div class="task {% if task.is_done %}is-done{% endif %} task--{{ task.who }}"

@@ -237,10 +237,31 @@
 /* Вся картинка — кнопка: так свет включается откуда угодно, и то же
    действие достаётся клавиатуре. Кнопке возвращён вид обычной картинки. */
 .art__stage {
+  position: relative;
   display: block; width: 100%; padding: 0; border: 0; background: none;
   font: inherit; color: inherit; cursor: pointer;
   border-radius: var(--radius-3);
 }
+
+/* Свет от торшера. Раньше он был пятном внутри картинки — и упирался
+   в её край: снизу и слева появлялись ровные линии обреза, из-за которых
+   рисунок читался как вставленная картинка, а не как часть страницы.
+   Свет рамок не знает, поэтому теперь он фон кнопки и выходит далеко
+   за пределы рисунка: на заголовок, на расчёт, на весь первый экран. */
+.art__stage::before {
+  content: '';
+  position: absolute;
+  /* Пятно вчетверо больше рисунка: край размытия должен остаться
+     за экраном, иначе он снова превратится в границу. */
+  inset: -80% -120%;
+  background: radial-gradient(circle at 33% 60%, var(--glow), transparent 62%);
+  opacity: 0;
+  transition: opacity .9s var(--ease);
+  pointer-events: none;
+}
+.art__stage[aria-pressed="true"]::before { opacity: 1; }
+/* Линии остаются поверх света: свет — это воздух, а не пелена. */
+.art { position: relative; }
 .art__stage:focus-visible { outline: 2px solid var(--brand-400); outline-offset: 6px; }
 /* Без JS кнопка ничего не делает, поэтому и на кнопку не похожа:
    курсор обычный, из обхода клавиатурой она исключена в разметке. */
@@ -288,13 +309,6 @@ html:not(.js) .art__stage { cursor: default; }
    Всё, что меняется при включённом торшере, собрано здесь: абажур
    загорается, комната теплеет, на свет выходит кот. */
 
-.art__glow {
-  fill: var(--brand-300);
-  opacity: 0;
-  filter: blur(26px);
-  transition: opacity .7s var(--ease);
-}
-.art__stage[aria-pressed="true"] .art__glow { opacity: .45; }
 /* Свет включают, когда за окном темнеет. Солнце не гаснет совсем —
    оно просто перестаёт быть главным.
 
@@ -1027,7 +1041,7 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
    Стоять этот блок обязан ПОСЛЕ обычных правил .total: при равной
    силе побеждает последний, и написанный выше он бы просто не работал. */
 @media (max-width: 999px) {
-  .house__note { margin-top: var(--gap-1); }
+.house__note { margin-top: var(--gap-1); }
   .total { padding: var(--gap-2) var(--gap-3); margin-top: var(--gap-2); }
   .total__row { padding: 2px 0; gap: var(--gap-3); }
   .total__label { font-size: var(--step--2); }
@@ -1185,6 +1199,29 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
   opacity: 0; transition: opacity .2s var(--ease);
 }
 .house.is-receiving .house__hint { opacity: 1; }
+/* Комната, из которой убрали всё, что можно убрать. Появляется мягко
+   и не мешает: это ответ на вопрос «за что я плачу», а не ошибка. */
+.house__bare { display: none; }
+/* Подсказка «нажмите, чтобы убрать» пустой комнате уже не нужна —
+   убирать нечего. Она уступает место объяснению, что именно осталось. */
+.house.is-bare ~ .house__note { display: none; }
+.house.is-bare ~ .house__bare {
+  display: block;
+  margin: var(--gap-2) auto 0; max-width: 44ch;
+  padding: var(--gap-3) var(--gap-4);
+  border-radius: var(--radius-2);
+  background: var(--paper-alt); border: 1px solid var(--line);
+  font-size: var(--step--2); color: var(--muted); text-align: center;
+  animation: bare-in .45s var(--ease) both;
+}
+.house__bare strong {
+  display: block; font-size: var(--step--1); color: var(--ink-2); margin-bottom: 2px;
+}
+@keyframes bare-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .house.is-bare ~ .house__bare { animation: none; }
+}
+
 .house__note {
   text-align: center; font-size: var(--step--2); color: var(--muted);
   margin-top: var(--gap-2);
@@ -1308,4 +1345,51 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 .lost__art:hover .lost__door { transform: perspective(600px) rotateY(-24deg); }
 @media (prefers-reduced-motion: reduce) {
   .lost__door { transition: none; }
+}
+
+/* --- Три блока работы ------------------------------------------------------
+   Восемь этапов подряд — подробно, но неохватно: их читают как восемь
+   равных шагов и после третьего решают, что дело стоит. Три арки
+   запоминаются с одного взгляда.
+
+   Ширина у арок честная: она и есть доля. Средний блок шире не потому,
+   что так красивее, а потому что он и правда сорок процентов работы. */
+
+.arches { display: grid; gap: var(--gap-4); }
+@media (min-width: 860px) {
+  /* 30 / 40 / 30 — ровно так, как в договоре. */
+  .arches { grid-template-columns: 30fr 40fr 30fr; gap: var(--gap-5); align-items: start; }
+}
+
+.arch { display: grid; gap: var(--gap-3); }
+/* Свод: полукруг сверху, прямые стены снизу — та же форма, что в знаке
+   и на первом экране. */
+.arch__vault {
+  display: grid; align-content: center; justify-items: center; gap: var(--gap-1);
+  min-height: 132px; padding: var(--gap-5) var(--gap-4) var(--gap-4);
+  border: 2px solid var(--line);
+  border-bottom: none;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(var(--brand-50), transparent 70%);
+  text-align: center;
+}
+.arch__share {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: var(--step-2); letter-spacing: -.03em; color: var(--brand-500);
+}
+.arch__title { font-size: var(--step--1); color: var(--ink-2); font-weight: 600; }
+
+.arch__stages { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap-2); }
+.arch__stages li {
+  display: flex; gap: var(--gap-2); align-items: baseline;
+  font-size: var(--step--1); color: var(--ink-2);
+}
+.arch__num {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--line); color: var(--muted);
+  font-size: var(--step--2); display: inline-grid; place-items: center;
+}
+.arches__note {
+  margin-top: var(--gap-5); font-size: var(--step--1); color: var(--muted);
+  max-width: 70ch;
 }

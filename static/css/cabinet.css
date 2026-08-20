@@ -959,3 +959,35 @@
   font-size: var(--step--2); font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: .08em;
 }
+
+
+/* --- «Этап собран» ---------------------------------------------------------
+   Отбивка в момент, когда закрылась последняя задача этапа. Работа,
+   доведённая до конца, должна быть замечена: без этого список задач
+   читается как лента, в которой ничего никогда не заканчивается.
+
+   Линия и два слова, две с половиной секунды — и всё исчезает.
+   Ни конфетти, ни звука: кабинет — рабочий инструмент, а не игра. */
+
+.stage__sealed {
+  display: flex; align-items: center; gap: var(--gap-3);
+  margin: 0 0 var(--gap-3);
+  font-size: var(--step--1); font-weight: 600; color: var(--brand-500);
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity .35s var(--ease), transform .35s var(--ease);
+}
+.stage__sealed.is-on { opacity: 1; transform: none; }
+
+/* Линия дорисовывается слева направо — как закрывают чертёж. */
+.stage__sealed-line {
+  flex: 1; height: 2px; border-radius: 1px;
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-300));
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform .8s var(--ease) .1s;
+}
+.stage__sealed.is-on .stage__sealed-line { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__sealed, .stage__sealed-line { transition: none; }
+  .stage__sealed-line { transform: scaleX(1); }
+}

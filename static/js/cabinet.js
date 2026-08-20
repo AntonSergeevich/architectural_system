@@ -454,6 +454,34 @@
   // человек закрывает вкладку, и требовать от него ещё и «сохранить»
   // означает терять отметки.
 
+  /* Этап собран: закрылась последняя задача.
+
+     Работа, доведённая до конца, должна быть замечена — иначе список
+     задач читается как лента, в которой ничего никогда не заканчивается.
+     Отбивка короткая и тихая: линия и два слова. Ни конфетти, ни звука:
+     кабинет — рабочий инструмент, а не игра.
+
+     Считаем по разметке, а не по ответу сервера: при отметке карточка
+     не перерисовывается, и это правильно — человек не должен видеть,
+     как под ним прыгает список из-за одной галочки. */
+  function sealIfFinished(card) {
+    if (!card) return;
+    var all = card.querySelectorAll('.task').length;
+    var left = card.querySelectorAll('.task:not(.is-done)').length;
+    if (!all || left) return;
+
+    var mark = card.querySelector('[data-sealed]');
+    if (!mark || !mark.hidden) return;
+    mark.hidden = false;
+    // Класс вешаем следующим кадром: элемент только что был скрыт,
+    // и без этого переход не запустится.
+    requestAnimationFrame(function () { mark.classList.add('is-on'); });
+    setTimeout(function () {
+      mark.classList.remove('is-on');
+      setTimeout(function () { mark.hidden = true; }, 400);
+    }, 2600);
+  }
+
   document.addEventListener('click', function (e) {
     var button = e.target.closest('[data-task-toggle]');
     if (!button || button.disabled) return;
@@ -480,7 +508,12 @@
     fetch(url, { method: 'POST', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (r) { return r.json(); })
       .then(function (payload) {
-        if (payload.ok) return;
+        if (payload.ok) {
+          // Отметку поставили, а не сняли — и если она была последней,
+          // этап на секунду говорит об этом вслух.
+          if (!pressed) sealIfFinished(button.closest('[data-stage]'));
+          return;
+        }
         // Сервер не согласился — возвращаем как было.
         button.setAttribute('aria-pressed', String(pressed));
         if (row) row.classList.toggle('is-done', pressed);
