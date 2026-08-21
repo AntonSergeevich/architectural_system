@@ -24,17 +24,18 @@
   text-decoration: none; color: var(--ink); line-height: 1.1;
 }
 .logo__mark { color: var(--brand-500); flex: none; transition: transform .25s var(--ease); }
-.footer .logo__mark { width: 36px; height: 36px; }
+.footer .logo__mark { width: 38px; height: 40px; }
 .logo:hover .logo__mark { transform: translateY(-1px); }
 
-/* Лист на макушке качается при наведении. Знак и без того уходит чуть
-   вверх; лист добавляет к движению живость, которой у ровной фигуры
-   быть не может. */
+/* Ветка на макушке качается при наведении. Знак и без того уходит чуть
+   вверх; ветка добавляет к движению живость, которой у ровной фигуры
+   быть не может. Качается от черешка, а не от середины: ветка гнётся
+   там, где растёт. */
 .logo__leaf {
-  transform-box: fill-box; transform-origin: left bottom;
+  transform-box: fill-box; transform-origin: 50% 100%;
   transition: transform .35s var(--ease);
 }
-.logo:hover .logo__leaf { transform: rotate(-12deg); }
+.logo:hover .logo__leaf { transform: rotate(-7deg); }
 @media (prefers-reduced-motion: reduce) {
   .logo__mark, .logo__leaf { transition: none; }
 }
