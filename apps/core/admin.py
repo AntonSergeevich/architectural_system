@@ -18,7 +18,22 @@ from .models import (
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
     fieldsets = (
-        ("О себе", {"fields": ("owner_name", "owner_title", "owner_photo", "owner_about")}),
+        (
+            "О себе",
+            {
+                "fields": (
+                    "owner_name",
+                    "owner_title",
+                    "owner_photo",
+                    "owner_intro_title",
+                    "owner_intro",
+                    "owner_about",
+                ),
+                "description": "Всё, что написано о вас на сайте, живёт здесь. "
+                "«Коротко» показывается на главной, «Текст о себе» — на странице "
+                "«Обо мне». Пустое поле означает, что блока на сайте не будет",
+            },
+        ),
         ("Контакты", {"fields": ("phone", "email", "telegram", "whatsapp", "city")}),
         (
             "Соцсети",

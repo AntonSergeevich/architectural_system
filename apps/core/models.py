@@ -15,7 +15,25 @@ class SiteSettings(models.Model):
         "Кто вы", max_length=200, default="архитектор, дизайнер интерьера"
     )
     owner_photo = models.ImageField("Фото", upload_to="site/", blank=True)
-    owner_about = models.TextField("Текст о себе", blank=True)
+
+    # Два текста, а не один: на главной нужен короткий, на странице
+    # «Обо мне» — подробный. Раньше подробный дописывался к зашитому
+    # в шаблон абзацу, и правка в админке не заменяла текст, а удлиняла
+    # его. Теперь в шаблонах нет ни одного слова о Дарье: всё, что
+    # написано на сайте о ней, правится отсюда.
+    owner_intro = models.TextField(
+        "Коротко о себе (главная)",
+        blank=True,
+        help_text="Два-три предложения в блоке «Обо мне» на главной странице",
+    )
+    owner_about = models.TextField(
+        "Текст о себе (страница «Обо мне»)",
+        blank=True,
+        help_text="Полный рассказ. Заменяет текст на странице целиком",
+    )
+    owner_intro_title = models.CharField(
+        "Заголовок блока на главной", max_length=120, blank=True, default="Я не робот"
+    )
 
     phone = models.CharField("Телефон", max_length=32, default="+7 (913) 032-29-08")
     email = models.EmailField("Email", blank=True, default="dark-ost@ya.ru")

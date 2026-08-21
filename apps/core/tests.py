@@ -813,3 +813,55 @@ class PhotoOrderingTests(TestCase):
         first.order = 1
         first.save(update_fields=["order"])
         self.assertEqual(self.project.gallery[0].caption, "Санузел")
+
+
+class OwnerTextTests(TestCase):
+    """Текст о себе правится из админки и заменяет, а не дописывается."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+
+    def test_about_page_shows_only_what_is_written_in_settings(self):
+        from .models import SiteSettings
+
+        site = SiteSettings.get()
+        site.owner_about = "Пятнадцать лет и триста объектов."
+        site.save(update_fields=["owner_about"])
+
+        body = self.client.get(reverse("public:about")).content.decode()
+        self.assertIn("Пятнадцать лет и триста объектов", body)
+        # Ни одного слова из прежней зашитой версии остаться не должно:
+        # именно из-за неё правка в админке удлиняла текст вместо замены.
+        self.assertNotIn("Мои люди — те, кто не сомневается", body)
+        self.assertNotIn("Я выбираю специалистов по человеку", body)
+
+    def test_home_has_its_own_short_text(self):
+        from .models import SiteSettings
+
+        site = SiteSettings.get()
+        site.owner_intro_title = "Коротко"
+        site.owner_intro = "Делаю дома, в которых хочется остаться."
+        site.owner_about = "Длинный рассказ для отдельной страницы."
+        site.save()
+
+        body = self.client.get(reverse("public:home")).content.decode()
+        self.assertIn("Делаю дома, в которых хочется остаться", body)
+        self.assertIn("Коротко", body)
+        # Длинный текст на главную не лезет: у главной свой размер.
+        self.assertNotIn("Длинный рассказ для отдельной страницы", body)
+
+    def test_empty_text_means_no_block(self):
+        from .models import SiteSettings
+
+        site = SiteSettings.get()
+        site.owner_intro = ""
+        site.owner_about = ""
+        site.save(update_fields=["owner_intro", "owner_about"])
+
+        home = self.client.get(reverse("public:home")).content.decode()
+        about = self.client.get(reverse("public:about")).content.decode()
+        self.assertNotIn("Я не робот", home)
+        self.assertNotIn("нельзя собрать по шаблону", home)
+        self.assertNotIn("нельзя собрать по шаблону", about)

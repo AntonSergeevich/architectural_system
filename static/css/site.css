@@ -480,9 +480,13 @@ html:not(.js) .art__stage { cursor: default; }
 /* Мозаика в колонках: кадр сохраняет свои пропорции, и вертикальный
    снимок остаётся вертикальным. Ровная сетка режет всё до одного
    прямоугольника — восемь разных комнат превращаются в каталог плитки. */
-.mosaic { columns: 2; column-gap: var(--gap-4); }
-@media (max-width: 640px) { .mosaic { columns: 1; } }
-@media (min-width: 1400px) { .mosaic { columns: 3; } }
+/* Столбцов всегда несколько, даже на телефоне. У объекта бывает
+   тридцать кадров в разных ракурсах: в один столбик это полчаса
+   прокрутки, а нужного ракурса всё равно не найти. Мелкий кадр здесь
+   не проблема — любой открывается на весь экран одним касанием. */
+.mosaic { columns: 3; column-gap: var(--gap-4); }
+@media (max-width: 900px) { .mosaic { columns: 2; column-gap: var(--gap-3); } }
+@media (min-width: 1400px) { .mosaic { columns: 4; } }
 
 .mosaic__item {
   break-inside: avoid; margin: 0 0 var(--gap-4);
@@ -495,7 +499,14 @@ html:not(.js) .art__stage { cursor: default; }
 }
 .mosaic__item img { width: 100%; height: auto; display: block; transition: transform .5s var(--ease); }
 .mosaic__item a:hover img { transform: scale(1.03); }
-.mosaic__item figcaption { color: var(--muted); font-size: var(--step--2); }
+/* Подписи в мозаике нет: тридцать подписей под тридцатью кадрами
+   превращают галерею в список. Подпись человек видит там, где она
+   и нужна, — когда открыл кадр и рассматривает его. */
+.mosaic__item figcaption {
+  color: var(--muted); font-size: var(--step--2);
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 
 /* Панораму не режем на колонку: она вся про ширину. Главный кадр
    отдельного правила не требует — он просто идёт первым, то есть

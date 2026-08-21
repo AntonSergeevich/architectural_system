@@ -221,14 +221,21 @@
       {% if site.owner_photo %}<img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">{% endif %}
     </div>
     <div>
+      {% comment %}
+        Заголовок и текст — из настроек сайта. На главной нужен короткий
+        рассказ, на странице «Обо мне» — подробный, поэтому и полей два:
+        один текст в двух местах либо длинен для главной, либо короток
+        для страницы.
+      {% endcomment %}
       <p class="eyebrow">Обо мне</p>
-      <h2>Я не робот</h2>
-      <p class="lead">
-        И это осознанный выбор, а не оправдание. Я делаю живую историю,
-        а не копипасту: интерьер, который отражает конкретных людей,
-        нельзя собрать по шаблону.
-      </p>
-      {% if site.owner_about %}<div class="lead">{{ site.owner_about|richtext }}</div>{% endif %}
+      {% comment %}
+        Заголовок показывается только вместе с текстом: заголовок
+        над пустотой — это не «коротко», это недоделка.
+      {% endcomment %}
+      {% if site.owner_intro %}
+        {% if site.owner_intro_title %}<h2>{{ site.owner_intro_title }}</h2>{% endif %}
+        <div class="lead">{{ site.owner_intro|richtext }}</div>
+      {% endif %}
       <div class="hero__actions">
         <a class="btn" href="{% url 'public:contacts' %}">Написать мне</a>
         <a class="btn btn--ghost" href="{% url 'public:about' %}">Подробнее обо мне</a>
