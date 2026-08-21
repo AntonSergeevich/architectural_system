@@ -67,7 +67,7 @@
 
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Код</th><th>Услуга</th><th>Единица</th><th>Цена</th><th>На сайте</th></tr></thead>
+          <thead><tr><th>Код</th><th>Услуга</th><th>Единица</th><th>Цена</th><th>На сайте</th><th></th></tr></thead>
           <tbody>
             {% for module in modules %}
               <tr>
@@ -89,6 +89,12 @@
                 <td>
                   <input type="checkbox" name="active_{{ module.pk }}" {% if module.is_active %}checked{% endif %}>
                 </td>
+                {% comment %}
+                  Правка названия и описания — на своей странице: форма
+                  внутри формы ломается, а таблица цен и есть одна большая
+                  форма.
+                {% endcomment %}
+                <td><a href="{% url 'cabinet:service_edit' module.pk %}">править</a></td>
               </tr>
             {% endfor %}
           </tbody>

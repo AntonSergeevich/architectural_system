@@ -1281,6 +1281,64 @@ class OwnServiceTests(CabinetTestCase):
         codes = set(ServiceModule.objects.filter(code__startswith="S").values_list("code", flat=True))
         self.assertEqual(len(codes), 2)
 
+    def test_service_can_be_edited(self):
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Подбор света", "block": "extra", "unit": "fixed",
+             "price": "12000", "duration_days": "3"},
+        )
+        module = ServiceModule.objects.get(title="Подбор света")
+        self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]),
+            {"title": "Подбор света и сценариев", "short_title": "Свет",
+             "block": "extra", "unit": "fixed", "price": "15000",
+             "duration_days": "4", "description": "Раскладка сценариев по комнатам"},
+        )
+        module.refresh_from_db()
+        self.assertEqual(module.title, "Подбор света и сценариев")
+        self.assertEqual(module.description, "Раскладка сценариев по комнатам")
+        self.assertEqual(module.price, Decimal("15000"))
+
+    def test_service_can_be_deleted(self):
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Разовая консультация", "block": "extra", "unit": "fixed",
+             "price": "5000", "duration_days": "1"},
+        )
+        module = ServiceModule.objects.get(title="Разовая консультация")
+        self.client.post(reverse("cabinet:service_edit", args=[module.pk]), {"remove": "1"})
+        self.assertFalse(ServiceModule.objects.filter(pk=module.pk).exists())
+
+    def test_service_in_a_quote_is_not_deleted(self):
+        """КП хранит то, что видел заказчик: строка оттуда пропасть не может."""
+        from apps.catalog.models import ServiceModule
+        from apps.crm.models import Quote, QuoteItem
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Уже в предложении", "block": "extra", "unit": "fixed",
+             "price": "7000", "duration_days": "1"},
+        )
+        module = ServiceModule.objects.get(title="Уже в предложении")
+        quote = Quote.objects.create(client=self.customer)
+        QuoteItem.objects.create(
+            quote=quote, module=module, title=module.title, unit=module.unit,
+            unit_price=module.price, quantity=1, amount=module.price,
+        )
+
+        response = self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]), {"remove": "1"}, follow=True
+        )
+        self.assertTrue(ServiceModule.objects.filter(pk=module.pk).exists())
+        self.assertContains(response, "удалить нельзя")
+
     def test_client_cannot_add_services(self):
         self.login_client()
         response = self.client.post(

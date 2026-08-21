@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import (
     Article,
@@ -59,9 +60,33 @@ class LegalDocumentAdmin(admin.ModelAdmin):
 
 
 class PortfolioPhotoInline(admin.TabularInline):
+    """Фотографии объекта.
+
+    Порядок задаётся перетаскиванием строк за ручку слева: номерами
+    его задавать можно, но нельзя *смотреть*. Человек раскладывает кадры
+    глазами — «этот после того», — а не считает десятки в голове.
+    Поля с номером остаются на месте: без JavaScript и для точной правки.
+    """
+
     model = PortfolioPhoto
     extra = 3
-    fields = ("image", "caption", "is_cover", "is_wide", "is_before", "order")
+    fields = ("preview", "image", "caption", "is_cover", "is_wide", "is_before", "order")
+    readonly_fields = ("preview",)
+
+    class Media:
+        js = ("js/admin_sort.js",)
+        css = {"all": ("css/admin_sort.css",)}
+
+    @admin.display(description="Кадр")
+    def preview(self, obj):
+        """Миниатюра в строке.
+
+        Без неё перетаскивание бессмысленно: в списке видно имя файла
+        вроде «IMG_4417.jpg», а раскладывают всё-таки картинки.
+        """
+        if not obj.pk or not obj.image:
+            return "—"
+        return format_html('<img src="{}" alt="" class="photo-thumb">', obj.image.url)
 
 
 @admin.register(PortfolioProject)

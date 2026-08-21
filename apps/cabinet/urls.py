@@ -39,6 +39,7 @@ urlpatterns = [
     path("proekty/<int:pk>/dogovor/", owner_views.contract_add, name="contract_add"),
     path("ceny/", owner_views.prices, name="prices"),
     path("ceny/uslugi/", owner_views.price_add, name="price_add"),
+    path("ceny/uslugi/<int:pk>/", owner_views.service_edit, name="service_edit"),
     path("dogovory/", owner_views.contracts, name="contracts"),
     path("dogovory/<int:pk>/", owner_views.contract_edit, name="contract_edit"),
     path("dogovory/<int:pk>/pechat/", owner_views.contract_print, name="contract_print"),

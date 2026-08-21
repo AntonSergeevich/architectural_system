@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Count, Q
+from django.db.models import Count, ProtectedError, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -1173,6 +1173,61 @@ def price_add(request):
         f"Услуга «{module.title}» заведена. Она уже на сайте — "
         "снимите галочку «На сайте», если показывать пока рано.",
     )
+    return redirect("cabinet:prices")
+
+
+@login_required
+@owner_only
+def service_edit(request, pk):
+    """Правка услуги целиком: название, описание, единица, срок.
+
+    Отдельной страницей, а не строкой в общей таблице: там правятся
+    цены разом, и вкладывать форму в форму нельзя — браузер такую
+    разметку молча ломает.
+    """
+    module = get_object_or_404(ServiceModule, pk=pk)
+
+    if request.method == "POST":
+        if request.POST.get("remove"):
+            return _service_remove(request, module)
+
+        form = ServiceForm(request.POST, instance=module)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Услуга «{module.title}» сохранена.")
+            return redirect("cabinet:prices")
+        messages.error(request, "Проверьте поля услуги.")
+    else:
+        form = ServiceForm(instance=module)
+
+    return render(
+        request,
+        "cabinet/service_edit.html",
+        {"section": "prices", "module": module, "form": form},
+    )
+
+
+def _service_remove(request, module):
+    """Удалить услугу — если она никуда не вросла.
+
+    Услуга может стоять в уже выставленном КП, а КП хранит то, что видел
+    заказчик. Удалять её оттуда задним числом нельзя: пропадёт строка
+    из документа, который человек читал и на который согласился.
+    """
+    title = module.title
+    try:
+        module.delete()
+    except ProtectedError:
+        messages.error(
+            request,
+            f"«{title}» стоит в уже выставленных предложениях, удалить нельзя: "
+            "иначе из них пропадёт строка, которую заказчик видел. "
+            "Снимите галочку «На сайте» — услуга исчезнет из конструктора "
+            "и прайса, а старые документы останутся целыми.",
+        )
+        return redirect("cabinet:service_edit", pk=module.pk)
+
+    messages.success(request, f"Услуга «{title}» удалена.")
     return redirect("cabinet:prices")
 
 

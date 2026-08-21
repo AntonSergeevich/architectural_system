@@ -80,10 +80,17 @@ class Client(models.Model):
 
     @property
     def purge_on(self):
-        """Когда карточка исчезнет окончательно."""
+        """Когда карточка исчезнет окончательно.
+
+        Дата берётся по местному времени, а не по UTC. Разница в семь
+        часов означает, что вечером в Красноярске «сегодня» по UTC — это
+        ещё вчера, и карточка, убранная в архив минуту назад, показывала
+        «осталось 29 дней» вместо тридцати.
+        """
         if not self.archived_at:
             return None
-        return (self.archived_at + timezone.timedelta(days=self.ARCHIVE_DAYS)).date()
+        deadline = self.archived_at + timezone.timedelta(days=self.ARCHIVE_DAYS)
+        return timezone.localtime(deadline).date()
 
     @property
     def days_left(self):

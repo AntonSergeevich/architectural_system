@@ -1,0 +1,54 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load forms %}
+{% block title %}{{ module.title }} — услуга{% endblock %}
+
+{% comment %}
+  Правка услуги целиком. Отдельной страницей, а не строкой в общей
+  таблице цен: там правятся десятки чисел разом, и форма внутри формы —
+  разметка, которую браузер молча ломает.
+{% endcomment %}
+
+{% block cabinet %}
+<div class="cabnarrow">
+  <p class="eyebrow">Услуга {{ module.code }}</p>
+  <h1>{{ module.title }}</h1>
+  <p class="lead">
+    Название и описание видит заказчик — в конструкторе и в коммерческом
+    предложении. Единица и цена определяют, как услуга считается.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid grid--2">
+      {% field form.title %}
+      {% field form.short_title %}
+      {% field form.block %}
+      {% field form.unit %}
+      {% field form.price %}
+      {% field form.duration_days %}
+    </div>
+    {% field form.description %}
+    <button class="btn" type="submit">Сохранить</button>
+    <a class="btn btn--ghost" href="{% url 'cabinet:prices' %}">Вернуться к ценам</a>
+  </form>
+
+  {% comment %}
+    Удаление внизу и отдельной формой. Услуга может стоять в выставленных
+    КП — там она и останется: КП хранит то, что видел заказчик, и менять
+    это задним числом нельзя. В таком случае система откажет и предложит
+    просто снять галочку «На сайте».
+  {% endcomment %}
+  <section class="lead__end" style="margin-top: var(--gap-7)">
+    <p class="muted">
+      Если услуга больше не нужна, но стоит в старых предложениях, —
+      снимите «На сайте» в таблице цен: она исчезнет из конструктора
+      и прайса, а документы останутся целыми.
+    </p>
+    <form method="post" data-confirm="Удалить услугу «{{ module.title }}» насовсем?">
+      {% csrf_token %}
+      <input type="hidden" name="remove" value="1">
+      <button class="btn btn--ghost btn--danger" type="submit">Удалить услугу</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

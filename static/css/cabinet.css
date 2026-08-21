@@ -1022,6 +1022,12 @@
 .board__empty { font-size: var(--step--2); color: var(--muted-2); margin: 0; }
 .board__hint { font-size: var(--step--2); color: var(--muted); margin-top: var(--gap-3); }
 
+/* Пока карточка в руке, страница не прокручивается и не тянется
+   за палец: иначе доска уезжает из-под карточки. */
+html.is-moving-lead, html.is-moving-lead body {
+  touch-action: none; overscroll-behavior: none;
+}
+
 /* Столбец под рукой: подсвечен тот, куда упадёт карточка. */
 .board.is-dragging .board__col { background: var(--surface); }
 .board__col.is-target {
@@ -1033,8 +1039,14 @@
 .house-card {
   display: flex; gap: var(--gap-3); align-items: flex-start;
   /* Выделение текста при перетаскивании только мешает: карточку тащат
-     целиком, а не читают по буквам. */
+     целиком, а не читают по буквам.
+
+     -webkit-touch-callout выключает системное меню Safari, которое
+     появляется по долгому нажатию на ссылку: «Открыть», «Открыть
+     в фоновом режиме», «Скопировать». Именно оно и перехватывало
+     захват на планшете — карточку было не сдвинуть вовсе. */
   user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius-2); padding: var(--gap-3);
   cursor: grab; touch-action: pan-y;
@@ -1043,7 +1055,12 @@
 .house-card:active { cursor: grabbing; }
 .house-card__mark { flex: none; color: var(--brand-500); margin-top: 2px; }
 .house-card__body { display: grid; gap: 2px; min-width: 0; flex: 1; }
-.house-card__name { font-weight: 600; font-size: var(--step--1); text-decoration: none; }
+.house-card__name {
+  font-weight: 600; font-size: var(--step--1); text-decoration: none;
+  /* Меню Safari висит на ссылке, поэтому глушить его надо и на ней:
+     запрет на родителе ссылку не накрывает. */
+  -webkit-touch-callout: none;
+}
 .house-card__step {
   font-size: var(--step--2); color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

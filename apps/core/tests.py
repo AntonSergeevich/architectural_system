@@ -14,7 +14,13 @@ from apps.crm.models import Lead
 
 from . import notify, views
 from .forms import LeadForm
-from .models import CookieConsent, LegalDocument, PersonalDataConsent
+from .models import (
+    CookieConsent,
+    LegalDocument,
+    PersonalDataConsent,
+    PortfolioPhoto,
+    PortfolioProject,
+)
 
 
 def stamp(seconds_ago=30):
@@ -770,3 +776,40 @@ class EmptyRoomTests(TestCase):
         self.assertIn("house__bare", body)
         self.assertIn("Пустая комната", body)
         self.assertIn("кроме пола", body)
+
+
+class PhotoOrderingTests(TestCase):
+    """Порядок кадров задаётся перетаскиванием, номера — про запас."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import Role, User
+
+        cls.admin = User.objects.create_superuser(
+            email="root@example.com", password="root-pass-123", role=Role.OWNER
+        )
+        cls.project = PortfolioProject.objects.create(title="Квартира", is_published=True)
+        for i, caption in enumerate(("Кухня", "Спальня", "Санузел"), start=1):
+            PortfolioPhoto.objects.create(
+                project=cls.project, image=f"portfolio/{i}.jpg", caption=caption, order=i * 10
+            )
+
+    def test_admin_page_carries_the_sorter(self):
+        """Без скрипта и миниатюр перетаскивание бессмысленно: в строке
+        видно имя файла вроде «IMG_4417.jpg», а раскладывают картинки."""
+        self.client.force_login(self.admin)
+        body = self.client.get(
+            reverse("admin:core_portfolioproject_change", args=[self.project.pk])
+        ).content.decode()
+        self.assertIn("admin_sort.js", body)
+        self.assertIn("admin_sort.css", body)
+        self.assertIn("photo-thumb", body)
+        # Номера остаются: без JavaScript и для точной правки они
+        # единственный способ.
+        self.assertIn('name="photos-0-order"', body)
+
+    def test_order_decides_the_gallery(self):
+        first = self.project.photos.get(caption="Санузел")
+        first.order = 1
+        first.save(update_fields=["order"])
+        self.assertEqual(self.project.gallery[0].caption, "Санузел")

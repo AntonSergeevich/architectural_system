@@ -23,6 +23,15 @@
      и карточка не двигалась вовсе. */
   board.addEventListener('dragstart', function (e) { e.preventDefault(); });
 
+  /* То же самое на планшете, только хуже: по долгому нажатию Safari
+     показывает своё меню ссылки — «Открыть», «Открыть в фоновом режиме»,
+     «Скопировать», — и карточку становится не сдвинуть. Меню выключено
+     стилями (-webkit-touch-callout), а здесь глушится его брат —
+     контекстное меню по долгому нажатию. */
+  board.addEventListener('contextmenu', function (e) {
+    if (e.target.closest('[data-lead]')) e.preventDefault();
+  });
+
   var HOLD_MS = 260;          // столько палец держит карточку, прежде чем взять
   var MOVE_TOLERANCE = 8;     // сдвиг раньше срока считается прокруткой
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -57,6 +66,14 @@
 
   var drag = null;
   var pending = null;
+  var suppressClick = false;
+
+  document.addEventListener('click', function (e) {
+    if (!suppressClick) return;
+    if (!e.target.closest('[data-lead]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
 
   document.addEventListener('pointerdown', function (e) {
     var card = e.target.closest('[data-lead]');
@@ -104,6 +121,9 @@
     document.body.appendChild(clone);
     card.classList.add('house-card--ghost');
     board.classList.add('is-dragging');
+    // Пока карточка в руке, страница не прокручивается: иначе доска
+    // уезжает из-под пальца вместе с карточкой.
+    document.documentElement.classList.add('is-moving-lead');
 
     // Тактильное подтверждение захвата: палец закрывает карточку,
     // и одного визуального сигнала мало.
@@ -118,7 +138,15 @@
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onCancel);
+    // Прокрутку на планшете глушим не только стилями, но и здесь.
+    // Стиль touch-action читается в момент касания, а карточку берут
+    // позже, после удержания, — и на уже начатое движение он не влияет.
+    window.addEventListener('touchmove', blockScroll, { passive: false });
     move(x, y);
+  }
+
+  function blockScroll(e) {
+    if (drag && e.cancelable) e.preventDefault();
   }
 
   function move(x, y) {
@@ -139,6 +167,7 @@
   function onMove(e) {
     if (!drag) return;
     e.preventDefault();
+    drag.moved = true;
     move(e.clientX, e.clientY);
 
     var found = null;
@@ -164,10 +193,12 @@
     drag.clone.remove();
     drag.card.classList.remove('house-card--ghost');
     board.classList.remove('is-dragging');
+    document.documentElement.classList.remove('is-moving-lead');
     drag.cols.forEach(function (col) { col.el.classList.remove('is-target'); });
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
+    window.removeEventListener('touchmove', blockScroll);
     drag = null;
   }
 
@@ -177,7 +208,15 @@
     if (!drag) return;
     var card = drag.card;
     var target = drag.target;
+    var moved = drag.moved;
     cleanup();
+
+    // Палец отпустили на имени заказчика — браузер уже собрался открыть
+    // заявку. После переноса это не то, чего человек хотел.
+    if (moved) {
+      suppressClick = true;
+      setTimeout(function () { suppressClick = false; }, 400);
+    }
     if (!target || target.status === card.dataset.status) return;
 
     var from = card.closest('[data-column]');
