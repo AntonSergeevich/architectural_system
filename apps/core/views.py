@@ -167,13 +167,29 @@ def _press():
     return PressMention.objects.filter(is_published=True)
 
 
+def _featured_projects(published, limit=4):
+    """Работы для главной.
+
+    Галочка «На главную» задаёт порядок, а не ограничивает витрину:
+    отмеченные идут первыми, свободные места добираются последними
+    опубликованными. Иначе получается то, что и получилось — Дарья
+    завела три объекта, отметила один, и на главной остался один,
+    хотя в «Работах» их три.
+    """
+    chosen = list(published.filter(is_featured=True)[:limit])
+    if len(chosen) < limit:
+        taken = [p.pk for p in chosen]
+        chosen += list(published.exclude(pk__in=taken)[: limit - len(chosen)])
+    return chosen
+
+
 def home(request):
     published = PortfolioProject.objects.filter(is_published=True)
     return render(
         request,
         "public/home.html",
         {
-            "featured": published.filter(is_featured=True)[:4],
+            "featured": _featured_projects(published),
             "presets": Preset.objects.filter(is_active=True).prefetch_related("modules"),
             "objections": Objection.objects.filter(is_published=True)[:3],
             "hero_pricing": _hero_pricing(),

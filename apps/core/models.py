@@ -259,7 +259,13 @@ class PortfolioProject(models.Model):
     )
 
     is_published = models.BooleanField("Опубликован", default=False)
-    is_featured = models.BooleanField("На главную", default=False)
+    is_featured = models.BooleanField(
+        "На главную первым",
+        default=False,
+        help_text="Галочка поднимает объект в начало витрины на главной. "
+        "Свободные места добираются последними опубликованными — "
+        "главная не пустеет, даже если ничего не отмечено",
+    )
     order = models.PositiveSmallIntegerField("Порядок", default=100)
     created_at = models.DateTimeField(auto_now_add=True)
 

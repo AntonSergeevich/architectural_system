@@ -2,20 +2,21 @@
 <div class="accordion__item">
   <button class="accordion__head" type="button">
     {{ module.title }}
-    <span class="block__price">
-      {% if module.unit == 'custom' %}по расчёту
-      {% elif module.unit == 'sqm' %}{{ module.price|money }}/м²
-      {% elif module.unit == 'month' %}{{ module.price|money }}/мес
-      {% elif module.unit == 'stage' %}{{ module.price|money }}/этап
-      {% elif module.unit == 'visit' %}{{ module.price|money }}/выезд
-      {% elif module.unit == 'hours' %}{{ module.price|money }} за {{ module.included_units|floatformat:"-1" }} ч, далее +{{ module.extra_unit_price|money }}/ч
-      {% else %}{{ module.price|money }}{% endif %}
-    </span>
+    {% comment %}
+      Цена пишется одним шаблоном на весь сайт. Раньше здесь была своя
+      копия правил, и она успела разойтись с общей: ноль показывался
+      как «0 ₽/м²» — то есть как «бесплатно и потому подозрительно», —
+      хотя означает «уже посчитано в другом блоке».
+    {% endcomment %}
+    <span class="block__price">{% include "components/module_price.html" %}</span>
   </button>
   <div class="accordion__body">
     {% if module.description %}<p>{{ module.description }}</p>{% endif %}
     {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
     {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days }} рабочих дней</p>{% endif %}
+    {% if module.unit == 'hours' and module.extra_unit_price %}
+      <p><strong>Сверх пакета:</strong> {{ module.extra_unit_price|money }} за час</p>
+    {% endif %}
     {% if module.not_included %}<p><strong>Что не входит:</strong> {{ module.not_included }}</p>{% endif %}
     {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning }}</p>{% endif %}
   </div>

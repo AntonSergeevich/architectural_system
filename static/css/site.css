@@ -252,10 +252,12 @@
 .art__stage::before {
   content: '';
   position: absolute;
-  /* Пятно вчетверо больше рисунка: край размытия должен остаться
-     за экраном, иначе он снова превратится в границу. */
   inset: -80% -120%;
-  background: radial-gradient(circle at 33% 60%, var(--glow), transparent 62%);
+  /* Радиус задан явно, а не «до дальнего угла»: без него пятно
+     дотягивалось до левого края экрана и там обрывалось — ровная
+     граница света читалась как конец блока. Теперь свет гаснет
+     заметно раньше края. */
+  background: radial-gradient(circle 42vw at 36% 58%, var(--glow), transparent 72%);
   opacity: 0;
   transition: opacity .9s var(--ease);
   pointer-events: none;
@@ -310,13 +312,29 @@ html:not(.js) .art__stage { cursor: default; }
    Всё, что меняется при включённом торшере, собрано здесь: абажур
    загорается, комната теплеет, на свет выходит кот. */
 
-/* Свет включают, когда за окном темнеет. Солнце не гаснет совсем —
-   оно просто перестаёт быть главным.
+/* Свет включают, когда за окном темнеет: солнце уходит, вместо него
+   встаёт месяц и высыпают звёзды. Лампа, горящая среди белого дня, —
+   это не уют, это забытый выключатель.
 
    Меняем fill-opacity, а не opacity: opacity уже занят анимацией
    появления с forwards, и она сильнее любого обычного правила. */
 .art__sun { transition: fill-opacity .8s var(--ease); }
-.art__stage[aria-pressed="true"] .art__sun { fill-opacity: .45; }
+.art__stage[aria-pressed="true"] .art__sun { fill-opacity: 0; }
+
+.art__night { opacity: 0; transition: opacity .8s var(--ease) .1s; }
+.art__stage[aria-pressed="true"] .art__night { opacity: 1; }
+.art__moon { fill: var(--brand-500); }
+.art__star { fill: var(--brand-400); }
+/* Звёзды мерцают вразнобой — иначе это гирлянда, а не небо. */
+.art__stage[aria-pressed="true"] .art__star {
+  animation: twinkle 3.6s ease-in-out infinite;
+  animation-delay: calc(.4s + var(--s) * .7s);
+}
+@keyframes twinkle {
+  0%, 100% { opacity: .45; transform: scale(.9); }
+  50%      { opacity: 1; transform: scale(1.08); }
+}
+.art__star { transform-box: fill-box; transform-origin: center; }
 .art__stage[aria-pressed="true"] .art__shade { opacity: 1; fill: var(--brand-400); }
 .art__stage[aria-pressed="true"] .art__line { opacity: .72; }
 .art__stage[aria-pressed="true"] .art__line--soft { opacity: .4; }
@@ -353,6 +371,7 @@ html:not(.js) .art__stage { cursor: default; }
   .js .art__line { stroke-dashoffset: 0; animation: none; }
   .art__arch { opacity: .13; animation: none; }
   .art__sun { opacity: .9; animation: none; }
+  .art__stage[aria-pressed="true"] .art__star { animation: none; opacity: .9; }
   .art__fruit, .art__shade { opacity: 1; animation: none; }
   .art__leaves { animation: none; }
   .art__cat { transition: opacity .2s linear; }
@@ -638,12 +657,34 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
 
 .accordion { border-top: 1px solid var(--line); }
 .accordion__item { border-bottom: 1px solid var(--line); }
+/* Строка услуги: название, цена, плюс. Колонки заданы жёстко, а не
+   растяжкой по краям: при растяжке цена начинается там, где кончилось
+   название, и в списке из семи услуг цены стоят семью разными уступами.
+   Прайс читают глазами сверху вниз — значит, цены должны стоять
+   в столбик. */
 .accordion__head {
-  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: var(--gap-4);
+  width: 100%;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15ch) 1.1em;
+  align-items: baseline; gap: var(--gap-4);
   background: none; border: 0; padding: var(--gap-5) 0; cursor: pointer;
   font: inherit; font-weight: 700; font-size: var(--step-1); color: var(--ink); text-align: left;
 }
-.accordion__head::after { content: "+"; font-size: var(--step-2); color: var(--brand-500); flex: none; }
+.accordion__head .block__price { text-align: right; white-space: normal; }
+.accordion__head::after {
+  content: "+"; font-size: var(--step-2); color: var(--brand-500);
+  justify-self: end; line-height: 1;
+}
+
+/* На узком экране цена уходит под название: пятнадцать знаков цены
+   и длинное название в одну строку не помещаются, а сжимать название
+   до многоточия — терять смысл. */
+@media (max-width: 600px) {
+  .accordion__head { grid-template-columns: minmax(0, 1fr) 1.1em; }
+  .accordion__head .block__price {
+    grid-column: 1; grid-row: 2; text-align: left;
+    font-weight: 600; margin-top: var(--gap-1);
+  }
+}
 .accordion__item.is-open .accordion__head::after { content: "−"; }
 .accordion__body { padding-bottom: var(--gap-5); max-width: 70ch; color: var(--ink-2); }
 .accordion__body[hidden] { display: none; }
@@ -924,7 +965,9 @@ a.press__item:hover { border-color: var(--brand-300); transform: translateY(-2px
    визуализация: это единственная часть проекта, которую заказчик видит
    буквально глазами. */
 .slot[data-part="windows"] {
-  left: 57%; top: 40%; width: 13%; height: 12%;
+  /* Окно посреди стены, а не под самым потолком: под потолком оно
+     читается как форточка и ломает масштаб комнаты. */
+  left: 57%; top: 47%; width: 13%; height: 12%;
   --iso: skewY(26.57deg);
   transform-origin: 0 0;
   z-index: 5;

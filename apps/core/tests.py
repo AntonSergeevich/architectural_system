@@ -865,3 +865,35 @@ class OwnerTextTests(TestCase):
         self.assertNotIn("Я не робот", home)
         self.assertNotIn("нельзя собрать по шаблону", home)
         self.assertNotIn("нельзя собрать по шаблону", about)
+
+
+class HomeShowcaseTests(TestCase):
+    """Витрина на главной не пустеет из-за неотмеченной галочки."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+        call_command("seed_legal", verbosity=0)
+        for i in range(3):
+            PortfolioProject.objects.create(
+                title=f"Объект {i + 1}", is_published=True, is_featured=(i == 0), order=i
+            )
+
+    def test_all_published_reach_the_home_page(self):
+        response = self.client.get(reverse("public:home"))
+        titles = [p.title for p in response.context["featured"]]
+        self.assertEqual(len(titles), 3)
+        # Отмеченный — первым: галочка задаёт порядок, а не право быть.
+        self.assertEqual(titles[0], "Объект 1")
+
+    def test_unpublished_stays_hidden(self):
+        PortfolioProject.objects.create(title="Черновик", is_published=False)
+        response = self.client.get(reverse("public:home"))
+        titles = [p.title for p in response.context["featured"]]
+        self.assertNotIn("Черновик", titles)
+
+    def test_no_more_than_four(self):
+        for i in range(4, 9):
+            PortfolioProject.objects.create(title=f"Объект {i}", is_published=True)
+        response = self.client.get(reverse("public:home"))
+        self.assertEqual(len(response.context["featured"]), 4)

@@ -31,8 +31,25 @@
   <svg class="art" viewBox="0 0 560 470" fill="none" aria-hidden="true" focusable="false"
        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 
-    {% comment %} Солнце за аркой — единственное пятно цвета в полную силу. {% endcomment %}
+    {% comment %}
+      Солнце за аркой — единственное пятно цвета в полную силу. Когда
+      включают торшер, оно уступает место месяцу и звёздам: свет в комнате
+      зажигают вечером, и небо за окном обязано это подтверждать.
+      Иначе получается лампа, горящая среди белого дня.
+    {% endcomment %}
     <circle class="art__sun" cx="452" cy="140" r="46" stroke="none"/>
+
+    <g class="art__night" stroke="none">
+      {% comment %} Месяц ровно там же, где было солнце. {% endcomment %}
+      <path class="art__moon"
+            d="M470 100 a46 46 0 1 0 22 74 a37 37 0 1 1 -22 -74 Z"/>
+      {% comment %} Звёзды — в пустом небе над аркой, где ничего не мешает. {% endcomment %}
+      <path class="art__star" style="--s:0" d="M300 74 l3.5 9 9 3.5 -9 3.5 -3.5 9 -3.5 -9 -9 -3.5 9 -3.5 Z"/>
+      <path class="art__star" style="--s:1" d="M372 40 l3 7.5 7.5 3 -7.5 3 -3 7.5 -3 -7.5 -7.5 -3 7.5 -3 Z"/>
+      <path class="art__star" style="--s:2" d="M212 116 l2.6 6.5 6.5 2.6 -6.5 2.6 -2.6 6.5 -2.6 -6.5 -6.5 -2.6 6.5 -2.6 Z"/>
+      <path class="art__star" style="--s:3" d="M508 48 l2.6 6.5 6.5 2.6 -6.5 2.6 -2.6 6.5 -2.6 -6.5 -6.5 -2.6 6.5 -2.6 Z"/>
+      <path class="art__star" style="--s:4" d="M258 44 l2.2 5.5 5.5 2.2 -5.5 2.2 -2.2 5.5 -2.2 -5.5 -5.5 -2.2 5.5 -2.2 Z"/>
+    </g>
 
     {% comment %} Сама арка: мягкая заливка, поверх неё — линия. {% endcomment %}
     <path class="art__arch" stroke="none"
