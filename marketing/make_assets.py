@@ -204,6 +204,31 @@ def counter(draw, i, total, y=1790, fill=(255, 255, 255, 200), on_dark=True):
     draw_tracked(draw, (88, y), f"{i} / {total}", font(T_MED, 26), c, tracking=4)
 
 
+# --- Ссылки -----------------------------------------------------------------
+
+SITE = "s-poryadok.ru"          # мой сайт
+DARYA = "da-des.ru"             # система, про которую кейс
+
+
+def link_band(d, y, url, caption, width=None, fill=BRAND, ink=PAPER, sub=(244, 214, 208)):
+    """Плашка со ссылкой. Домен крупно, зачем идти — мелко под ним.
+
+    Ссылка без объяснения не нажимается: человек не знает, что его там ждёт,
+    и на всякий случай не идёт никуда.
+    """
+    w = width or (1080 - 2 * M)
+    d.rectangle([M, y, M + w, y + 116], fill=fill)
+    draw_tracked(d, (M + 40, y + 24), url, font(T_SEMI, 38), ink, tracking=0.5)
+    draw_tracked(d, (M + 40, y + 74), caption, font(T_REG, 27), sub, tracking=1)
+    return y + 116
+
+
+def warm_bw(im, tone=(252, 246, 238), strength=0.10):
+    """Чёрно-белый кадр рядом с тёплой бумагой выглядит холодным осколком.
+    Лёгкий тёплый тон возвращает его в палитру, не превращая в сепию."""
+    return Image.blend(im.convert("L").convert("RGB"), Image.new("RGB", im.size, tone), strength)
+
+
 # ===========================================================================
 #  СТОРИС — серия «Лето» про систему Дарьи
 # ===========================================================================
@@ -212,7 +237,7 @@ M = 88  # поле
 
 
 def photo_panel(photo, focus, zoom, panel_top, size=STORY, bg=PAPER,
-                warmth=1.045, contrast=1.10, sat=0.90):
+                warmth=1.045, contrast=1.10, sat=0.90, bw=False):
     """Кадр сверху, бумажная панель снизу.
 
     Белый текст поверх фотографии — лотерея: на белой футболке он исчезает.
@@ -221,8 +246,8 @@ def photo_panel(photo, focus, zoom, panel_top, size=STORY, bg=PAPER,
     """
     im = paper(size, bg)
     ph = cover(photo, (size[0], panel_top), focus=focus, zoom=zoom)
-    ph = grade(ph, warmth=warmth, contrast=contrast, sat=sat)
-    ph = top_scrim(ph, strength=0.34, depth=0.22)
+    ph = warm_bw(ph) if bw else grade(ph, warmth=warmth, contrast=contrast, sat=sat)
+    ph = top_scrim(ph, strength=0.30 if bw else 0.34, depth=0.22)
     im.paste(ph, (0, 0))
     d = ImageDraw.Draw(im)
     d.rectangle([0, panel_top, size[0], panel_top + 12], fill=BRAND)
@@ -237,42 +262,42 @@ def story_01_hero():
 
     y = 1348
     y = block(d, "Я всё лето\nне только отдыхал.", font(D_BOLD, 88),
-              (M, y, 1080 - 2 * M), INK, leading=1.08, tracking=-2.5)
+              (M, y, 1080 - 2 * M), INK, leading=1.08, tracking=-2.5, tag="s1-h")
     y += 30
     rule(d, M, y, 96, BRAND, h=5)
     y += 44
-    block(d, "Я собирал систему, которая продаёт вместо\nархитектора. И считает деньги, которые\nон раньше терял, даже не зная об этом.",
-          font(T_REG, 35), (M, y, 1080 - 2 * M), INK_2, leading=1.44)
+    block(d, "Я собирал систему, которая продаёт вместо\nархитектора. И перестаёт терять деньги там,\nгде она о них даже не думала.",
+          font(T_REG, 35), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="s1-t")
 
     draw_tracked(d, (M, 1836), "дальше — как это работает", font(T_MED, 27),
                  MUTED, tracking=3)
     save(im, "story-01-hero.jpg")
 
 
-def story_02_number():
+def story_02_vopros():
     im = paper(STORY, PAPER)
     d = ImageDraw.Draw(im)
     d.rectangle([0, 0, 1080, 14], fill=BRAND)
 
-    eyebrow(d, (M, 190), "с чего всё началось")
+    eyebrow(d, (M, 190), "самый дорогой ответ в бизнесе")
     rule(d, M, 250, 1080 - 2 * M, LINE)
 
-    d.text((M - 10, 430), "771 000", font=font(D_BLACK, 176), fill=INK)
-    draw_tracked(d, (M, 645), "₽ в месяц", font(D_SEMI, 58), BRAND, tracking=-1)
+    block(d, "Сколько денег\nвы теряете\nкаждый месяц?", font(D_BOLD, 82),
+          (M, 340, 1080 - 2 * M), INK, leading=1.1, tracking=-2.4, tag="s2-h")
 
-    y = 820
-    y = block(d, "Столько теряет один хороший специалист.\nНе потому что плохо работает —\nработает он отлично.",
-              font(T_REG, 40), (M, y, 1080 - 2 * M), INK_2, leading=1.46)
-    y += 30
-    block(d, "А потому что бизнес живёт в голове,\nв мессенджерах и в блокноте.\nГде угодно, только не в системе.",
-          font(T_SEMI, 40), (M, y, 1080 - 2 * M), INK, leading=1.46)
+    d.text((M - 8, 640), "— Не знаю", font=font(D_BLACK, 96), fill=BRAND)
 
-    d.rectangle([M, 1380, 1080 - M, 1580], fill=PAPER_ALT)
-    block(d, "Цифру придумал не я. Это её собственная\nоценка, когда мы разложили всё по полкам.",
-          font(T_REG, 33), (M + 44, 1428, 1080 - 2 * M - 88), MUTED, leading=1.44)
+    y = 830
+    y = block(d, "Так отвечают почти все. И это не лень —\nэти деньги правда не видно: они утекают\nне из кассы, а из разговоров.",
+              font(T_REG, 38), (M, y, 1080 - 2 * M), INK_2, leading=1.46, tag="s2-t")
+    y += 34
+    block(d, "Непроданный надзор. Проект, взятый дешевле\nсебестоимости. Клиент, ушедший подумать.",
+          font(T_SEMI, 38), (M, y, 1080 - 2 * M), INK, leading=1.44, tag="s2-a")
 
-    counter(d, 2, 8, y=1790, on_dark=False)
-    save(im, "story-02-cifra.jpg")
+    link_band(d, 1300, SITE, "прикинуть свою цифру — тест на сайте")
+
+    counter(d, 2, 9, y=1806, on_dark=False)
+    save(im, "story-02-vopros.jpg")
 
 
 def story_03_quote():
@@ -283,24 +308,23 @@ def story_03_quote():
     rule(d, M, 250, 1080 - 2 * M, LINE)
 
     block(d, "«Я рассказываю им каждый\nраз с нуля. Если я устала —\nмогу вообще забыть\nчто-то сказать»",
-          font(D_SEMI, 64), (M, 360, 1080 - 2 * M), INK, leading=1.24, tracking=-1.5)
+          font(D_SEMI, 64), (M, 360, 1080 - 2 * M), INK, leading=1.24, tracking=-1.5, tag="s3-q")
 
     draw_tracked(d, (M, 730), "ДАРЬЯ, АРХИТЕКТОР-ДИЗАЙНЕР", font(T_SEMI, 27), MUTED, tracking=4)
     rule(d, M, 810, 120, BRAND, h=5)
 
     y = 880
     y = block(d, "Заявка теряется не в блокноте.\nОна теряется в разговоре, где не прозвучало\nполовины ценности.",
-              font(T_REG, 38), (M, y, 1080 - 2 * M), INK_2, leading=1.46)
+              font(T_REG, 38), (M, y, 1080 - 2 * M), INK_2, leading=1.46, tag="s3-t")
     y += 46
     block(d, "Клиент уходит «подумать» и не возвращается.\nА специалист уверен, что не сошлись в цене.",
-          font(T_SEMI, 38), (M, y, 1080 - 2 * M), BRAND_600, leading=1.42)
+          font(T_SEMI, 38), (M, y, 1080 - 2 * M), BRAND_600, leading=1.42, tag="s3-a")
 
-    # Жёлтый маркер — тот самый, которым чиркают по распечатке.
     d.rectangle([M, 1330, 1080 - M, 1620], fill=MARKER)
     block(d, "Это не лечится мотивацией.\nЭто лечится тем, что объясняет сайт,\nа не уставший человек в трубке.",
-          font(T_SEMI, 38), (M + 44, 1392, 1080 - 2 * M - 88), INK, leading=1.42)
+          font(T_SEMI, 38), (M + 44, 1392, 1080 - 2 * M - 88), INK, leading=1.42, tag="s3-m")
 
-    counter(d, 3, 8, y=1806, on_dark=False)
+    counter(d, 3, 9, y=1806, on_dark=False)
     save(im, "story-03-citata.jpg")
 
 
@@ -321,7 +345,8 @@ def story_04_before_after():
     y = 292
     for t in was:
         d.ellipse([M, y + 16, M + 14, y + 30], fill=(178, 172, 164))
-        y = block(d, t, font(T_REG, 37), (M + 46, y, 1080 - 2 * M - 46), (112, 106, 98), leading=1.34)
+        y = block(d, t, font(T_REG, 37), (M + 46, y, 1080 - 2 * M - 46), (112, 106, 98),
+                  leading=1.34, tag="s4-was")
         y += 30
 
     eyebrow(d, (M, 892), "стало", fill=BRAND)
@@ -336,10 +361,11 @@ def story_04_before_after():
     y = 1042
     for t in now:
         d.rectangle([M, y + 14, M + 16, y + 30], fill=BRAND)
-        y = block(d, t, font(T_MED, 37), (M + 46, y, 1080 - 2 * M - 46), INK, leading=1.34)
+        y = block(d, t, font(T_MED, 37), (M + 46, y, 1080 - 2 * M - 46), INK,
+                  leading=1.34, tag="s4-now")
         y += 30
 
-    counter(d, 4, 8, y=1806, on_dark=False)
+    counter(d, 4, 9, y=1806, on_dark=False)
     save(im, "story-04-bylo-stalo.jpg")
 
 
@@ -350,7 +376,7 @@ def story_05_constructor():
 
     eyebrow(d, (M, 180), "главное решение")
     block(d, "Клиент собирает\nсвой проект сам.\nКак комнату\nиз кубиков.", font(D_BOLD, 88),
-          (M, 268, 1080 - 2 * M), INK, leading=1.12, tracking=-2.5)
+          (M, 268, 1080 - 2 * M), INK, leading=1.12, tracking=-2.5, tag="s5-h")
 
     bx, by, bw, bh = M, 790, 1080 - 2 * M, 340
     d.rectangle([bx, by, bx + bw, by + bh], outline=LINE, width=3)
@@ -364,15 +390,14 @@ def story_05_constructor():
 
     y = 1210
     y = block(d, "В начале в комнате только пол: без обмера\nи планировки проекта не существует.\nВсё остальное клиент приносит туда сам —\nи только перетаскиванием.",
-              font(T_REG, 36), (M, y, 1080 - 2 * M), INK_2, leading=1.46)
+              font(T_REG, 36), (M, y, 1080 - 2 * M), INK_2, leading=1.46, tag="s5-t")
     y += 32
-    y = block(d, "Галочку ставят не думая.\nБлок доносят до места.",
-              font(T_SEMI, 38), (M, y, 1080 - 2 * M), BRAND_600, leading=1.4)
-    y += 64
-    block(d, "Пустое место объясняет ценность лучше плашки.\nКомната без потолка продаёт надзор сама.",
-          font(T_REG, 34), (M, y, 1080 - 2 * M), MUTED, leading=1.44)
+    block(d, "Галочку ставят не думая.\nБлок доносят до места.",
+          font(T_SEMI, 38), (M, y, 1080 - 2 * M), BRAND_600, leading=1.4, tag="s5-a")
 
-    counter(d, 5, 8, y=1806, on_dark=False)
+    link_band(d, 1600, DARYA, "потрогать конструктор — сайт Дарьи")
+
+    counter(d, 5, 9, y=1806, on_dark=False)
     save(im, "story-05-konstruktor.jpg")
 
 
@@ -384,25 +409,44 @@ def story_06_principle():
     eyebrow(d, (M, 200), "принцип, на котором держится всё", fill=(214, 141, 128))
 
     block(d, "Заявка\nне может\nостаться без\nследующего\nшага.", font(D_BLACK, 106),
-          (M, 320, 1080 - 2 * M), PAPER, leading=1.06, tracking=-3)
+          (M, 320, 1080 - 2 * M), PAPER, leading=1.06, tracking=-3, tag="s6-h")
 
     y = 1080
     rule(d, M, y, 120, BRAND, h=5)
     y += 58
     y = block(d, "Это не про дисциплину и не про мотивацию.\nЭто обязательное поле в базе данных.",
-              font(T_REG, 38), (M, y, 1080 - 2 * M), (206, 198, 190), leading=1.46)
+              font(T_REG, 38), (M, y, 1080 - 2 * M), (206, 198, 190), leading=1.46, tag="s6-t1")
     y += 32
     y = block(d, "Просроченные касания светятся в кабинете\nи уходят напоминанием — ночью, без вас.",
-              font(T_REG, 38), (M, y, 1080 - 2 * M), (206, 198, 190), leading=1.46)
+              font(T_REG, 38), (M, y, 1080 - 2 * M), (206, 198, 190), leading=1.46, tag="s6-t2")
     y += 46
     block(d, "«Заявки теряются» перестаёт быть\nчертой характера и становится\nневозможным состоянием системы.",
-          font(T_SEMI, 40), (M, y, 1080 - 2 * M), PAPER, leading=1.4)
+          font(T_SEMI, 40), (M, y, 1080 - 2 * M), PAPER, leading=1.4, tag="s6-a")
 
-    counter(d, 6, 8, y=1806, on_dark=True)
+    counter(d, 6, 9, y=1806, on_dark=True)
     save(im, "story-06-princip.jpg")
 
 
-def story_07_personal():
+def story_07_slushal():
+    im, d = photo_panel(os.path.join(SRC, "photo-divan.jpg"),
+                        focus=(0.52, 0.40), zoom=1.0, panel_top=1120)
+
+    eyebrow(d, (M, 118), "как это делается", fill=(255, 255, 255), size=26)
+
+    y = 1206
+    y = block(d, "Большую часть лета\nя не писал код.\nЯ слушал.", font(D_BOLD, 80),
+              (M, y, 1080 - 2 * M), INK, leading=1.1, tracking=-2.3, tag="s7-h")
+    y += 28
+    rule(d, M, y, 96, BRAND, h=5)
+    y += 42
+    block(d, "Систему нельзя собрать, не разобрав бизнес.\nСначала долгий разговор, где человек говорит\nвслух то, чего обычно не говорит даже себе:\n«мне влом», «мне лень», «я забываю».\nИз этих фраз и получается задание.",
+          font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="s7-t")
+
+    counter(d, 7, 9, y=1836, on_dark=False)
+    save(im, "story-07-slushal.jpg")
+
+
+def story_08_personal():
     im = paper(STORY, PAPER_ALT)
     d = ImageDraw.Draw(im)
 
@@ -420,42 +464,40 @@ def story_07_personal():
 
     y = py + ph_ + 82
     y = block(d, "Гитара в парке — тоже часть работы.",
-              font(D_SEMI, 52), (M, y, 1080 - 2 * M), INK, leading=1.2, tracking=-1.5)
+              font(D_SEMI, 52), (M, y, 1080 - 2 * M), INK, leading=1.2, tracking=-1.5, tag="s8-h")
     y += 40
     block(d, "Хорошая система нужна ровно за этим — чтобы\nбизнес не зависел от того, выспались вы\nили нет. Дарья теперь может уехать на неделю:\nзаявки подождут в воронке, а не потеряются.",
-          font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44)
+          font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="s8-t")
 
-    counter(d, 7, 8, y=1806, on_dark=False)
-    save(im, "story-07-lichnoe.jpg")
+    counter(d, 8, 9, y=1836, on_dark=False)
+    save(im, "story-08-lichnoe.jpg")
 
 
-def story_08_cta():
-    im, d = photo_panel(os.path.join(SRC, "photo-most.jpg"),
-                        focus=(0.53, 0.155), zoom=1.62, panel_top=1000)
+def story_09_cta():
+    im, d = photo_panel(os.path.join(SRC, "photo-stul-bw.jpg"),
+                        focus=(0.50, 0.28), zoom=1.0, panel_top=1000, bw=True)
 
     eyebrow(d, (M, 118), "3 системы собраны", fill=(255, 255, 255), size=26)
 
-    y = 1090
-    y = block(d, "Четвёртая\nможет быть вашей.", font(D_BOLD, 84),
-              (M, y, 1080 - 2 * M), INK, leading=1.08, tracking=-2.5)
-    y += 28
+    y = 1086
+    y = block(d, "Четвёртая\nможет быть вашей.", font(D_BOLD, 82),
+              (M, y, 1080 - 2 * M), INK, leading=1.08, tracking=-2.4, tag="s9-h")
+    y += 26
     rule(d, M, y, 96, BRAND, h=5)
-    y += 42
-    y = block(d, "Архитектор. Школа иностранных языков.\nЧастная школа. Три разных бизнеса —\nодин принцип: система работает вместо вас.",
-              font(T_REG, 35), (M, y, 1080 - 2 * M), INK_2, leading=1.44)
+    y += 40
+    block(d, "Архитектор. Школа иностранных языков.\nЧастная школа. Один принцип: система\nработает вместо вас.",
+          font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.42, tag="s9-t")
 
-    y += 54
-    d.rectangle([M, y, M + 700, y + 108], fill=BRAND)
-    draw_tracked(d, (M + 44, y + 36), "НАПИШИТЕ СЛОВО «СИСТЕМА»",
-                 font(T_SEMI, 32), PAPER, tracking=2)
-    block(d, "в директ — покажу изнутри и скажу,\nчто можно собрать под ваш бизнес",
-          font(T_REG, 32), (M, y + 140, 1080 - 2 * M), MUTED, leading=1.4)
+    y = link_band(d, 1524, SITE, "разбор бизнеса и тест на потери")
+    link_band(d, y + 18, DARYA, "система из этой серии — вживую",
+              fill=PAPER_ALT, ink=INK, sub=MUTED)
 
-    save(im, "story-08-cta.jpg")
+    save(im, "story-09-cta.jpg")
 
 
-STORIES = [story_01_hero, story_02_number, story_03_quote, story_04_before_after,
-           story_05_constructor, story_06_principle, story_07_personal, story_08_cta]
+STORIES = [story_01_hero, story_02_vopros, story_03_quote, story_04_before_after,
+           story_05_constructor, story_06_principle, story_07_slushal,
+           story_08_personal, story_09_cta]
 
 
 # ===========================================================================
@@ -498,24 +540,23 @@ def card_ba(n, total, was_h, was_t, now_h, now_t, fname):
 
 def card_01_cover():
     im = paper(CARD, PAPER)
-    ph = cover(os.path.join(SRC, "photo-most.jpg"), (1080, 700), focus=(0.52, 0.33))
-    ph = grade(ph, warmth=1.045, contrast=1.10, sat=0.90)
-    ph = top_scrim(ph, strength=0.36, depth=0.26)
+    ph = cover(os.path.join(SRC, "photo-chernaya-stena.jpg"), (1080, 700), focus=(0.5, 0.30))
+    ph = grade(ph, warmth=1.03, contrast=1.06, sat=0.88)
     im.paste(ph, (0, 0))
     d = ImageDraw.Draw(im)
     d.rectangle([0, 700, 1080, 712], fill=BRAND)
 
-    eyebrow(d, (CM, 92), "кейс · лето 2026", fill=(255, 255, 255), size=25)
+    eyebrow(d, (CM, 92), "кейс · лето 2026", fill=(226, 220, 214), size=25)
 
-    y = block(d, "Архитектор теряла\n771 000 ₽ в месяц.\nИ не знала об этом.", font(D_BOLD, 74),
-              (CM, 786, CW), INK, leading=1.12, tracking=-2.2, tag="cover-h")
-    y += 30
+    y = block(d, "«Сколько вы теряете\nкаждый месяц?»\n— Не знаю.", font(D_BOLD, 72),
+              (CM, 786, CW), INK, leading=1.14, tracking=-2.2, tag="cover-h")
+    y += 28
     rule(d, CM, y, 96, BRAND, h=5)
-    y += 40
-    block(d, "За лето я собрал ей систему, которая продаёт,\nсчитает и не забывает — вместо неё.\nПоказываю, что было и что стало.",
+    y += 38
+    block(d, "Самый частый ответ — и самый дорогой.\nЗа лето я собрал архитектору систему,\nкоторая закрывает места, где деньги утекали.",
           font(T_REG, 33), (CM, y, CW), INK_2, leading=1.44, tag="cover-t")
 
-    draw_tracked(d, (CM, 1288), "ЛИСТАЙТЕ →", font(T_SEMI, 28), BRAND, tracking=4)
+    draw_tracked(d, (CM, 1268), "ЛИСТАЙТЕ →", font(T_SEMI, 28), BRAND, tracking=4)
     save(im, "card-01-oblozhka.jpg")
 
 
@@ -533,26 +574,31 @@ def card_09_final():
         ("Правки", "лежат в системе и защищают в суде"),
         ("Заявка", "не может потеряться технически"),
     ]
-    y = 270
+    y = 250
     for a, b in rows:
         d.rectangle([CM, y + 16, CM + 16, y + 32], fill=BRAND)
         block(d, a, font(T_SEMI, 36), (CM + 44, y, CW - 44), PAPER, leading=1.3, tag="fin-a")
-        y = block(d, b, font(T_REG, 34), (CM + 44, y + 48, CW - 44), (176, 168, 160), leading=1.3, tag="fin-b")
-        y += 44
+        y = block(d, b, font(T_REG, 34), (CM + 44, y + 48, CW - 44), (176, 168, 160),
+                  leading=1.3, tag="fin-b")
+        y += 38
 
-    rule(d, CM, 790, CW, (62, 56, 51))
+    rule(d, CM, 758, CW, (62, 56, 51))
 
-    y = block(d, "У меня три собранные системы:\nархитектор, школа языков, частная школа.",
-              font(D_SEMI, 46), (CM, 850, CW), PAPER, leading=1.2, tracking=-1.2, tag="fin-h")
-    y += 34
-    y = block(d, "Разные бизнесы — один принцип: система делает\nто, на что у собственника не остаётся сил.",
-              font(T_REG, 33), (CM, y, CW), (176, 168, 160), leading=1.42, tag="fin-t")
+    y = block(d, "Три системы собраны: архитектор,\nшкола языков, частная школа.",
+              font(D_SEMI, 46), (CM, 812, CW), PAPER, leading=1.2, tracking=-1.2, tag="fin-h")
+    y += 26
+    block(d, "Разные бизнесы — один принцип: система делает\nто, на что у собственника не остаётся сил.",
+          font(T_REG, 33), (CM, y, CW), (176, 168, 160), leading=1.42, tag="fin-t")
 
-    y += 32
-    d.rectangle([CM, y, CM + 700, y + 100], fill=BRAND)
-    draw_tracked(d, (CM + 42, y + 30), "НАПИШИТЕ «СИСТЕМА»", font(T_SEMI, 32), PAPER, tracking=2)
-    block(d, "в комментариях или в личные — разберу ваш случай",
-          font(T_REG, 30), (CM, y + 128, CW), (150, 143, 134), leading=1.4, tag="fin-cta")
+    d.rectangle([CM, 1064, CM + CW, 1180], fill=BRAND)
+    draw_tracked(d, (CM + 40, 1088), SITE, font(T_SEMI, 38), PAPER, tracking=0.5)
+    draw_tracked(d, (CM + 40, 1138), "разбор бизнеса и тест на потери",
+                 font(T_REG, 27), (244, 214, 208), tracking=1)
+
+    d.rectangle([CM, 1198, CM + CW, 1294], fill=(44, 39, 36))
+    draw_tracked(d, (CM + 40, 1218), DARYA, font(T_SEMI, 34), PAPER, tracking=0.5)
+    draw_tracked(d, (CM + 40, 1260), "система из этого кейса — вживую",
+                 font(T_REG, 26), (150, 143, 134), tracking=1)
 
     save(im, "card-09-final.jpg")
 
@@ -574,7 +620,7 @@ CAROUSEL_BA = [
      "Вопрос в пятницу вечером получает срок\nдо понедельника. Клиент видит это сразу\nпри отправке. Система не обещает быстрее\nрегламента — даже когда ответ придёт за час.",
      "card-04-sroki.jpg"),
     (5, "Заявки\nтеряются",
-     "Не в блокноте — в разговоре и в переписке.\nПри нескольких проектах в год одна\nпотерянная заявка это минус восьмая\nчасть годовой выручки.",
+     "Не в блокноте — в разговоре и в переписке.\nПри нескольких проектах в год одна\nпотерянная заявка стоит заметной части\nгодовой выручки.",
      "Потеряться\nтехнически нельзя",
      "У заявки обязательное поле «дата следующего\nшага». Просроченные светятся в кабинете\nи уходят напоминанием ночью, сами.",
      "card-05-zayavki.jpg"),
