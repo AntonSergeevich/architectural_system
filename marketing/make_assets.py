@@ -208,6 +208,16 @@ def counter(draw, i, total, y=1790, fill=(255, 255, 255, 200), on_dark=True):
 
 SITE = "s-poryadok.ru"          # мой сайт
 DARYA = "da-des.ru"             # система, про которую кейс
+LINGUICH = "linguich.ru"        # школа иностранных языков
+TVERDYY = "tverdyy-znak.ru"     # частная школа
+
+# Порядок витрины: сначала та система, про которую только что был кейс,
+# остальные следом. Человек идёт по ссылке, которую ему уже объяснили.
+SYSTEMS = [
+    (DARYA, "Архитектор-дизайнер", "конструктор проекта прямо на главной"),
+    (LINGUICH, "Школа иностранных языков", "кейс — следующий в очереди"),
+    (TVERDYY, "Частная школа", "кейс — третий в очереди"),
+]
 
 
 def link_band(d, y, url, caption, width=None, fill=BRAND, ink=PAPER, sub=(244, 214, 208)):
@@ -296,7 +306,7 @@ def story_02_vopros():
 
     link_band(d, 1300, SITE, "прикинуть свою цифру — тест на сайте")
 
-    counter(d, 2, 9, y=1806, on_dark=False)
+    counter(d, 2, 10, y=1806, on_dark=False)
     save(im, "story-02-vopros.jpg")
 
 
@@ -324,7 +334,7 @@ def story_03_quote():
     block(d, "Это не лечится мотивацией.\nЭто лечится тем, что объясняет сайт,\nа не уставший человек в трубке.",
           font(T_SEMI, 38), (M + 44, 1392, 1080 - 2 * M - 88), INK, leading=1.42, tag="s3-m")
 
-    counter(d, 3, 9, y=1806, on_dark=False)
+    counter(d, 3, 10, y=1806, on_dark=False)
     save(im, "story-03-citata.jpg")
 
 
@@ -365,7 +375,7 @@ def story_04_before_after():
                   leading=1.34, tag="s4-now")
         y += 30
 
-    counter(d, 4, 9, y=1806, on_dark=False)
+    counter(d, 4, 10, y=1806, on_dark=False)
     save(im, "story-04-bylo-stalo.jpg")
 
 
@@ -397,7 +407,7 @@ def story_05_constructor():
 
     link_band(d, 1600, DARYA, "потрогать конструктор — сайт Дарьи")
 
-    counter(d, 5, 9, y=1806, on_dark=False)
+    counter(d, 5, 10, y=1806, on_dark=False)
     save(im, "story-05-konstruktor.jpg")
 
 
@@ -423,7 +433,7 @@ def story_06_principle():
     block(d, "«Заявки теряются» перестаёт быть\nчертой характера и становится\nневозможным состоянием системы.",
           font(T_SEMI, 40), (M, y, 1080 - 2 * M), PAPER, leading=1.4, tag="s6-a")
 
-    counter(d, 6, 9, y=1806, on_dark=True)
+    counter(d, 6, 10, y=1806, on_dark=True)
     save(im, "story-06-princip.jpg")
 
 
@@ -442,7 +452,7 @@ def story_07_slushal():
     block(d, "Систему нельзя собрать, не разобрав бизнес.\nСначала долгий разговор, где человек говорит\nвслух то, чего обычно не говорит даже себе:\n«мне влом», «мне лень», «я забываю».\nИз этих фраз и получается задание.",
           font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="s7-t")
 
-    counter(d, 7, 9, y=1836, on_dark=False)
+    counter(d, 7, 10, y=1836, on_dark=False)
     save(im, "story-07-slushal.jpg")
 
 
@@ -469,7 +479,7 @@ def story_08_personal():
     block(d, "Хорошая система нужна ровно за этим — чтобы\nбизнес не зависел от того, выспались вы\nили нет. Дарья теперь может уехать на неделю:\nзаявки подождут в воронке, а не потеряются.",
           font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="s8-t")
 
-    counter(d, 8, 9, y=1836, on_dark=False)
+    counter(d, 8, 10, y=1836, on_dark=False)
     save(im, "story-08-lichnoe.jpg")
 
 
@@ -488,16 +498,51 @@ def story_09_cta():
     block(d, "Архитектор. Школа иностранных языков.\nЧастная школа. Один принцип: система\nработает вместо вас.",
           font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.42, tag="s9-t")
 
-    y = link_band(d, 1524, SITE, "разбор бизнеса и тест на потери")
-    link_band(d, y + 18, DARYA, "система из этой серии — вживую",
-              fill=PAPER_ALT, ink=INK, sub=MUTED)
+    link_band(d, 1560, SITE, "разбор бизнеса и тест на потери")
 
+    counter(d, 9, 10, y=1836, on_dark=False)
     save(im, "story-09-cta.jpg")
+
+
+def story_10_vitrina():
+    """Витрина трёх систем.
+
+    Отдельным кадром, а не четвёртой плашкой на девятом: ссылка в каждом
+    кадре читается как баннерная сетка, а четыре ссылки на одном экране —
+    как список, из которого не выбирают. Здесь же выбор и есть содержание
+    кадра, поэтому ему нужен свой экран.
+    """
+    im = paper(STORY, PAPER)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 1080, 14], fill=BRAND)
+
+    eyebrow(d, (M, 190), "не на словах")
+    block(d, "Все три системы\nможно открыть\nпрямо сейчас.", font(D_BOLD, 82),
+          (M, 270, 1080 - 2 * M), INK, leading=1.1, tracking=-2.4, tag="s10-h")
+
+    y = 620
+    for domain, business, what in SYSTEMS:
+        d.rectangle([M, y + 14, M + 16, y + 30], fill=BRAND)
+        draw_tracked(d, (M + 46, y), domain, font(T_SEMI, 44), INK, tracking=0.5)
+        block(d, business, font(T_MED, 33), (M + 46, y + 66, 1080 - 2 * M - 46),
+              INK_2, leading=1.3, tag="s10-b")
+        block(d, what, font(T_REG, 30), (M + 46, y + 112, 1080 - 2 * M - 46),
+              MUTED, leading=1.3, tag="s10-w")
+        rule(d, M, y + 176, 1080 - 2 * M, LINE)
+        y += 216
+
+    link_band(d, 1330, SITE, "а четвёртая может быть вашей")
+
+    block(d, "Разные бизнесы, разные экраны — один принцип:\nсистема делает то, на что у собственника\nне остаётся сил.",
+          font(T_REG, 32), (M, 1516, 1080 - 2 * M), MUTED, leading=1.4, tag="s10-t")
+
+    counter(d, 10, 10, y=1836, on_dark=False)
+    save(im, "story-10-vitrina.jpg")
 
 
 STORIES = [story_01_hero, story_02_vopros, story_03_quote, story_04_before_after,
            story_05_constructor, story_06_principle, story_07_slushal,
-           story_08_personal, story_09_cta]
+           story_08_personal, story_09_cta, story_10_vitrina]
 
 
 # ===========================================================================
@@ -565,7 +610,7 @@ def card_09_final():
     d = ImageDraw.Draw(im)
     d.rectangle([0, 0, 1080, 12], fill=BRAND)
 
-    draw_tracked(d, (CM, 100), "09 / 09", font(T_MED, 25), (120, 112, 104), tracking=4)
+    draw_tracked(d, (CM, 100), "09 / 10", font(T_MED, 25), (120, 112, 104), tracking=4)
     eyebrow(d, (CM, 176), "что это дало", fill=(214, 141, 128), size=25)
 
     rows = [
@@ -595,10 +640,8 @@ def card_09_final():
     draw_tracked(d, (CM + 40, 1138), "разбор бизнеса и тест на потери",
                  font(T_REG, 27), (244, 214, 208), tracking=1)
 
-    d.rectangle([CM, 1198, CM + CW, 1294], fill=(44, 39, 36))
-    draw_tracked(d, (CM + 40, 1218), DARYA, font(T_SEMI, 34), PAPER, tracking=0.5)
-    draw_tracked(d, (CM + 40, 1260), "система из этого кейса — вживую",
-                 font(T_REG, 26), (150, 143, 134), tracking=1)
+    draw_tracked(d, (CM, 1232), "а на следующем слайде — все три, со ссылками",
+                 font(T_REG, 29), (150, 143, 134), tracking=1)
 
     save(im, "card-09-final.jpg")
 
@@ -642,11 +685,47 @@ CAROUSEL_BA = [
 ]
 
 
+def card_10_vitrina():
+    """Последний слайд — витрина. Кейс доказал, что вы умеете; витрина
+    показывает, что это не единственный раз."""
+    im = paper(CARD, PAPER)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 1080, 12], fill=BRAND)
+
+    draw_tracked(d, (CM, 96), "10 / 10", font(T_MED, 25), (150, 143, 134), tracking=4)
+    eyebrow(d, (CM, 170), "не на словах", size=25)
+
+    block(d, "Все три системы можно\nоткрыть прямо сейчас.", font(D_BOLD, 60),
+          (CM, 244, CW), INK, leading=1.14, tracking=-1.8, tag="c10-h")
+
+    y = 440
+    for domain, business, what in SYSTEMS:
+        d.rectangle([CM, y + 12, CM + 16, y + 28], fill=BRAND)
+        draw_tracked(d, (CM + 44, y), domain, font(T_SEMI, 42), INK, tracking=0.5)
+        block(d, business, font(T_MED, 32), (CM + 44, y + 62, CW - 44),
+              INK_2, leading=1.3, tag="c10-b")
+        block(d, what, font(T_REG, 29), (CM + 44, y + 106, CW - 44),
+              MUTED, leading=1.3, tag="c10-w")
+        rule(d, CM, y + 166, CW, LINE)
+        y += 202
+
+    d.rectangle([CM, 1076, CM + CW, 1192], fill=BRAND)
+    draw_tracked(d, (CM + 40, 1100), SITE, font(T_SEMI, 38), PAPER, tracking=0.5)
+    draw_tracked(d, (CM + 40, 1150), "а четвёртая может быть вашей",
+                 font(T_REG, 27), (244, 214, 208), tracking=1)
+
+    draw_tracked(d, (CM, 1240), "напишите слово «система» — начнём с разбора",
+                 font(T_REG, 29), MUTED, tracking=1)
+
+    save(im, "card-10-vitrina.jpg")
+
+
 def build_carousel():
     card_01_cover()
     for n, wh, wt, nh, nt, fn in CAROUSEL_BA:
-        card_ba(n, 9, wh, wt, nh, nt, fn)
+        card_ba(n, 10, wh, wt, nh, nt, fn)
     card_09_final()
+    card_10_vitrina()
 
 
 if __name__ == "__main__":
