@@ -38,6 +38,7 @@ BRAND      = (178, 58, 43)     # терракота
 BRAND_600  = (149, 46, 34)
 BRAND_50   = (251, 240, 238)
 MARKER     = (251, 231, 154)
+SURFACE    = (255, 255, 255)   # белый лист поверх бумаги — для кусков интерфейса
 DARK       = (26, 23, 21)
 
 STORY = (1080, 1920)
@@ -622,3 +623,74 @@ def story_muzyka():
           font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="msty-t")
 
     save(im, "story-muzyka.jpg")
+
+
+def card_reglament():
+    """Пост про регламент ответа.
+
+    Внутри карточки — кусок настоящего интерфейса, а не иллюстрация.
+    Решение здесь и есть экран: клиент видит срок ответа в момент отправки
+    вопроса, и объяснять это словами дольше, чем показать.
+    """
+    im = paper(CARD, PAPER)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 1080, 12], fill=BRAND)
+
+    eyebrow(d, (CM, 120), "система архитектора · решение", size=25)
+
+    y = block(d, "Обещать хуже,\nчем можешь.", font(D_BOLD, 76),
+              (CM, 196, CW), INK, leading=1.1, tracking=-2.4, tag="reg-h")
+    y += 30
+    rule(d, CM, y, 96, BRAND, h=5)
+    y += 42
+    block(d, "Дарья отвечает за час. Система обещает клиенту\nсутки — и не даёт пообещать быстрее,\nдаже когда быстрее получается.",
+          font(T_REG, 32), (CM, y, CW), INK_2, leading=1.44, tag="reg-t")
+
+    # Кусок экрана: то, что видит заказчик в момент отправки вопроса.
+    bx, by, bw, bh = CM, 660, CW, 290
+    d.rectangle([bx, by, bx + bw, by + bh], fill=SURFACE, outline=LINE, width=2)
+    d.rectangle([bx, by, bx + 6, by + bh], fill=BRAND)
+    draw_tracked(d, (bx + 44, by + 44), "ВОПРОС ОТПРАВЛЕН", font(T_SEMI, 24), MUTED, tracking=4)
+    block(d, "Ответ придёт до понедельника, 19:00",
+          font(D_SEMI, 40), (bx + 44, by + 96, bw - 88), INK, leading=1.2, tracking=-1, tag="reg-ui")
+    block(d, "сейчас пятница, 18:40 — выходные не считаются",
+          font(T_REG, 28), (bx + 44, by + 184, bw - 88), MUTED, leading=1.3, tag="reg-ui2")
+
+    rule(d, CM, 1020, 96, BRAND, h=5)
+    block(d, "Выполненное обещание\nстоит дороже красивого.",
+          font(D_SEMI, 44), (CM, 1066, CW), INK, leading=1.2, tracking=-1, tag="reg-q")
+
+    save(im, "post-reglament.jpg")
+
+
+def story_reglament():
+    im = paper(STORY, PAPER)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 1080, 14], fill=BRAND)
+
+    eyebrow(d, (M, 190), "система архитектора · решение")
+    rule(d, M, 250, 1080 - 2 * M, LINE)
+
+    block(d, "Обещать хуже,\nчем можешь.", font(D_BOLD, 92),
+          (M, 340, 1080 - 2 * M), INK, leading=1.1, tracking=-2.6, tag="rsty-h")
+
+    y = 580
+    y = block(d, "Дарья отвечает за час.\nСистема обещает заказчику сутки —\nи не даёт пообещать быстрее.",
+              font(T_REG, 38), (M, y, 1080 - 2 * M), INK_2, leading=1.46, tag="rsty-t")
+
+    bx, by, bw, bh = M, 820, 1080 - 2 * M, 300
+    d.rectangle([bx, by, bx + bw, by + bh], fill=SURFACE, outline=LINE, width=2)
+    d.rectangle([bx, by, bx + 6, by + bh], fill=BRAND)
+    draw_tracked(d, (bx + 44, by + 46), "ВОПРОС ОТПРАВЛЕН", font(T_SEMI, 25), MUTED, tracking=4)
+    block(d, "Ответ придёт\nдо понедельника, 19:00",
+          font(D_SEMI, 44), (bx + 44, by + 104, bw - 88), INK, leading=1.2, tracking=-1, tag="rsty-ui")
+
+    y = 1200
+    y = block(d, "Потому что обещание, выполненное всегда,\nстоит дороже обещания красивого.",
+              font(T_SEMI, 38), (M, y, 1080 - 2 * M), BRAND_600, leading=1.42, tag="rsty-a")
+
+    d.rectangle([M, 1400, 1080 - M, 1660], fill=MARKER)
+    block(d, "Ответил в воскресенье один раз —\nи с этого дня этого ждут.\nА молчание читается как игнор.",
+          font(T_SEMI, 36), (M + 44, 1458, 1080 - 2 * M - 88), INK, leading=1.42, tag="rsty-m")
+
+    save(im, "story-reglament.jpg")
