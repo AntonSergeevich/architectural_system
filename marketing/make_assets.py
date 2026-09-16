@@ -559,3 +559,66 @@ if __name__ == "__main__":
             print(f"  [{tag}] {got}px > {limit}px — {line}")
     else:
         print("\nВся ручная вёрстка строк влезла.")
+
+
+# ===========================================================================
+#  ОТДЕЛЬНЫЕ ПОСТЫ — не серия, по одному в неделю между кейсами
+# ===========================================================================
+
+def card_muzyka():
+    """Личный пост про музыку.
+
+    Лицо на таком посте не нужно: он не про автора, он про мысль. Кадр
+    стоит углом и обрезан — так он читается как иллюстрация, а не как
+    «посмотрите, я ещё и на гитаре умею».
+    """
+    im = paper(CARD, PAPER)
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 1080, 12], fill=BRAND)
+
+    eyebrow(d, (CM, 120), "личное", size=25)
+
+    y = block(d, "Почему я\nдо сих пор играю\nпод метроном", font(D_BOLD, 66),
+              (CM, 196, CW), INK, leading=1.14, tracking=-2, tag="mus-h")
+    y += 30
+    rule(d, CM, y, 96, BRAND, h=5)
+    y += 40
+    block(d, "Метроном все ненавидят. Он щёлкает ровно\nи без пощады — и сразу слышно то, чего\nбез него не слышно.",
+          font(T_REG, 32), (CM, y, CW - 60), INK_2, leading=1.44, tag="mus-t")
+
+    # Кадр в угол, с выходом за край: иллюстрация, а не портрет.
+    pw, ph_ = 430, 700
+    ph = cover(os.path.join(SRC, "photo-gitara.jpg"), (pw, ph_), focus=(0.55, 0.44))
+    ph = grade(ph, warmth=1.04, contrast=1.08, sat=0.90)
+    im.paste(ph, (1080 - pw, CARD[1] - ph_))
+    d = ImageDraw.Draw(im)
+
+    rule(d, CM, 1006, 96, BRAND, h=5)
+    block(d, "Пока цифры\nне считает система,\nих считает ваше\nнастроение.",
+          font(D_SEMI, 42), (CM, 1052, 520), INK, leading=1.2, tracking=-1, tag="mus-q")
+
+    save(im, "post-muzyka.jpg")
+
+
+def story_muzyka():
+    im = paper(STORY, PAPER_ALT)
+    d = ImageDraw.Draw(im)
+
+    eyebrow(d, (M, 150), "личное")
+
+    pw, ph_ = 680, 1080
+    ph = cover(os.path.join(SRC, "photo-gitara.jpg"), (pw, ph_), focus=(0.58, 0.46))
+    ph = grade(ph, warmth=1.04, contrast=1.08, sat=0.92)
+    px, py = M, 250
+    d.rectangle([px + 22, py + 22, px + pw + 22, py + ph_ + 22], fill=SAND)
+    im.paste(ph, (px, py))
+    d = ImageDraw.Draw(im)
+
+    y = py + ph_ + 82
+    y = block(d, "Почему я до сих пор\nиграю под метроном.", font(D_SEMI, 52),
+              (M, y, 1080 - 2 * M), INK, leading=1.2, tracking=-1.5, tag="msty-h")
+    y += 40
+    block(d, "Он показывает то, чего без него не слышно:\nв сложных местах ты ускоряешься, в скучных\nзамедляешься. Бизнес ведёт себя так же —\nи без цифр этого тоже не слышно.",
+          font(T_REG, 34), (M, y, 1080 - 2 * M), INK_2, leading=1.44, tag="msty-t")
+
+    save(im, "story-muzyka.jpg")
