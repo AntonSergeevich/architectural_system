@@ -287,10 +287,12 @@ def inline_pair(d, xy, bold, rest, size=34, bold_fill=INK, rest_fill=MUTED):
 
 
 def story_01_hero():
+    # Кадр посажен так, чтобы срез панели прошёл ниже часов, а не по запястью:
+    # рука, обрубленная посередине браслета, читается как ошибка кадрирования.
     im, d = photo_panel(os.path.join(SRC, "photo-most.jpg"),
-                        focus=(0.52, 0.36), zoom=1.0, panel_top=1258)
+                        focus=(0.52, 0.42), zoom=1.0, panel_top=1258)
 
-    eyebrow(d, (M, 118), "лето 2026", fill=(255, 255, 255), size=26)
+    eyebrow(d, (M, 100), "лето 2026", fill=(255, 255, 255), size=26)
 
     y = 1348
     y = block(d, "Я всё лето\nне только отдыхал.", font(D_BOLD, 88),
