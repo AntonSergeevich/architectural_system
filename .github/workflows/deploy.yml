@@ -89,28 +89,35 @@ jobs:
           # получают отступы или переводы строк Windows, и ssh отвечает
           # «error in libcrypto». Тело ключа — base64 между строками BEGIN
           # и END; пробелы и переводы строк внутри ничего не значат, поэтому
-          # вычищаем их все и раскладываем по 70 знаков, как ssh-keygen.
+          # вычищаем их все и раскладываем по 64 знака, как в PEM.
           RAW="$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r')"
-          BODY="$(printf '%s' "$RAW" | tr '\n' ' ' \
-            | sed -n 's/.*-----BEGIN OPENSSH PRIVATE KEY-----\(.*\)-----END OPENSSH PRIVATE KEY-----.*/\1/p' \
-            | tr -d ' \t')"
-          if [ -z "$BODY" ]; then
-            # Строки BEGIN/END потерялись, а само тело на месте.
+          FLAT="$(printf '%s' "$RAW" | tr '\n' ' ')"
+          # Вид ключа — по строке BEGIN: OPENSSH, RSA, EC или просто PRIVATE KEY.
+          KIND="$(printf '%s' "$FLAT" | grep -oE -- '-----BEGIN [A-Z ]*PRIVATE KEY-----' | head -1 \
+            | sed 's/-----BEGIN \(.*\)-----/\1/')"
+          if [ -n "$KIND" ]; then
+            BODY="$(printf '%s' "$FLAT" \
+              | sed -n "s/.*-----BEGIN $KIND-----\(.*\)-----END $KIND-----.*/\1/p" | tr -d ' \t')"
+          else
+            # Строки BEGIN/END потерялись, а тело ключа OpenSSH на месте.
+            KIND="OPENSSH PRIVATE KEY"
             BODY="$(printf '%s' "$RAW" | tr -d ' \t\n' | grep -oE 'b3BlbnNzaC1rZXktdjE[A-Za-z0-9+/]+=*' | head -1)"
           fi
           if [ -z "$BODY" ]; then
-            if printf '%s' "$RAW" | grep -q 'ssh-ed25519 AAAA'; then
-              echo "::error::В DEPLOY_SSH_KEY открытый ключ (ssh-ed25519 AAAA…). Нужен закрытый: вывод cat ~/gh-deploy, от -----BEGIN до -----END."
-            else
-              echo "::error::В DEPLOY_SSH_KEY нет закрытого ключа OpenSSH. Нужен весь вывод cat ~/gh-deploy, от -----BEGIN OPENSSH PRIVATE KEY----- до -----END OPENSSH PRIVATE KEY-----."
-            fi
+            # Что лежит в секрете — без самого секрета: только приметы.
+            HINT="длина $(printf '%s' "$RAW" | wc -c) знаков, строк $(printf '%s\n' "$RAW" | wc -l)"
+            printf '%s' "$RAW" | grep -q 'PuTTY-User-Key-File' && HINT="$HINT; это файл PuTTY (.ppk) — нужен формат OpenSSH"
+            printf '%s' "$RAW" | grep -q 'ssh-ed25519 AAAA\|ssh-rsa AAAA' && HINT="$HINT; похоже на открытый ключ"
+            printf '%s' "$RAW" | grep -qE 'cat |gh-deploy|ssh-keygen' && HINT="$HINT; похоже на текст команды, а не её вывод"
+            printf '%s' "$RAW" | grep -q -- '-----BEGIN' && HINT="$HINT; строка BEGIN есть, END не найдена — ключ обрезан"
+            echo "::error::В DEPLOY_SSH_KEY нет закрытого ключа ($HINT). Нужен весь вывод cat ~/gh-deploy, от -----BEGIN OPENSSH PRIVATE KEY----- до -----END OPENSSH PRIVATE KEY-----."
             exit 1
           fi
           {
-            echo "-----BEGIN OPENSSH PRIVATE KEY-----"
-            printf '%s' "$BODY" | fold -w 70
+            echo "-----BEGIN $KIND-----"
+            printf '%s' "$BODY" | fold -w 64
             echo
-            echo "-----END OPENSSH PRIVATE KEY-----"
+            echo "-----END $KIND-----"
           } > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
           if ! ssh-keygen -y -f ~/.ssh/deploy > ~/.ssh/deploy.pub 2>/dev/null; then
