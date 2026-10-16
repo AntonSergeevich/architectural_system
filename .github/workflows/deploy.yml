@@ -84,16 +84,44 @@ jobs:
           DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
         run: |
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          # Переводы строк Windows (\r) ломают ключ: ssh отвечает «invalid
+          # format». Секреты часто вставляют из блокнота — вычищаем.
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
+
           # Отпечаток сервера записан заранее, а не принимается «на веру»
           # при первом входе: иначе ключ выкатки можно было бы отдать
           # кому угодно, кто встанет между GitHub и сервером.
-          printf '%s %s\n' "$DEPLOY_HOST" "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          #
+          # Из секрета берём только «тип ключ»: туда легко попадают лишние
+          # части — адрес сервера из вывода ssh-keyscan, подпись root@host,
+          # переводы строк. Ключ без типа (одно «AAAA…») тоже принимаем.
+          HOST_KEY="$(printf '%s' "$DEPLOY_HOST_KEY" | tr -d '\r' \
+            | grep -oE '(ssh-ed25519|ecdsa-sha2-nistp[0-9]+|ssh-rsa) +[A-Za-z0-9+/]+=*' | head -1)"
+          if [ -z "$HOST_KEY" ]; then
+            BARE="$(printf '%s' "$DEPLOY_HOST_KEY" | tr -d '\r' | grep -oE 'AAAAC3NzaC1lZDI1NTE5[A-Za-z0-9+/]+=*' | head -1)"
+            [ -n "$BARE" ] && HOST_KEY="ssh-ed25519 $BARE"
+          fi
+          if [ -z "$HOST_KEY" ]; then
+            echo "::error::В DEPLOY_HOST_KEY нет ключа сервера. Ожидается строка вида «ssh-ed25519 AAAA…» — вывод на сервере: cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub"
+            exit 1
+          fi
+          printf '%s %s\n' "$DEPLOY_HOST" "$HOST_KEY" > ~/.ssh/known_hosts
+          # Отпечаток — не секрет: его можно сверить с выводом на сервере
+          # ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+          echo "Ключ сервера из секрета: $(ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $1, $2, $NF}')"
 
       - name: Выкатка
         if: env.HAS_KEY == 'true'
         run: |
+          # Если сервер представился не тем ключом, что в секрете, —
+          # печатаем отпечаток, которым он представился на самом деле.
+          # Это подсказка для сверки, а не разрешение: доверия ему нет.
+          if ! ssh-keygen -F "$DEPLOY_HOST" >/dev/null || \
+             ! ssh-keyscan -T 10 -t ed25519 "$DEPLOY_HOST" 2>/dev/null | ssh-keygen -lf - 2>/dev/null \
+               | awk '{print $2}' | grep -qxF "$(ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $2}')"; then
+            echo "::warning::Сервер представился ключом: $(ssh-keyscan -T 10 -t ed25519 "$DEPLOY_HOST" 2>/dev/null | ssh-keygen -lf - 2>/dev/null | awk '{print $2}'). Сверьте с ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub на сервере."
+          fi
           ssh -i ~/.ssh/deploy \
               -o IdentitiesOnly=yes \
               -o StrictHostKeyChecking=yes \
