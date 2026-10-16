@@ -1145,7 +1145,7 @@ html.is-moving-lead, html.is-moving-lead body {
 .chip-btn:active { transform: scale(.96); }
 @media (max-width: 599px) {
   .todo__actions { width: 100%; }
-  .todo__actions > * { flex: 1; }
+  .todo__actions > * { flex: 1 1 0; }
   .todo__actions .chip-btn { width: 100%; min-height: 44px; }
 }
 
