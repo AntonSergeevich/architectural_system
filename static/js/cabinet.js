@@ -1028,4 +1028,32 @@
       }
     });
   }
+
+  // --- Оглавление проекта: какой раздел сейчас на экране -------------------
+  var jump = document.querySelector('[data-jump]');
+  if (jump && 'IntersectionObserver' in window) {
+    var links = {};
+    jump.querySelectorAll('a[href^="#"]').forEach(function (a) { links[a.hash.slice(1)] = a; });
+    var visible = {};
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { visible[en.target.id] = en.isIntersecting; });
+      // Подсвечиваем первый по порядку видимый раздел — тот, что выше.
+      var here = Object.keys(links).filter(function (id) { return visible[id]; })[0];
+      Object.keys(links).forEach(function (id) {
+        links[id].classList.toggle('is-here', id === here);
+        if (id === here && jump.scrollWidth > jump.clientWidth) {
+          // Прокручиваем только саму строку, а не страницу: scrollIntoView
+          // сбил бы плавную прокрутку страницы, которую запустил тап.
+          jump.scrollTo({
+            left: links[id].offsetLeft - (jump.clientWidth - links[id].offsetWidth) / 2,
+            behavior: reduceMotion ? 'auto' : 'smooth'
+          });
+        }
+      });
+    }, { rootMargin: '-40% 0px -50% 0px' });
+    Object.keys(links).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) spy.observe(el);
+    });
+  }
 })();

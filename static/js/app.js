@@ -51,6 +51,15 @@
   // Только если человек не просил убрать анимации. И только как украшение:
   // без JS и при reduce-motion всё видно сразу, ничего не прячется навсегда.
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Высота шапки — в переменную: под ней прилипают оглавления страниц,
+  // а шапка на узком экране и при крупном шрифте бывает разной высоты.
+  var header = document.querySelector('.header');
+  function headerHeight() {
+    if (header) document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+  }
+  headerHeight();
+  window.addEventListener('resize', headerHeight);
   var revealables = document.querySelectorAll('[data-reveal]');
   if (revealables.length && window.IntersectionObserver && !reduce) {
     var observer = new IntersectionObserver(function (entries) {
