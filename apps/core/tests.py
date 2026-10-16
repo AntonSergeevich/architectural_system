@@ -897,3 +897,40 @@ class HomeShowcaseTests(TestCase):
             PortfolioProject.objects.create(title=f"Объект {i}", is_published=True)
         response = self.client.get(reverse("public:home"))
         self.assertEqual(len(response.context["featured"]), 4)
+
+
+class SeasonTests(TestCase):
+    """Листопад осенью, снег зимой — по дате, и выключается галочкой."""
+
+    def test_months_map_to_seasons(self):
+        from datetime import date
+
+        from .context_processors import season_of
+
+        self.assertEqual(season_of(date(2026, 9, 1)), "autumn")
+        self.assertEqual(season_of(date(2026, 11, 30)), "autumn")
+        self.assertEqual(season_of(date(2026, 12, 1)), "winter")
+        self.assertEqual(season_of(date(2027, 2, 28)), "winter")
+        self.assertEqual(season_of(date(2027, 5, 15)), "")
+
+    def test_autumn_shows_falling_leaves(self):
+        from datetime import date
+
+        with mock.patch("apps.core.context_processors.timezone.localdate", return_value=date(2026, 10, 15)):
+            response = self.client.get(reverse("public:home"))
+        self.assertContains(response, 'data-season="autumn"')
+        self.assertContains(response, "art__fall")
+        self.assertNotContains(response, "art__snow")
+
+    def test_switch_in_settings_turns_it_off(self):
+        from datetime import date
+
+        from .models import SiteSettings
+
+        settings_row = SiteSettings.get()
+        settings_row.seasonal = False
+        settings_row.save()
+        with mock.patch("apps.core.context_processors.timezone.localdate", return_value=date(2026, 10, 15)):
+            response = self.client.get(reverse("public:home"))
+        self.assertNotContains(response, "data-season")
+        self.assertNotContains(response, "art__fall")

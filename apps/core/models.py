@@ -91,6 +91,14 @@ class SiteSettings(models.Model):
         "Именно этот предел защищает от выгорания",
     )
 
+    # --- Оформление --------------------------------------------------------
+    seasonal = models.BooleanField(
+        "Сезонные детали",
+        default=True,
+        help_text="Осенью на рисунке главной падают листья и желтеет ветка "
+        "в знаке, зимой идёт снег. Время года определяется по дате само",
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -117,6 +117,51 @@
      </g>
     </g>
 
+    {% comment %}
+      Время года. Осенью мимо арки летят листья, а несколько уже лежат
+      на полу, зимой идёт снег. Сезон определяется по дате на сервере
+      (по Красноярску), выключается в настройках сайта галочкой
+      «Сезонные детали». Листья — берёзовые: город за окном — Красноярск.
+
+      Падение и покачивание — две разные анимации на двух элементах:
+      группа летит вниз равномерно, а сам лист внутри неё качается
+      и поворачивается. Одной анимацией этого не сделать — получается
+      либо камень, либо маятник.
+    {% endcomment %}
+    {% if season == "autumn" %}
+    <g class="art__autumn" stroke="none">
+      <path class="art__leaf art__leaf--1 art__leaf--down" transform="translate(72 420) rotate(-14)" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/>
+      <path class="art__leaf art__leaf--3 art__leaf--down" transform="translate(392 420) rotate(12)" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/>
+      <path class="art__leaf art__leaf--2 art__leaf--down" transform="translate(494 420) rotate(-6)" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/>
+      <g class="art__fall" style="--x:70px;--drift:40px;--dur:13s;--delay:1.6s"><path class="art__leaf art__leaf--1" style="--k:1.0" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:190px;--drift:-30px;--dur:15s;--delay:4.8s"><path class="art__leaf art__leaf--2" style="--k:0.8" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:300px;--drift:36px;--dur:12s;--delay:2.9s"><path class="art__leaf art__leaf--3" style="--k:1.1" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:380px;--drift:-24px;--dur:16s;--delay:7.5s"><path class="art__leaf art__leaf--1" style="--k:0.9" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:470px;--drift:30px;--dur:14s;--delay:0.4s"><path class="art__leaf art__leaf--2" style="--k:1.0" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:530px;--drift:-40px;--dur:13s;--delay:6.2s"><path class="art__leaf art__leaf--3" style="--k:0.8" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+      <g class="art__fall" style="--x:130px;--drift:26px;--dur:17s;--delay:9.8s"><path class="art__leaf art__leaf--2" style="--k:1.0" d="M-9 0 C-6 -7 3 -8 9 -1 C4 5 -4 6 -9 0 Z M-9 0 l-4 2"/></g>
+    </g>
+    {% elif season == "winter" %}
+    <g class="art__winter" stroke="none">
+      <circle class="art__snow" cx="0" cy="0" r="2.5" style="--x:20px;--drift:1px;--dur:11s;--delay:0.9s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:61px;--drift:-1px;--dur:11s;--delay:10.9s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:84px;--drift:-19px;--dur:17s;--delay:5.0s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:119px;--drift:11px;--dur:17s;--delay:0.7s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:164px;--drift:-10px;--dur:11s;--delay:6.9s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:192px;--drift:-10px;--dur:11s;--delay:6.7s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3" style="--x:218px;--drift:2px;--dur:13s;--delay:6.5s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3" style="--x:266px;--drift:11px;--dur:13s;--delay:1.2s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2.5" style="--x:300px;--drift:-1px;--dur:12s;--delay:6.6s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:318px;--drift:15px;--dur:14s;--delay:6.0s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3.5" style="--x:367px;--drift:-4px;--dur:18s;--delay:7.0s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3" style="--x:398px;--drift:-5px;--dur:14s;--delay:9.5s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2" style="--x:425px;--drift:12px;--dur:15s;--delay:6.3s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3.5" style="--x:462px;--drift:-6px;--dur:12s;--delay:1.4s"/>
+      <circle class="art__snow" cx="0" cy="0" r="2.5" style="--x:499px;--drift:24px;--dur:16s;--delay:1.8s"/>
+      <circle class="art__snow" cx="0" cy="0" r="3.5" style="--x:535px;--drift:-22px;--dur:12s;--delay:9.2s"/>
+    </g>
+    {% endif %}
+
     <g class="art__purrs" stroke="none">
       <text class="art__purr" style="--p:0" x="146" y="356" font-size="13">мрр-мррр</text>
       <text class="art__purr" style="--p:1" x="158" y="330" font-size="11">мррр</text>
