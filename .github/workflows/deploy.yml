@@ -1,0 +1,119 @@
+# Автоматическая выкатка: push в main → тесты → сервер.
+#
+# Выкатывается только то, что прошло тесты, и только из main. Если тесты
+# упали, сайт остаётся на прошлой версии, а GitHub пришлёт письмо тому,
+# кто отправил изменения.
+#
+# Сервер не доверяет GitHub ничего, кроме одной команды. Ключ, лежащий
+# в секретах, на сервере привязан к deploy/autodeploy.sh: зайти им в
+# оболочку, пробросить порт или выполнить что-то другое нельзя. Утечка
+# ключа даёт ровно одну возможность — выкатить коммит, который и так уже
+# лежит в main. Настройка — DEPLOY.md, раздел «Автоматическая выкатка».
+
+name: Тесты и выкатка
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Две выкатки одновременно — это два git merge и два перезапуска в одной
+# папке. Вторая ждёт первую, а не отменяет её: прерванная на середине
+# миграция хуже любой очереди.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Тесты
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Зависимости
+        run: pip install -r requirements.txt
+
+      # Модель поменяли, а миграцию не создали — на сервере это всплывёт
+      # ошибкой «no such column» уже у живых людей. Ловим здесь.
+      - name: Миграции на месте
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Проверка проекта
+        run: python manage.py check
+
+      - name: Тесты
+        run: python manage.py test apps
+
+  deploy:
+    name: Выкатка на da-des.ru
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://da-des.ru
+    env:
+      DEPLOY_HOST: 155.212.209.229
+      DEPLOY_USER: dades
+      # Пока секретов нет, выкатка пропускается, а не падает: сначала
+      # настраивается сервер, потом GitHub, и красный крестик на каждом
+      # коммите в промежутке ничего бы не сообщил.
+      HAS_KEY: ${{ secrets.DEPLOY_SSH_KEY != '' && secrets.DEPLOY_HOST_KEY != '' }}
+    steps:
+      - name: Ключи не заданы — выкатка пропущена
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "::notice::Секреты DEPLOY_SSH_KEY и DEPLOY_HOST_KEY не заданы. Выкатка пропущена — см. DEPLOY.md, «Автоматическая выкатка»."
+
+      - name: Ключ и отпечаток сервера
+        if: env.HAS_KEY == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          # Отпечаток сервера записан заранее, а не принимается «на веру»
+          # при первом входе: иначе ключ выкатки можно было бы отдать
+          # кому угодно, кто встанет между GitHub и сервером.
+          printf '%s %s\n' "$DEPLOY_HOST" "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+
+      - name: Выкатка
+        if: env.HAS_KEY == 'true'
+        run: |
+          ssh -i ~/.ssh/deploy \
+              -o IdentitiesOnly=yes \
+              -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 \
+              -o ConnectTimeout=20 \
+              "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA"
+
+      # Сервер сам проверяет приложение на своём сокете. Здесь — снаружи,
+      # тем же путём, что и посетитель: DNS, сертификат, nginx.
+      - name: Сайт открывается снаружи
+        if: env.HAS_KEY == 'true'
+        run: |
+          for i in 1 2 3 4 5; do
+            CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://da-des.ru/ || true)"
+            [ "$CODE" = "200" ] && { echo "✓ https://da-des.ru отвечает 200"; exit 0; }
+            echo "попытка $i: код $CODE"; sleep 5
+          done
+          echo "::error::Сайт снаружи не отвечает 200 после выкатки"
+          exit 1
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/deploy

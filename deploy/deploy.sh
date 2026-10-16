@@ -8,6 +8,11 @@ ROOT="$(pwd)"
 PY="$ROOT/.venv/bin/python"
 PIP="$ROOT/.venv/bin/pip"
 
+# Без аргумента — выкатить свежий main. С хешем — ровно этот коммит:
+# так работает автоматическая выкатка (deploy/autodeploy.sh), которой
+# нельзя прихватить коммит новее — его тесты могут быть ещё не пройдены.
+TARGET="${1:-}"
+
 # Выкатку запускает владелец проекта — и проверяется это первым делом,
 # до бэкапа и до всего остального.
 #
@@ -25,11 +30,30 @@ if [ "$(id -un)" != "$OWNER" ]; then
     exit 1
 fi
 
+# Без терминала (автоматическая выкатка) sudo не может спросить пароль
+# и падает посреди дела — уже после миграций. Проверяем заранее и
+# говорим, чего не хватает, пока ничего не тронуто.
+if [ ! -t 0 ] && ! sudo -n -l /usr/bin/systemctl restart dades >/dev/null 2>&1; then
+    echo "✗ Для выкатки без терминала нужно право перезапускать сайт без пароля."
+    echo "  Один раз на сервере, см. DEPLOY.md «Автоматическая выкатка»:"
+    echo "  sudo visudo -cf $ROOT/deploy/sudoers && sudo install -m 440 -o root -g root $ROOT/deploy/sudoers /etc/sudoers.d/dades-deploy"
+    exit 1
+fi
+
+# Только база: выкатка меняет код и схему, а не загруженные файлы.
+# Полная копия с фотографиями делается каждую ночь по крону, и архив
+# всех медиа на каждый пуш за месяц съел бы диск.
 echo "→ Резервная копия базы перед выкаткой"
-./deploy/backup.sh
+./deploy/backup.sh --db-only
 
 echo "→ Забираем изменения"
-git pull --ff-only
+if [ -n "$TARGET" ]; then
+    git fetch -q origin main
+    git merge --ff-only -q "$TARGET"
+else
+    git pull --ff-only
+fi
+echo "  версия: $(git log -1 --format='%h %s')"
 
 echo "→ Зависимости"
 "$PIP" install -q -r requirements.txt

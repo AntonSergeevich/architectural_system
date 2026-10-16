@@ -17,5 +17,8 @@
 # Резервные копии базы и файлов — каждую ночь.
 30 3 * * *  /srv/dades/deploy/backup.sh >> /var/log/dades-backup.log 2>&1
 
-# Обновление сертификата.
-15 4 * * *  certbot renew --quiet --deploy-hook "systemctl reload nginx"
+# Сертификат здесь не обновляется. Это crontab пользователя dades,
+# а certbot без root не может ни писать в /etc/letsencrypt, ни
+# перезапускать nginx — строка только сыпала ошибками каждую ночь.
+# Обновлением занимается certbot.timer, который пакет certbot ставит сам
+# и запускает от root. Проверить: systemctl list-timers | grep certbot

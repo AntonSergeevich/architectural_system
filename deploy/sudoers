@@ -1,0 +1,8 @@
+# Права для выкатки без пароля. Установить (одной строкой):
+#   sudo visudo -cf /srv/dades/deploy/sudoers && sudo install -m 440 -o root -g root /srv/dades/deploy/sudoers /etc/sudoers.d/dades-deploy
+#
+# Ровно две команды и ровно с этими аргументами: перезапустить сайт
+# и показать его журнал, если он не поднялся. Ни «sudo что угодно»,
+# ни даже «systemctl что угодно» — только это.
+dades ALL=(root) NOPASSWD: /usr/bin/systemctl restart dades
+dades ALL=(root) NOPASSWD: /usr/bin/journalctl -u dades -n 40 --no-pager

@@ -2,7 +2,13 @@
 # Резервная копия базы и загруженных файлов.
 # Файлы проектов — визуализации и чертежи — терять нельзя ни при каких
 # условиях: заново их не сделать.
+#
+#   ./deploy/backup.sh            база и файлы (ночной крон)
+#   ./deploy/backup.sh --db-only  только база (перед каждой выкаткой)
 set -euo pipefail
+
+DB_ONLY=0
+[ "${1:-}" = "--db-only" ] && DB_ONLY=1
 
 ROOT="/srv/dades"
 DEST="/srv/backups"
@@ -40,7 +46,7 @@ if [ -n "${POSTGRES_DB:-}" ]; then
         | gzip > "$DEST/db_$STAMP.sql.gz"
 fi
 
-if [ -d "$ROOT/media" ]; then
+if [ "$DB_ONLY" = 0 ] && [ -d "$ROOT/media" ]; then
     tar czf "$DEST/media_$STAMP.tar.gz" -C "$ROOT" media
 fi
 
