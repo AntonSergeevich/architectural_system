@@ -165,3 +165,26 @@ th { font-size: var(--step--1); color: var(--muted); font-weight: 600; }
   width: 1px; height: 1px;
   overflow: hidden;
 }
+
+/* --- Переходы между страницами ---------------------------------------------
+   Сайт остаётся обычными страницами — с адресами, кнопкой «назад»
+   и работой без JavaScript, — но переход между ними не мигает белым,
+   а мягко проявляется. Шапка при этом стоит на месте: её не перерисовывают,
+   и глаз воспринимает переход как смену содержимого, а не всей страницы.
+
+   Это встроенная возможность браузера (View Transitions). Где её нет,
+   ничего не ломается: страница просто открывается, как раньше. */
+
+@view-transition { navigation: auto; }
+
+.header { view-transition-name: site-header; }
+.tabbar { view-transition-name: tabbar; }
+
+::view-transition-old(root) { animation: page-out .16s cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(root) { animation: page-in .3s cubic-bezier(.22, .61, .36, 1) both; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}

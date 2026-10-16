@@ -42,6 +42,32 @@
 {% block footer %}{% include "components/footer.html" %}{% endblock %}
 {% include "components/cookies.html" %}
 
+{% comment %}
+  Предзагрузка: стоит задержать курсор на ссылке (на телефоне — коснуться
+  её), и браузер начинает грузить страницу заранее. К моменту клика она
+  уже готова, и переход получается мгновенным.
+
+  Только публичные страницы. В кабинете открытие страницы кое-что
+  меняет — отмечает сообщения прочитанными, а коммерческое предложение —
+  «открытым заказчиком». Предзагрузка от простого наведения сделала бы
+  это за человека, который страницу так и не открыл.
+{% endcomment %}
+<script type="speculationrules">
+{"prefetch": [{
+  "where": {"and": [
+    {"href_matches": "/*"},
+    {"not": {"href_matches": "/cabinet/*"}},
+    {"not": {"href_matches": "/accounts/*"}},
+    {"not": {"href_matches": "/admin/*"}},
+    {"not": {"href_matches": "/kp/*"}},
+    {"not": {"href_matches": "/dogovor/*"}},
+    {"not": {"href_matches": "/pay/*"}},
+    {"not": {"href_matches": "/media/*"}},
+    {"not": {"selector_matches": "[download], [target=_blank], [data-no-prefetch]"}}
+  ]},
+  "eagerness": "moderate"
+}]}
+</script>
 <script src="{% static 'js/app.js' %}" defer></script>
 {% block scripts %}{% endblock %}
 </body>

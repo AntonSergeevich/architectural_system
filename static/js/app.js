@@ -136,6 +136,14 @@
     function show(i) {
       index = (i + links.length) % links.length;
       var link = links[index];
+      // Соседние кадры подгружаем заранее: листают быстро, и пустой
+      // кадр на полсекунды выглядит как поломка.
+      if (many) {
+        [index + 1, index - 1].forEach(function (n) {
+          var next = links[(n + links.length) % links.length];
+          (new Image()).src = next.getAttribute('href');
+        });
+      }
       var text = link.dataset.lightbox || '';
       img.src = link.getAttribute('href');
       img.alt = text;
@@ -163,6 +171,86 @@
       if (e.target === box || e.target.closest('.lightbox__close')) close();
     });
     document.addEventListener('keydown', onKey);
+
+    // --- Свайпы ------------------------------------------------------------
+    // На телефоне кадры листают пальцем, а не целятся в стрелки по краям:
+    // влево-вправо — соседний кадр, вниз — закрыть, как в галерее телефона.
+    // Кадр едет за пальцем, поэтому жест виден ещё до того, как сработал.
+    //
+    // Слушаем touch, а не pointer: два пальца — это увеличение, и его мы
+    // браузеру оставляем. Pointer-события пришлось бы глушить целиком
+    // через touch-action, и увеличить кадр стало бы нельзя.
+    var figure = box.querySelector('.lightbox__figure');
+    var touch = null;
+
+    function setDrag(x, y) {
+      figure.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      var fade = Math.min(Math.abs(y) / 400, 0.6);
+      box.style.backgroundColor = 'rgba(12, 10, 8,' + (0.88 - fade) + ')';
+    }
+
+    function settle() {
+      figure.style.transition = reduce ? '' : 'transform .22s ease';
+      box.style.transition = 'background-color .22s ease';
+      setDrag(0, 0);
+      box.style.backgroundColor = '';
+      setTimeout(function () { figure.style.transition = ''; }, 240);
+    }
+
+    function slide(step) {
+      if (reduce) { show(index + step); return; }
+      var out = step > 0 ? -window.innerWidth : window.innerWidth;
+      figure.style.transition = 'transform .18s ease-in, opacity .18s';
+      figure.style.transform = 'translateX(' + out + 'px)';
+      figure.style.opacity = '0';
+      setTimeout(function () {
+        show(index + step);
+        figure.style.transition = 'none';
+        figure.style.transform = 'translateX(' + (-out / 3) + 'px)';
+        requestAnimationFrame(function () {
+          figure.style.transition = 'transform .22s ease-out, opacity .22s';
+          figure.style.transform = '';
+          figure.style.opacity = '';
+        });
+      }, 170);
+    }
+
+    box.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { touch = null; settle(); return; }
+      var t = e.touches[0];
+      touch = { x: t.clientX, y: t.clientY, dx: 0, dy: 0, axis: null, at: Date.now() };
+      figure.style.transition = 'none';
+    }, { passive: true });
+
+    box.addEventListener('touchmove', function (e) {
+      if (!touch || e.touches.length !== 1) return;
+      var t = e.touches[0];
+      touch.dx = t.clientX - touch.x;
+      touch.dy = t.clientY - touch.y;
+      // Направление решается один раз, по первым десяти пикселям:
+      // иначе диагональный жест дёргает кадр в обе стороны.
+      if (!touch.axis && Math.abs(touch.dx) + Math.abs(touch.dy) > 10) {
+        touch.axis = Math.abs(touch.dx) > Math.abs(touch.dy) ? 'x' : 'y';
+      }
+      if (!touch.axis) return;
+      e.preventDefault();
+      if (touch.axis === 'x') setDrag(many ? touch.dx : touch.dx / 4, 0);
+      else setDrag(0, Math.max(touch.dy, touch.dy / 4));
+    }, { passive: false });
+
+    box.addEventListener('touchend', function () {
+      if (!touch || !touch.axis) { touch = null; return; }
+      var fast = Date.now() - touch.at < 250;
+      var gone = touch;
+      touch = null;
+      if (gone.axis === 'x' && many && (Math.abs(gone.dx) > 70 || (fast && Math.abs(gone.dx) > 30))) {
+        slide(gone.dx < 0 ? 1 : -1);
+      } else if (gone.axis === 'y' && (gone.dy > 110 || (fast && gone.dy > 50))) {
+        close();
+      } else {
+        settle();
+      }
+    });
 
     show(index);
     document.body.appendChild(box);
