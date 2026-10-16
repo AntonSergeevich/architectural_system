@@ -39,7 +39,9 @@
 @media (prefers-reduced-motion: reduce) {
   .logo__mark, .logo__leaf { transition: none; }
 }
-.logo__text { display: grid; }
+/* Между именем и подписью — воздух: при общей высоте строки 1.1 подпись
+   прилипала к имени, и два текста читались как одна сжатая плашка. */
+.logo__text { display: grid; gap: 5px; }
 .logo__name {
   font-family: var(--font-display); font-weight: 800;
   letter-spacing: -0.04em; font-size: var(--step-1);

@@ -84,10 +84,42 @@ jobs:
           DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
         run: |
           install -d -m 700 ~/.ssh
-          # Переводы строк Windows (\r) ломают ключ: ssh отвечает «invalid
-          # format». Секреты часто вставляют из блокнота — вычищаем.
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy
+          # Закрытый ключ собираем заново из того, что вставили. При
+          # копировании из терминала строки ключа склеиваются через пробел,
+          # получают отступы или переводы строк Windows, и ssh отвечает
+          # «error in libcrypto». Тело ключа — base64 между строками BEGIN
+          # и END; пробелы и переводы строк внутри ничего не значат, поэтому
+          # вычищаем их все и раскладываем по 70 знаков, как ssh-keygen.
+          RAW="$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r')"
+          BODY="$(printf '%s' "$RAW" | tr '\n' ' ' \
+            | sed -n 's/.*-----BEGIN OPENSSH PRIVATE KEY-----\(.*\)-----END OPENSSH PRIVATE KEY-----.*/\1/p' \
+            | tr -d ' \t')"
+          if [ -z "$BODY" ]; then
+            # Строки BEGIN/END потерялись, а само тело на месте.
+            BODY="$(printf '%s' "$RAW" | tr -d ' \t\n' | grep -oE 'b3BlbnNzaC1rZXktdjE[A-Za-z0-9+/]+=*' | head -1)"
+          fi
+          if [ -z "$BODY" ]; then
+            if printf '%s' "$RAW" | grep -q 'ssh-ed25519 AAAA'; then
+              echo "::error::В DEPLOY_SSH_KEY открытый ключ (ssh-ed25519 AAAA…). Нужен закрытый: вывод cat ~/gh-deploy, от -----BEGIN до -----END."
+            else
+              echo "::error::В DEPLOY_SSH_KEY нет закрытого ключа OpenSSH. Нужен весь вывод cat ~/gh-deploy, от -----BEGIN OPENSSH PRIVATE KEY----- до -----END OPENSSH PRIVATE KEY-----."
+            fi
+            exit 1
+          fi
+          {
+            echo "-----BEGIN OPENSSH PRIVATE KEY-----"
+            printf '%s' "$BODY" | fold -w 70
+            echo
+            echo "-----END OPENSSH PRIVATE KEY-----"
+          } > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
+          if ! ssh-keygen -y -f ~/.ssh/deploy > ~/.ssh/deploy.pub 2>/dev/null; then
+            echo "::error::Закрытый ключ в DEPLOY_SSH_KEY повреждён — скопирован не целиком. Если файла ~/gh-deploy на сервере уже нет, создайте ключ заново (DEPLOY.md, раздел 13, шаги 2–5)."
+            exit 1
+          fi
+          # Отпечаток открытой половины — не секрет. Сверить на сервере:
+          # ssh-keygen -lf ~/.ssh/authorized_keys
+          echo "Ключ выкатки: $(ssh-keygen -lf ~/.ssh/deploy.pub | awk '{print $2}')"
 
           # Отпечаток сервера записан заранее, а не принимается «на веру»
           # при первом входе: иначе ключ выкатки можно было бы отдать
@@ -144,4 +176,4 @@ jobs:
 
       - name: Убрать ключ
         if: always()
-        run: rm -f ~/.ssh/deploy
+        run: rm -f ~/.ssh/deploy ~/.ssh/deploy.pub
