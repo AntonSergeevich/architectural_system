@@ -3,10 +3,17 @@
 {% block title %}Обо мне — {{ site.owner_name }}{% endblock %}
 {% block content %}
 <section class="section">
-  <div class="wrap split">
+  {% comment %}
+    Без фото блока под портрет нет вовсе. Пустой бежевый прямоугольник
+    читался как «картинка не загрузилась», а на телефоне занимал
+    полэкрана до первого слова.
+  {% endcomment %}
+  <div class="wrap split{% if not site.owner_photo %} split--solo{% endif %}">
+    {% if site.owner_photo %}
     <div class="portrait">
-      {% if site.owner_photo %}<img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">{% endif %}
+      <img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">
     </div>
+    {% endif %}
     <div>
       <p class="eyebrow">Обо мне</p>
       <h1>{{ site.owner_name }}</h1>

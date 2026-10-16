@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static cabinet_nav %}
 
 {% comment %}
   Общая рамка кабинета. Публичный сайт продаёт, кабинет — работает,
@@ -10,9 +10,9 @@
 {% block head %}<link rel="stylesheet" href="{% static 'css/cabinet.css' %}">{% endblock %}
 
 {% block content %}
-<div class="cab">
+<div class="cab{% if user.is_owner %} cab--tabbar{% endif %}">
   <div class="wrap">
-    <nav class="cabnav" aria-label="Разделы кабинета">
+    <nav class="cabnav{% if user.is_owner %} cabnav--owner{% endif %}" aria-label="Разделы кабинета">
       {% if user.is_owner %}
         <a class="cabnav__item {% if section == 'dashboard' %}is-active{% endif %}" href="{% url 'cabinet:dashboard' %}">Сегодня</a>
         <a class="cabnav__item {% if section == 'leads' %}is-active{% endif %}" href="{% url 'cabinet:leads' %}">Заявки</a>
@@ -33,6 +33,63 @@
     {% block cabinet %}{% endblock %}
   </div>
 </div>
+
+{% if user.is_owner %}
+  {% overdue_leads_count as late %}
+  {% comment %}
+    Нижние вкладки — только на телефоне. Восемь пунктов верхнего меню
+    вставали там в три строки и занимали треть экрана, а до них ещё
+    надо было дотянуться большим пальцем через весь телефон. Внизу —
+    четыре раздела, с которых начинается день, остальное — в «Ещё».
+  {% endcomment %}
+  <nav class="tabbar" aria-label="Разделы кабинета">
+    <a class="tabbar__item{% if section == 'dashboard' %} is-active{% endif %}" href="{% url 'cabinet:dashboard' %}"{% if section == 'dashboard' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none"/></svg>
+      <span>Сегодня</span>
+    </a>
+    <a class="tabbar__item{% if section == 'leads' %} is-active{% endif %}" href="{% url 'cabinet:leads' %}"{% if section == 'leads' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4.5l8 7V20H4z"/><path d="M12 17.5c-2.6-1.9-3.8-3.1-3.8-4.4 0-1 .8-1.7 1.7-1.7.9 0 1.6.6 2.1 1.4.5-.8 1.2-1.4 2.1-1.4.9 0 1.7.7 1.7 1.7 0 1.3-1.2 2.5-3.8 4.4z" fill="currentColor" stroke="none"/></svg>
+      <span>Заявки</span>
+      {% if late %}<b class="tabbar__badge" aria-label="просрочено: {{ late }}">{{ late }}</b>{% endif %}
+    </a>
+    <a class="tabbar__item{% if section == 'projects' %} is-active{% endif %}" href="{% url 'cabinet:projects' %}"{% if section == 'projects' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
+      <span>Проекты</span>
+    </a>
+    <a class="tabbar__item{% if section == 'clients' %} is-active{% endif %}" href="{% url 'cabinet:clients' %}"{% if section == 'clients' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6M17.5 14.4c2 .8 3.5 2.9 3.5 5.6"/></svg>
+      <span>Заказчики</span>
+    </a>
+    <details class="tabbar__more{% if section == 'prices' or section == 'contracts' or section == 'invoices' %} is-active{% endif %}" data-tabbar-more>
+      <summary class="tabbar__item">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+        <span>Ещё</span>
+      </summary>
+      <div class="tabbar__sheet">
+        <a href="{% url 'cabinet:prices' %}"{% if section == 'prices' %} aria-current="page"{% endif %}>Цены</a>
+        <a href="{% url 'cabinet:contracts' %}"{% if section == 'contracts' %} aria-current="page"{% endif %}>Договоры</a>
+        <a href="{% url 'cabinet:invoices' %}"{% if section == 'invoices' %} aria-current="page"{% endif %}>Счета</a>
+        <a href="/admin/">Админка: сайт, портфолио, тексты</a>
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}<button type="submit">Выйти</button>
+        </form>
+      </div>
+    </details>
+  </nav>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+  {% comment %}
+    Кабинет — рабочий инструмент, и полный подвал сайта с меню, документами
+    и реквизитами здесь только удлиняет страницу. Остаётся одна строка.
+  {% endcomment %}
+  <footer class="cabfoot">
+    <div class="wrap">
+      <a href="{% url 'public:home' %}">← На сайт</a>
+      {% for doc in legal_menu %}<a href="{{ doc.get_absolute_url }}">{{ doc.title }}</a>{% endfor %}
+    </div>
+  </footer>
 {% endblock %}
 
 {% block scripts %}

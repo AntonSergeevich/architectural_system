@@ -1,0 +1,26 @@
+{% load richtext %}
+{% comment %}
+  Просроченные касания с действиями на месте: позвонить или честно
+  перенести на завтра. Одна разметка на стол «Сегодня» и на «Заявки».
+  refresh — что перерисовать после переноса.
+{% endcomment %}
+<ul class="todo">
+  {% for lead in overdue %}
+    <li class="todo__row">
+      <div class="todo__main">
+        <a class="todo__name" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+        <span class="muted">{{ lead.next_action }} · <span class="todo__late">просрочено {{ lead.overdue_days|overdue }}</span></span>
+      </div>
+      <div class="todo__actions">
+        {% if lead.client.phone %}
+          <a class="chip-btn" href="tel:{{ lead.client.phone }}" aria-label="Позвонить: {{ lead.client.name }}">Позвонить</a>
+        {% endif %}
+        <form method="post" action="{% url 'cabinet:lead_snooze' lead.pk %}" data-async data-refresh="{{ refresh }}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button class="chip-btn" type="submit">На завтра</button>
+        </form>
+      </div>
+    </li>
+  {% endfor %}
+</ul>

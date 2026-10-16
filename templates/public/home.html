@@ -158,7 +158,7 @@
             {% if project.cover %}<img src="{{ project.cover.image.url }}" alt="{{ project.title }}" loading="lazy">{% endif %}
           </span>
           <span class="work__title">{{ project.title }}</span>
-          <span class="work__meta">{{ project.city }}{% if project.area %} · {{ project.area }} м²{% endif %}</span>
+          <span class="work__meta">{{ project.city }}{% if project.area %} · {{ project.area|floatformat:"-1" }} м²{% endif %}</span>
         </a>
       {% endfor %}
     </div>
@@ -216,10 +216,17 @@
 {% endif %}
 
 <section class="section section--alt" data-reveal>
-  <div class="wrap split">
+  {% comment %}
+    Без фото блока под портрет нет вовсе. Пустой бежевый прямоугольник
+    читался как «картинка не загрузилась», а на телефоне занимал
+    полэкрана до первого слова.
+  {% endcomment %}
+  <div class="wrap split{% if not site.owner_photo %} split--solo{% endif %}">
+    {% if site.owner_photo %}
     <div class="portrait">
-      {% if site.owner_photo %}<img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">{% endif %}
+      <img src="{{ site.owner_photo.url }}" alt="{{ site.owner_name }}">
     </div>
+    {% endif %}
     <div>
       {% comment %}
         Заголовок и текст — из настроек сайта. На главной нужен короткий

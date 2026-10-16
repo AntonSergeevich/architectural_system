@@ -59,15 +59,15 @@
             <h3>{{ stage.title }}</h3>
             <p>{{ stage.description }}</p>
             {% if stage.what_client_does %}<p class="card__muted">Что делаете вы: {{ stage.what_client_does }}</p>{% endif %}
-            <p class="step__days">Моя работа: {{ stage.working_days }} рабочих дней · Ваши согласования: {{ stage.client_days }} дней</p>
+            <p class="step__days">Моя работа: {{ stage.working_days|workdays }} · Ваши согласования: {{ stage.client_days|days }}</p>
           </div>
         </div>
       {% endfor %}
     </div>
 
     <div class="note" style="margin-top: var(--gap-6)">
-      <p><strong>Итого по нормативу:</strong> {{ total_days }} рабочих дней моей работы
-        и {{ client_days }} дней на ваши согласования.</p>
+      <p><strong>Итого по нормативу:</strong> {{ total_days|workdays }} моей работы
+        и {{ client_days|days }} на ваши согласования.</p>
       <p>Вторая цифра — не формальность. Половина сдвигов по срокам возникает
         из-за ожидания ответа, и честнее показать это сразу, чем объяснять потом.</p>
     </div>

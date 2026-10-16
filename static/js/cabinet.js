@@ -1012,4 +1012,20 @@
   setInterval(watchEditWindow, 1000);
   armAll();
   window.addEventListener('resize', paintRail);
+
+  // --- «Ещё» в нижних вкладках ---------------------------------------------
+  // <details> сам по себе не закрывается от касания мимо, а меню, которое
+  // приходится закрывать тем же пунктом, которым открывал, — ловушка.
+  var more = document.querySelector('[data-tabbar-more]');
+  if (more) {
+    document.addEventListener('click', function (e) {
+      if (more.open && !more.contains(e.target)) more.open = false;
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && more.open) {
+        more.open = false;
+        more.querySelector('summary').focus();
+      }
+    });
+  }
 })();

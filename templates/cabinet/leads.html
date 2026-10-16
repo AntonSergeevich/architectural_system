@@ -5,20 +5,15 @@
 {% block cabinet %}
     <h1>Заявки</h1>
 
+    <div data-overdue>
     {% if overdue %}
       <div class="note note--warn">
         <h3>Просрочено: {{ overdue|length }}</h3>
         <p>Заявка без сделанного следующего шага — это и есть потерянная заявка.</p>
-        <ul>
-          {% for lead in overdue %}
-            <li>
-              <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
-              — {{ lead.next_action }}, {{ lead.next_action_at|date:"d.m H:i" }}
-            </li>
-          {% endfor %}
-        </ul>
+        {% include "cabinet/_overdue.html" with refresh="[data-overdue]" %}
       </div>
     {% endif %}
+    </div>
 
     {% comment %}
       Воронка — доска, а не список. Заявки разбирают пачкой: пять подряд,

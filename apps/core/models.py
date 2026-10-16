@@ -7,6 +7,21 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+# Транслитерация для адресов страниц. slugify из Django кириллицу просто
+# выбрасывает, и «Квартира у Енисея» становилась «obekt», а следующая —
+# «obekt-2»: по адресу не понять, что за страница, и поисковику тоже.
+# Таблица — как у Яндекса в адресах, ею же пользуется админка.
+_TRANSLIT = dict(zip(
+    "абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+    ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o",
+     "p", "r", "s", "t", "u", "f", "h", "ts", "ch", "sh", "sch", "", "y", "", "e", "yu", "ya"],
+))
+
+
+def translit(text):
+    return "".join(_TRANSLIT.get(ch, ch) for ch in (text or "").lower())
+
+
 class SiteSettings(models.Model):
     """Единственная строка с настройками. Правится Дарьей в кабинете."""
 
@@ -287,7 +302,7 @@ class PortfolioProject(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base = slugify(self.title, allow_unicode=False) or "obekt"
+            base = slugify(translit(self.title)) or "obekt"
             slug, n = base, 2
             while PortfolioProject.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug, n = f"{base}-{n}", n + 1

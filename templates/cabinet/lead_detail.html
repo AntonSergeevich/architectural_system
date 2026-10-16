@@ -1,4 +1,5 @@
 {% extends "cabinet/base_cabinet.html" %}
+{% load richtext %}
 {% block title %}{{ lead.client.name }}{% endblock %}
 {% block cabinet %}
 <div class="cabnarrow">
@@ -12,7 +13,7 @@
     {% if lead.estate %}
       <div class="card">
         <p class="card__title">Объект</p>
-        <p>{{ lead.estate.get_kind_display }}, {{ lead.estate.area }} м², {{ lead.estate.rooms }} помещений</p>
+        <p>{{ lead.estate.get_kind_display }}, {{ lead.estate.area|floatformat:"-1" }} м², {{ lead.estate.rooms|rooms }}</p>
         <p class="card__muted">
           {{ lead.estate.city }}{% if lead.estate.address %}, {{ lead.estate.address }}{% endif %} ·
           ключи {% if lead.estate.keys_received %}получены{% else %}не получены{% endif %} ·

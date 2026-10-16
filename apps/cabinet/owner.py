@@ -9,6 +9,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from apps.billing.models import Invoice
@@ -187,6 +188,46 @@ def lead_detail(request, pk):
         "cabinet/lead_detail.html",
         {"lead": lead, "statuses": Lead.Status.choices, "section": "leads"},
     )
+
+
+def next_workday_start(now=None):
+    """Начало следующего рабочего дня по регламенту: завтра в 10:00,
+    а в пятницу и субботу — в понедельник. Напоминание на воскресенье
+    Дарья всё равно не увидит: в выходные система ей не пишет."""
+    now = timezone.localtime(now)
+    day = now.date() + timezone.timedelta(days=1)
+    while day.weekday() >= 5:
+        day += timezone.timedelta(days=1)
+    start = SiteSettings.get().workday_start
+    return timezone.make_aware(
+        timezone.datetime.combine(day, timezone.datetime.min.time()).replace(hour=start),
+        timezone.get_current_timezone(),
+    )
+
+
+@login_required
+@owner_only
+@require_POST
+def lead_snooze(request, pk):
+    """«Не сегодня» — одной кнопкой со стола, без захода в карточку.
+
+    Просроченное касание бывает не забытым, а честно отложенным: человек
+    просил перезвонить после отпуска, ключи будут через неделю. Заходить
+    ради этого в заявку, искать поле даты и набирать её руками — три
+    лишних шага, после которых просрочку проще оставить висеть. А висящая
+    просрочка, которую все знают как ложную, перестаёт что-либо значить.
+    """
+    lead = get_object_or_404(Lead, pk=pk)
+    lead.next_action_at = next_workday_start()
+    lead.save(update_fields=["next_action_at"])
+    when = timezone.localtime(lead.next_action_at)
+    messages.success(
+        request, f"{lead.client.name}: напомню {when:%d.%m} в {when:%H:%M}."
+    )
+    back = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
+        back = reverse("cabinet:dashboard")
+    return redirect(back)
 
 
 @login_required

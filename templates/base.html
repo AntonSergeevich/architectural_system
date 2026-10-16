@@ -39,7 +39,7 @@
   {% block content %}{% endblock %}
 </main>
 
-{% include "components/footer.html" %}
+{% block footer %}{% include "components/footer.html" %}{% endblock %}
 {% include "components/cookies.html" %}
 
 <script src="{% static 'js/app.js' %}" defer></script>

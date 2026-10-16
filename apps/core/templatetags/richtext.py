@@ -59,6 +59,24 @@ def richtext(value):
     return mark_safe("\n".join(html))
 
 
+def plural(number, one, few, many):
+    """Русский счёт: 1 день, 2 дня, 5 дней, 21 день, 111 дней."""
+    tail, hundred = number % 10, number % 100
+    if tail == 1 and hundred != 11:
+        return one
+    if tail in (2, 3, 4) and hundred not in (12, 13, 14):
+        return few
+    return many
+
+
+def _count(value, one, few, many):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return value
+    return f"{number} {plural(number, one, few, many)}"
+
+
 @register.filter(name="workdays")
 def workdays(value):
     """7 → «7 рабочих дней», 21 → «21 рабочий день».
@@ -67,19 +85,34 @@ def workdays(value):
     дней» на экране заказчика читается как небрежность — а небрежность
     в мелочах переносят на работу целиком.
     """
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return value
+    return _count(value, "рабочий день", "рабочих дня", "рабочих дней")
 
-    tail, hundred = number % 10, number % 100
-    if tail == 1 and hundred != 11:
-        word = "рабочий день"
-    elif tail in (2, 3, 4) and hundred not in (12, 13, 14):
-        word = "рабочих дня"
-    else:
-        word = "рабочих дней"
-    return f"{number} {word}"
+
+@register.filter(name="days")
+def days(value):
+    """1 → «1 день», 3 → «3 дня», 22 → «22 дня». Так было «Ваши
+    согласования: 1 дней» на странице, которую читает каждый заказчик."""
+    return _count(value, "день", "дня", "дней")
+
+
+@register.filter(name="overdue")
+def overdue(days_late):
+    """0 → «сегодня», 1 → «со вчера», 3 → «3 дня» — сколько висит касание."""
+    try:
+        number = int(days_late)
+    except (TypeError, ValueError):
+        return ""
+    if number <= 0:
+        return "сегодня"
+    if number == 1:
+        return "со вчера"
+    return f"{number} {plural(number, 'день', 'дня', 'дней')}"
+
+
+@register.filter(name="rooms")
+def rooms(value):
+    """1 → «1 помещение», 3 → «3 помещения», 5 → «5 помещений»."""
+    return _count(value, "помещение", "помещения", "помещений")
 
 
 @register.filter(name="money")

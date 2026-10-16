@@ -7,7 +7,7 @@
     <p class="eyebrow">Предложение{% if quote.valid_until %} · действует до {{ quote.valid_until|date:"d.m.Y" }}{% endif %}</p>
     <h1>Ваш проект</h1>
     <p class="lead">
-      {{ quote.area }} м²{% if quote.rooms %}, {{ quote.rooms }} помещений{% endif %}{% if quote.complexity %} · {{ quote.complexity.title }}{% endif %}
+      {{ quote.area|floatformat:"-1" }} м²{% if quote.rooms %}, {{ quote.rooms|rooms }}{% endif %}{% if quote.complexity %} · {{ quote.complexity.title }}{% endif %}
     </p>
     {% if quote.is_expired %}
       <p class="message message--warning">Срок этого предложения истёк — напишите мне, пересчитаю по текущим ценам.</p>

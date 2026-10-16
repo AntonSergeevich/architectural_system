@@ -1476,3 +1476,55 @@ class LeadBoardTests(CabinetTestCase):
             reverse("cabinet:lead_move", args=[self.lead.pk]), {"status": "won"}
         )
         self.assertNotEqual(response.status_code, 200)
+
+
+class TodayDeskTests(CabinetTestCase):
+    """Стол «Сегодня»: просрочка решается на месте, без захода в заявку."""
+
+    def test_snooze_moves_step_to_next_workday_morning(self):
+        from datetime import datetime
+        from unittest import mock
+
+        from apps.cabinet.owner import next_workday_start
+
+        tz = timezone.get_current_timezone()
+        friday = timezone.make_aware(datetime(2026, 10, 16, 15, 0), tz)
+        monday = next_workday_start(friday)
+        self.assertEqual((monday.weekday(), monday.hour), (0, 10))
+        tuesday = timezone.make_aware(datetime(2026, 10, 13, 9, 0), tz)
+        self.assertEqual(next_workday_start(tuesday).date().day, 14)
+
+        self.lead.next_action_at = timezone.now() - timezone.timedelta(days=3)
+        self.lead.save()
+        self.login_owner()
+        with mock.patch("apps.cabinet.owner.timezone.localtime", return_value=friday):
+            response = self.client.post(
+                reverse("cabinet:lead_snooze", args=[self.lead.pk]),
+                {"next": "https://evil.example.com/"},
+            )
+        # Чужой адрес в next не принимается — возвращаемся на стол.
+        self.assertRedirects(response, reverse("cabinet:dashboard"), fetch_redirect_response=False)
+        self.lead.refresh_from_db()
+        self.assertFalse(self.lead.is_overdue)
+
+    def test_client_cannot_snooze(self):
+        self.login_client()
+        response = self.client.post(reverse("cabinet:lead_snooze", args=[self.lead.pk]))
+        self.assertNotEqual(response.status_code, 200)
+        self.lead.refresh_from_db()
+
+    def test_overdue_has_call_and_snooze_on_desk(self):
+        self.lead.next_action_at = timezone.now() - timezone.timedelta(days=2)
+        self.lead.save()
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:dashboard"))
+        self.assertContains(response, "tel:+79130000001")
+        self.assertContains(response, reverse("cabinet:lead_snooze", args=[self.lead.pk]))
+        self.assertContains(response, "просрочено 2 дня")
+
+    def test_tabbar_only_for_owner(self):
+        self.login_owner()
+        self.assertContains(self.client.get(reverse("cabinet:dashboard")), 'class="tabbar"')
+        self.client.logout()
+        self.login_client()
+        self.assertNotContains(self.client.get(reverse("cabinet:my_project")), 'class="tabbar"')

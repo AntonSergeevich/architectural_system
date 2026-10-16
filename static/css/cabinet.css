@@ -99,6 +99,12 @@
 .rail__block-head {
   display: flex; gap: var(--gap-2); align-items: baseline; justify-content: center;
   flex-wrap: wrap;
+  /* На телефоне шкала прокручена к текущему этапу, и подпись блока,
+     стоящая по центру скобки, уезжала за край: от «Обмер, бриф,
+     планировки 30%» оставалось «КИ 30%». Липкая подпись держится в
+     видимой части, пока видна хоть часть её скобки. */
+  width: max-content; max-width: 100%; margin-inline: auto;
+  position: sticky; left: var(--gap-2); right: var(--gap-2);
 }
 .rail__block-title {
   font-size: var(--step--2); font-weight: 600; color: var(--muted);
@@ -1008,6 +1014,25 @@
   padding-bottom: var(--gap-3);
   min-width: 0;
 }
+/* На телефоне доска листается по столбцу за раз, как страницы: свайп —
+   и перед глазами следующий этап целиком, а край соседнего выглядывает
+   справа и подсказывает, что листать есть куда. Пока карточка в руке,
+   примагничивание выключено — иначе оно спорит с подъездом доски у края. */
+@media (max-width: 699px) {
+  .board {
+    grid-auto-columns: 84%;
+    scroll-snap-type: x mandatory; scroll-padding-inline: var(--gap-1);
+    overscroll-behavior-x: contain;
+  }
+  .board__col { scroll-snap-align: start; }
+  .board.is-dragging { scroll-snap-type: none; }
+  .rail { scroll-snap-type: x proximity; }
+  /* Полное имя блока — только у текущего: у соседних от него виден
+     лишь край, и длинная подпись в нём обрезалась до «…АНИРОВКИ».
+     Процент остаётся у всех — по нему и видно, сколько позади. */
+  .rail__block:not(.is-current) .rail__block-title { display: none; }
+  .rail__item { scroll-snap-align: center; }
+}
 .board__col {
   background: var(--paper-alt); border: 1px solid var(--line);
   border-radius: var(--radius-2); padding: var(--gap-4);
@@ -1085,4 +1110,129 @@ html.is-moving-lead, html.is-moving-lead body {
 }
 @media (prefers-reduced-motion: reduce) {
   .house-card--landed { animation: none; }
+}
+
+/* --- Дела на столе ----------------------------------------------------------
+   Строка «что сделать»: слева кто и что, справа — само действие. На
+   телефоне кнопки уходят под текст и становятся крупными: по ним бьют
+   большим пальцем на ходу. */
+
+.todo { list-style: none; margin: 0; padding: 0; }
+.todo__row {
+  display: flex; flex-wrap: wrap; gap: var(--gap-3) var(--gap-4);
+  align-items: center; justify-content: space-between;
+  padding: var(--gap-3) 0;
+  border-top: 1px solid var(--line-soft);
+}
+.todo__row:first-child { border-top: 0; padding-top: 0; }
+.todo__main { display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; font-size: var(--step--1); }
+.todo__name { font-weight: 700; font-size: var(--step-0); color: var(--ink); text-decoration: none; }
+.todo__name:hover { color: var(--brand-500); }
+.todo__late { color: var(--err); }
+.todo__quote { color: var(--ink-2); font-style: italic; }
+.todo__actions { display: flex; gap: var(--gap-2); flex-wrap: wrap; }
+.todo__actions form { margin: 0; }
+
+.chip-btn {
+  font: inherit; font-size: var(--step--1); font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding: 0 var(--gap-4);
+  border: 1px solid var(--line); border-radius: var(--radius-pill);
+  background: var(--surface); color: var(--ink); text-decoration: none;
+  transition: border-color .18s var(--ease), background .18s var(--ease), transform .12s var(--ease);
+}
+.chip-btn:hover { border-color: var(--brand-400); background: var(--brand-50); color: var(--ink); }
+.chip-btn:active { transform: scale(.96); }
+@media (max-width: 599px) {
+  .todo__actions { width: 100%; }
+  .todo__actions > * { flex: 1; }
+  .todo__actions .chip-btn { width: 100%; min-height: 44px; }
+}
+
+/* Полоска готовности проекта: цифра «37 %» читается, полоска — видна
+   краем глаза, и стол с несколькими проектами сравнивается без чтения. */
+.meter {
+  display: block; height: 4px; margin: var(--gap-2) 0 var(--gap-1);
+  max-width: 320px; border-radius: 4px; background: var(--line-soft); overflow: hidden;
+}
+.meter__fill { display: block; height: 100%; background: var(--brand-500); border-radius: inherit; }
+
+/* --- Подвал кабинета ------------------------------------------------------ */
+.cabfoot {
+  border-top: 1px solid var(--line-soft); margin-top: var(--gap-7);
+  padding: var(--gap-5) 0; font-size: var(--step--2); color: var(--muted);
+}
+.cabfoot .wrap { display: flex; flex-wrap: wrap; gap: var(--gap-2) var(--gap-5); }
+.cabfoot a { color: var(--muted); text-decoration: none; }
+.cabfoot a:hover { color: var(--brand-500); }
+
+/* --- Нижние вкладки на телефоне -------------------------------------------
+   Только у Дарьи и только на узком экране. Верхнее меню там прячется:
+   два меню на одном экране — это вопрос «каким пользоваться». */
+.tabbar { display: none; }
+
+@media (max-width: 699px) {
+  .cabnav--owner { display: none; }
+  body:has(.tabbar) .cabfoot { padding-bottom: calc(var(--gap-5) + 72px + env(safe-area-inset-bottom, 0px)); }
+  body:has(.tabbar) .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--line);
+  }
+  .tabbar__item {
+    position: relative;
+    display: grid; justify-items: center; gap: 2px;
+    padding: 6px 2px; min-height: 52px;
+    color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 600;
+    list-style: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color .18s var(--ease), transform .12s var(--ease);
+  }
+  .tabbar__item::-webkit-details-marker { display: none; }
+  .tabbar__item:active { transform: scale(.94); }
+  .tabbar__item svg {
+    width: 24px; height: 24px;
+    fill: none; stroke: currentColor; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .tabbar__item.is-active, .tabbar__more.is-active > .tabbar__item, .tabbar__more[open] > .tabbar__item {
+    color: var(--brand-500);
+  }
+  .tabbar__badge {
+    position: absolute; top: 2px; left: calc(50% + 6px);
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: var(--err); color: #fff;
+    font-size: 11px; line-height: 18px; text-align: center;
+    box-shadow: 0 0 0 2px var(--surface);
+  }
+
+  .tabbar__more { position: relative; }
+  .tabbar__sheet {
+    position: absolute; right: 4px; bottom: calc(100% + 10px);
+    min-width: 230px; padding: var(--gap-2);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-3); box-shadow: var(--shadow-lift);
+    display: grid;
+    animation: sheet-in .18s var(--ease);
+  }
+  .tabbar__sheet a, .tabbar__sheet button {
+    display: block; width: 100%; text-align: left;
+    padding: 12px var(--gap-4); border-radius: var(--radius-2);
+    font: inherit; font-size: var(--step-0); color: var(--ink);
+    background: none; border: 0; text-decoration: none; cursor: pointer;
+  }
+  .tabbar__sheet a[aria-current] { color: var(--brand-500); font-weight: 700; }
+  .tabbar__sheet a:active, .tabbar__sheet button:active { background: var(--paper-alt); }
+  .tabbar__sheet form { margin: 0; border-top: 1px solid var(--line-soft); margin-top: var(--gap-1); padding-top: var(--gap-1); }
+  .tabbar__sheet button { color: var(--muted); }
+  @keyframes sheet-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+}
+@media (max-width: 699px) and (prefers-reduced-motion: reduce) {
+  .tabbar__sheet { animation: none; }
 }

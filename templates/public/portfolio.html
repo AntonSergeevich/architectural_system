@@ -17,7 +17,7 @@
           </span>
           <span class="work__title">{{ project.title }}</span>
           <span class="work__meta">
-            {{ project.city }}{% if project.area %} · {{ project.area }} м²{% endif %}{% if project.year %} · {{ project.year }}{% endif %}
+            {{ project.city }}{% if project.area %} · {{ project.area|floatformat:"-1" }} м²{% endif %}{% if project.year %} · {{ project.year }}{% endif %}
           </span>
         </a>
       {% empty %}

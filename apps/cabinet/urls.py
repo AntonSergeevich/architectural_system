@@ -15,6 +15,7 @@ urlpatterns = [
     path("zayavki/<int:pk>/etap/", owner_views.lead_move, name="lead_move"),
     path("zayavki/<int:pk>/udalit/", owner_views.lead_delete, name="lead_delete"),
     path("zayavki/<int:pk>/spam/", owner_views.lead_spam, name="lead_spam"),
+    path("zayavki/<int:pk>/zavtra/", owner_views.lead_snooze, name="lead_snooze"),
     path("zakazchiki/", owner_views.clients, name="clients"),
     path("zakazchiki/<int:pk>/", owner_views.client_detail, name="client_detail"),
     path("zakazchiki/<int:pk>/pravka/", owner_views.client_edit, name="client_edit"),

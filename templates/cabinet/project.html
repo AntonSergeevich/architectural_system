@@ -10,7 +10,7 @@
     <p class="muted">
       {{ project.client.name }}
       {% if project.client.phone %} · {{ project.client.phone }}{% endif %}
-      {% if project.estate %} · {{ project.estate.area|floatformat:"-1" }} м², {{ project.estate.rooms }} помещений{% endif %}
+      {% if project.estate %} · {{ project.estate.area|floatformat:"-1" }} м², {{ project.estate.rooms|rooms }}{% endif %}
       · {{ project.get_status_display }}
     </p>
   </div>

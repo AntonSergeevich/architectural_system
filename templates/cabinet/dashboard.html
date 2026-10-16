@@ -5,9 +5,21 @@
 {% block cabinet %}
 <header class="cabhead">
   <div>
-    <p class="eyebrow">Кабинет</p>
+    {% comment %}
+      Вместо «Кабинет» над заголовком — сегодняшняя дата, а под ним —
+      вся сводка одной фразой. Открыла стол и за секунду поняла,
+      насторожиться или выдохнуть, не листая панели.
+    {% endcomment %}
+    <p class="eyebrow">{% now "l, j E" %}</p>
     <h1>Сегодня</h1>
-    <p class="muted">Короткий ответ на вопрос «за что взяться». Всё остальное — в разделах.</p>
+    <p class="muted" data-summary>
+      {% if overdue or new_leads %}
+        {% if overdue %}Просрочено касаний: {{ overdue|length }}.{% endif %}
+        {% if new_leads %}Новых заявок: {{ new_leads|length }}.{% endif %}
+      {% else %}
+        Срочного нет: у всех заявок назначен следующий шаг.
+      {% endif %}
+    </p>
   </div>
   <div class="cabhead__side">
     <span class="wip {% if wip_exceeded %}is-over{% endif %}">
@@ -26,22 +38,22 @@
   </section>
 {% endif %}
 
+<div data-overdue>
 {% if overdue %}
   <section class="panel">
     <header class="panel__head">
       <h2>Просроченные касания</h2>
       <span class="muted">Заявка без следующего шага — это потерянная заявка</span>
     </header>
-    <ul class="files">
-      {% for lead in overdue %}
-        <li>
-          <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
-          <span class="muted">{{ lead.next_action }} · было до {{ lead.next_action_at|date:"d.m H:i" }}</span>
-        </li>
-      {% endfor %}
-    </ul>
+    {% comment %}
+      Всё, что нужно сделать с просрочкой, делается прямо здесь: позвонить
+      или честно перенести на завтра. Заходить в карточку ради «перезвоню
+      завтра» — лишние шаги, после которых просрочку проще оставить висеть.
+    {% endcomment %}
+    {% include "cabinet/_overdue.html" with refresh="[data-overdue],[data-summary]" %}
   </section>
 {% endif %}
+</div>
 
 <section class="panel">
   <header class="panel__head">
@@ -53,6 +65,7 @@
     <article class="row">
       <div class="row__main">
         <a class="row__title" href="{% url 'cabinet:project_detail' row.project.pk %}">{{ row.project }}</a>
+        <span class="meter" aria-hidden="true"><span class="meter__fill" style="width: {{ row.project.progress }}%"></span></span>
         <p class="muted">
           {% if row.stage %}Этап {{ row.stage.number }}: {{ row.stage.title }}{% else %}Этапы не разложены{% endif %}
           · готово {{ row.project.progress }}%
@@ -78,11 +91,19 @@
 {% if new_leads %}
   <section class="panel">
     <header class="panel__head"><h2>Новые заявки</h2></header>
-    <ul class="files">
+    <ul class="todo">
       {% for lead in new_leads %}
-        <li>
-          <a href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
-          <span class="muted">{{ lead.created_at|date:"d.m H:i" }}{% if lead.estate %} · {{ lead.estate.area|floatformat:"-1" }} м²{% endif %}</span>
+        <li class="todo__row">
+          <div class="todo__main">
+            <a class="todo__name" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+            <span class="muted">{{ lead.created_at|date:"j E, H:i" }}{% if lead.estate %} · {{ lead.estate.area|floatformat:"-1" }} м²{% endif %}</span>
+            {% if lead.message %}<span class="todo__quote">{{ lead.message|truncatechars:110 }}</span>{% endif %}
+          </div>
+          {% if lead.client.phone %}
+            <div class="todo__actions">
+              <a class="chip-btn" href="tel:{{ lead.client.phone }}" aria-label="Позвонить: {{ lead.client.name }}">Позвонить</a>
+            </div>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>

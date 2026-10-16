@@ -244,6 +244,11 @@ class Lead(models.Model):
             self.next_action_at < timezone.now()
         )
 
+    @property
+    def overdue_days(self):
+        """На сколько календарных дней просрочен шаг: 0 — сегодня."""
+        return (timezone.localdate() - timezone.localtime(self.next_action_at).date()).days
+
     # Ключи анкеты — это имена полей формы, а значения приходят как есть,
     # вместе с питоновскими True и False. Человеку в кабинете нужны
     # вопрос и ответ, а не устройство базы: «has_builders False» читается
