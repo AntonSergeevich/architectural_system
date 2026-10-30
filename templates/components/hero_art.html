@@ -90,6 +90,19 @@
         <path class="art__line" style="--i:9" d="M440 374 c4 -52 22 -68 42 -78"/>
         <circle class="art__fruit" cx="402" cy="296" r="10" stroke="none"/>
         <circle class="art__fruit" cx="486" cy="288" r="9" stroke="none"/>
+        {% if season == "spring" %}
+        <g class="art__spring" stroke="none">
+      <path class="art__sprout" style="--b:0" transform="translate(437 356) rotate(-150)" d="M0 0 C3 -6 10 -7 14 -2 C10 3 4 4 0 0 Z"/>
+      <path class="art__sprout" style="--b:1" transform="translate(444 346) rotate(-30)" d="M0 0 C3 -6 10 -7 14 -2 C10 3 4 4 0 0 Z"/>
+      <path class="art__sprout" style="--b:2" transform="translate(424 328) rotate(-160)" d="M0 0 C3 -6 10 -7 14 -2 C10 3 4 4 0 0 Z"/>
+      <path class="art__sprout" style="--b:3" transform="translate(458 318) rotate(-20)" d="M0 0 C3 -6 10 -7 14 -2 C10 3 4 4 0 0 Z"/>
+      <g class="art__bloom" style="--b:0"><circle cx="431.0" cy="334.0" r="3.3"/><circle cx="434.8" cy="336.8" r="3.3"/><circle cx="433.4" cy="341.2" r="3.3"/><circle cx="428.6" cy="341.2" r="3.3"/><circle cx="427.2" cy="336.8" r="3.3"/><circle class="art__bloom-eye" cx="431" cy="338" r="1.9"/></g>
+      <g class="art__bloom" style="--b:1"><circle cx="417.0" cy="314.0" r="3.3"/><circle cx="420.8" cy="316.8" r="3.3"/><circle cx="419.4" cy="321.2" r="3.3"/><circle cx="414.6" cy="321.2" r="3.3"/><circle cx="413.2" cy="316.8" r="3.3"/><circle class="art__bloom-eye" cx="417" cy="318" r="1.9"/></g>
+      <g class="art__bloom" style="--b:2"><circle cx="452.0" cy="326.0" r="3.3"/><circle cx="455.8" cy="328.8" r="3.3"/><circle cx="454.4" cy="333.2" r="3.3"/><circle cx="449.6" cy="333.2" r="3.3"/><circle cx="448.2" cy="328.8" r="3.3"/><circle class="art__bloom-eye" cx="452" cy="330" r="1.9"/></g>
+      <g class="art__bloom" style="--b:3"><circle cx="468.0" cy="305.0" r="3.3"/><circle cx="471.8" cy="307.8" r="3.3"/><circle cx="470.4" cy="312.2" r="3.3"/><circle cx="465.6" cy="312.2" r="3.3"/><circle cx="464.2" cy="307.8" r="3.3"/><circle class="art__bloom-eye" cx="468" cy="309" r="1.9"/></g>
+      <g class="art__bloom" style="--b:4"><circle cx="398.0" cy="298.0" r="3.3"/><circle cx="401.8" cy="300.8" r="3.3"/><circle cx="400.4" cy="305.2" r="3.3"/><circle cx="395.6" cy="305.2" r="3.3"/><circle cx="394.2" cy="300.8" r="3.3"/><circle class="art__bloom-eye" cx="398" cy="302" r="1.9"/></g>
+        </g>
+        {% endif %}
       </g>
     </g>
 
@@ -114,6 +127,14 @@
       <path d="M53.5 390 h5 l-2.5 2.5 Z"/>
       <path d="M56 392.5 v1.5 q-3 3 -5.5 0 M56 394 q3 3 5.5 0"/>
       <path class="art__whiskers" d="M44 388 H34 M44 393 H35 M68 388 H78 M68 393 H77"/>
+      {% if new_year %}
+      {% comment %} В праздники кот выходит на свет в шапке Деда Мороза. {% endcomment %}
+      <g class="art__hat">
+        <path class="art__hat-cap" d="M44.5 374 Q49 351 71 351.5 L67.5 373 Z"/>
+        <path class="art__hat-brim" d="M43 374.5 Q55.5 369.5 69 373"/>
+        <circle class="art__hat-pom" cx="72" cy="351.5" r="3.4"/>
+      </g>
+      {% endif %}
      </g>
     </g>
 
@@ -162,9 +183,74 @@
     </g>
     {% endif %}
 
+    {% if season == "spring" %}
+    {% comment %}
+      Весна: растение зацветает, рядом проклёвываются молодые листья,
+      по небу пролетают птицы. Цветы сидят в группе листвы и качаются
+      вместе с ней — иначе они висели бы в воздухе отдельно от веток.
+      Птицы — ночью их нет: включили лампу, значит стемнело.
+    {% endcomment %}
+    <g class="art__spring-sky">
+      <g class="art__flight" style="--y:72px;--wave:-10px;--dur:17s;--delay:0.8s"><path class="art__bird" style="--k:1" d="M-15 0 Q-7.5 -8 0 0 Q7.5 -8 15 0"/></g>
+      <g class="art__flight" style="--y:96px;--wave:8px;--dur:21s;--delay:6.5s"><path class="art__bird" style="--k:0.8" d="M-15 0 Q-7.5 -8 0 0 Q7.5 -8 15 0"/></g>
+      <g class="art__flight" style="--y:58px;--wave:6px;--dur:19s;--delay:12s"><path class="art__bird" style="--k:0.9" d="M-15 0 Q-7.5 -8 0 0 Q7.5 -8 15 0"/></g>
+    </g>
+    {% elif season == "summer" %}
+    {% comment %}
+      Лето: у солнца появляются лучи и медленно поворачиваются, у растения
+      кружит бабочка. Ночью, при включённой лампе, и то и другое гаснет.
+    {% endcomment %}
+    <g class="art__summer-day">
+      <g class="art__rays">
+        <path d="M512.0 140.0 L524.0 140.0"/>
+        <path d="M504.0 170.0 L514.4 176.0"/>
+        <path d="M482.0 192.0 L488.0 202.4"/>
+        <path d="M452.0 200.0 L452.0 212.0"/>
+        <path d="M422.0 192.0 L416.0 202.4"/>
+        <path d="M400.0 170.0 L389.6 176.0"/>
+        <path d="M392.0 140.0 L380.0 140.0"/>
+        <path d="M400.0 110.0 L389.6 104.0"/>
+        <path d="M422.0 88.0 L416.0 77.6"/>
+        <path d="M452.0 80.0 L452.0 68.0"/>
+        <path d="M482.0 88.0 L488.0 77.6"/>
+        <path d="M504.0 110.0 L514.4 104.0"/>
+      </g>
+      <g class="art__butterfly">
+        <g class="art__wing art__wing--l"><path d="M0 0 C-10 -15 -23 -9 -18 1 C-15 8 -6 6 0 0 Z M0 1 C-5 4 -10 11 -5 12 C-2 12 0 7 0 1 Z"/></g>
+        <g class="art__wing art__wing--r"><path d="M0 0 C10 -15 23 -9 18 1 C15 8 6 6 0 0 Z M0 1 C5 4 10 11 5 12 C2 12 0 7 0 1 Z"/></g>
+        <path class="art__butterfly-body" d="M0 -7 V9 M0 -7 l-3 -5 M0 -7 l3 -5"/>
+      </g>
+    </g>
+    {% endif %}
+
+    {% if new_year %}
+    {% comment %}
+      Новогодние праздники — с 15 декабря по Старый Новый год: в углу
+      комнаты ёлка. Рисуется теми же линиями, что и вся комната, а огоньки
+      гирлянды загораются вместе с торшером: свет в комнате включили —
+      включилась и гирлянда.
+    {% endcomment %}
+    <g class="art__tree">
+      <path class="art__line" style="--i:3" d="M58 300 L38 334 H48 L32 364 H44 L26 400 H90 L72 364 H84 L68 334 H78 Z"/>
+      <path class="art__line" style="--i:4" d="M58 400 V424"/>
+      <path class="art__tree-star" d="M58 283 l3 7.5 7.5 3 -7.5 3 -3 7.5 -3 -7.5 -7.5 -3 7.5 -3 Z"/>
+      <g class="art__garland">
+        <circle class="art__bulb art__bulb--0" style="--g:0" cx="54" cy="326" r="2.7"/>
+        <circle class="art__bulb art__bulb--1" style="--g:1" cx="63" cy="331" r="2.7"/>
+        <circle class="art__bulb art__bulb--0" style="--g:2" cx="46" cy="356" r="2.7"/>
+        <circle class="art__bulb art__bulb--1" style="--g:3" cx="58" cy="350" r="2.7"/>
+        <circle class="art__bulb art__bulb--0" style="--g:4" cx="70" cy="358" r="2.7"/>
+        <circle class="art__bulb art__bulb--1" style="--g:5" cx="40" cy="392" r="2.7"/>
+        <circle class="art__bulb art__bulb--0" style="--g:6" cx="52" cy="386" r="2.7"/>
+        <circle class="art__bulb art__bulb--1" style="--g:7" cx="64" cy="392" r="2.7"/>
+        <circle class="art__bulb art__bulb--0" style="--g:8" cx="76" cy="388" r="2.7"/>
+      </g>
+    </g>
+    {% endif %}
+
     <g class="art__purrs" stroke="none">
-      <text class="art__purr" style="--p:0" x="146" y="356" font-size="13">мрр-мррр</text>
-      <text class="art__purr" style="--p:1" x="158" y="330" font-size="11">мррр</text>
+      <text class="art__purr" style="--p:0" x="150" y="336" font-size="13">мрр-мррр</text>
+      <text class="art__purr" style="--p:1" x="162" y="312" font-size="11">мррр</text>
     </g>
   </svg>
 </button>

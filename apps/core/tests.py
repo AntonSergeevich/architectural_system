@@ -911,7 +911,31 @@ class SeasonTests(TestCase):
         self.assertEqual(season_of(date(2026, 11, 30)), "autumn")
         self.assertEqual(season_of(date(2026, 12, 1)), "winter")
         self.assertEqual(season_of(date(2027, 2, 28)), "winter")
-        self.assertEqual(season_of(date(2027, 5, 15)), "")
+        self.assertEqual(season_of(date(2027, 5, 15)), "spring")
+        self.assertEqual(season_of(date(2027, 7, 1)), "summer")
+
+    def test_new_year_is_only_the_holidays(self):
+        from datetime import date
+
+        from .context_processors import is_new_year
+
+        self.assertFalse(is_new_year(date(2026, 12, 14)))
+        self.assertTrue(is_new_year(date(2026, 12, 15)))
+        self.assertTrue(is_new_year(date(2027, 1, 14)))
+        self.assertFalse(is_new_year(date(2027, 1, 15)))
+
+    def test_any_season_can_be_previewed(self):
+        response = self.client.get(reverse("public:home"), {"season": "newyear"})
+        self.assertContains(response, 'data-season="winter"')
+        self.assertContains(response, 'data-holiday="newyear"')
+        self.assertContains(response, "art__tree")
+        self.assertContains(response, "art__hat")
+        response = self.client.get(reverse("public:home"), {"season": "spring"})
+        self.assertContains(response, "art__bloom")
+        self.assertNotContains(response, "art__tree")
+        # Чужое значение не ломает страницу и не попадает в разметку.
+        response = self.client.get(reverse("public:home"), {"season": "<script>"})
+        self.assertNotContains(response, "<script>\"")
 
     def test_autumn_shows_falling_leaves(self):
         from datetime import date

@@ -110,8 +110,10 @@ class SiteSettings(models.Model):
     seasonal = models.BooleanField(
         "Сезонные детали",
         default=True,
-        help_text="Осенью на рисунке главной падают листья и желтеет ветка "
-        "в знаке, зимой идёт снег. Время года определяется по дате само",
+        help_text="Зимой на рисунке главной идёт снег (в праздники — ёлка и кот "
+        "в шапке), весной цветёт растение и летают птицы, летом — бабочка, "
+        "осенью — листопад. Время года определяется по дате само. Посмотреть "
+        "любое: адрес главной с ?season=winter, spring, summer, autumn или newyear",
     )
 
     updated_at = models.DateTimeField(auto_now=True)

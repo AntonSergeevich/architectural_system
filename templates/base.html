@@ -1,5 +1,5 @@
 {% load static %}<!doctype html>
-<html lang="ru" class="no-js"{% if season %} data-season="{{ season }}"{% endif %}>
+<html lang="ru" class="no-js"{% if season %} data-season="{{ season }}"{% endif %}{% if new_year %} data-holiday="newyear"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

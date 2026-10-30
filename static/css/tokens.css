@@ -96,6 +96,10 @@
   --autumn-2: #C9702A;
   --autumn-3: #B38A2E;
   --snow: #9FB3C2;
+  /* Весна и праздники. */
+  --bloom: #E4A0B2;
+  --sprout: #6F9E5E;
+  --frost: #F6F1E8;
 }
 
 /* Тёмная тема собрана отдельно, а не инверсией: инвертированная тёплая
@@ -128,6 +132,9 @@
     --autumn-2: #E08A43;
     --autumn-3: #CDA54A;
     --snow: #DCE6EE;
+    --bloom: #F0B3C2;
+    --sprout: #93C27F;
+    --frost: #F4EFE6;
 
     --ok-bg:   #1B2A20;  --ok:   #7CC79A;
     --warn-bg: #2C2413;  --warn: #E2BC63;
@@ -166,4 +173,7 @@
   --autumn-2:   #E08A43;
   --autumn-3:   #CDA54A;
   --snow:       #DCE6EE;
+  --bloom:      #F0B3C2;
+  --sprout:     #93C27F;
+  --frost:      #F4EFE6;
 }
