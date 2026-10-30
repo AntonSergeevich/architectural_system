@@ -1266,3 +1266,24 @@ html.is-moving-lead, html.is-moving-lead body {
 /* Поле правки не во весь экран: высокое пустое поле на телефоне
    выглядело так, будто от заказчика ждут сочинение. */
 #revision textarea { min-height: 7.5em; height: 7.5em; }
+
+/* --- «Как считается»: карточки единиц -------------------------------------- */
+.units { border: 0; padding: 0; margin: var(--gap-5) 0; min-width: 0; }
+.units legend { font-weight: 700; margin-bottom: var(--gap-3); }
+.units__grid { display: grid; gap: var(--gap-2); grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.unit-card {
+  position: relative; display: grid; gap: 4px; align-content: start; cursor: pointer;
+  padding: var(--gap-3) var(--gap-4) var(--gap-3) calc(var(--gap-4) + 26px);
+  border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--surface);
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+.unit-card:hover { border-color: var(--brand-300); }
+.unit-card input { position: absolute; left: var(--gap-4); top: calc(var(--gap-3) + 3px); margin: 0; accent-color: var(--brand-500); }
+.unit-card__name { font-weight: 700; }
+.unit-card__hint { font-size: var(--step--1); color: var(--muted); line-height: 1.4; }
+.unit-card.is-picked, .unit-card:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); }
+.unit-preview {
+  margin: 0 0 var(--gap-5); padding: var(--gap-3) var(--gap-4);
+  border-radius: var(--radius-2); background: var(--paper-alt); color: var(--ink-2); font-size: var(--step--1);
+}
+[data-only-unit][hidden] { display: none; }

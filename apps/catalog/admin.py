@@ -21,7 +21,12 @@ class ServiceModuleAdmin(admin.ModelAdmin):
         (None, {"fields": ("code", "title", "short_title", "block", "group", "house_part", "order")}),
         (
             "Цена",
-            {"fields": ("unit", "price", "included_units", "extra_unit_price", "affected_by_complexity")},
+            {
+                "fields": ("unit", "price", "included_units", "extra_unit_price", "affected_by_complexity"),
+                "description": "Проще и нагляднее менять цену и то, как она считается, "
+                "в кабинете: Цены → «править» у услуги. Там под каждым вариантом "
+                "написано, что увидит заказчик.",
+            },
         ),
         ("Поведение", {"fields": ("is_required", "is_active", "duration_days")}),
         ("Тексты", {"fields": ("description", "outcome", "not_included", "warning")}),

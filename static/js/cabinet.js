@@ -1056,4 +1056,51 @@
       if (el) spy.observe(el);
     });
   }
+
+  // --- «Как считается» у услуги -------------------------------------------
+  // Подсказка под ценой и пример суммы меняются вместе с выбором: человек
+  // видит последствия до того, как нажал «Сохранить».
+  document.querySelectorAll('[data-unit-picker]').forEach(function (picker) {
+    var form = picker.closest('form');
+    var price = form.querySelector('[name="price"]');
+    var hours = form.querySelector('[name="included_units"]');
+    var extra = form.querySelector('[name="extra_unit_price"]');
+    var label = form.querySelector('[data-price-label]');
+    var preview = form.querySelector('[data-unit-preview]');
+    var rub = function (n) { return Math.round(n).toLocaleString('ru-RU') + ' ₽'; };
+
+    function update() {
+      var checked = picker.querySelector('input[type="radio"]:checked');
+      var unit = checked ? checked.value : '';
+      picker.querySelectorAll('.unit-card').forEach(function (card) {
+        card.classList.toggle('is-picked', card.contains(checked));
+      });
+      var hint = picker.querySelector('[data-price-hint="' + unit + '"]');
+      if (label && hint) label.textContent = hint.textContent;
+      form.querySelectorAll('[data-only-unit]').forEach(function (box) {
+        box.hidden = box.dataset.onlyUnit !== unit;
+      });
+
+      var p = parseFloat((price && price.value || '0').replace(',', '.')) || 0;
+      var text = '';
+      if (unit === 'sqm') text = 'Квартира 60 м²: 60 × ' + rub(p) + ' = ' + rub(60 * p) + '.';
+      else if (unit === 'fixed') text = 'Заказчик увидит: ' + rub(p) + ' за услугу.';
+      else if (unit === 'month') text = 'Стройка 6 месяцев: 6 × ' + rub(p) + ' = ' + rub(6 * p) + '.';
+      else if (unit === 'stage') text = 'Заказчик увидит: ' + rub(p) + ' за этап.';
+      else if (unit === 'visit') text = 'Заказчик увидит: ' + rub(p) + ' за выезд.';
+      else if (unit === 'hours') {
+        var h = parseFloat(hours && hours.value) || 0;
+        var e = parseFloat(extra && extra.value) || 0;
+        text = 'Заказчик увидит: ' + rub(p) + (h ? ' за ' + h + ' ч' : '') + (e ? ', далее +' + rub(e) + '/ч' : '') + '.';
+      } else if (unit === 'custom') text = 'Заказчик увидит: «по расчёту».';
+      if (preview) {
+        preview.textContent = text ? 'Как это выглядит на сайте. ' + text : '';
+        preview.hidden = !text;
+      }
+    }
+
+    picker.addEventListener('change', update);
+    [price, hours, extra].forEach(function (el) { if (el) el.addEventListener('input', update); });
+    update();
+  });
 })();

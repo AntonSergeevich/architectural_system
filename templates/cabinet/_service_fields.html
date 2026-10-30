@@ -1,0 +1,49 @@
+{% load forms %}
+{% comment %}
+  Поля услуги — одни и те же в «завести свою» и «править».
+
+  «Как считается» — карточками с объяснением, а не голым списком.
+  Список «за м², в месяц, за этап» ничего не говорил о том, что
+  изменится на сайте, и трогать его было страшно. Под каждым вариантом —
+  формула для заказчика, а ниже цены — пример, как сумму увидят
+  в конструкторе. Пример пересчитывается сразу, без сохранения.
+
+  Поля часов нужны только «пакету часов» и при другом выборе прячутся.
+  Без JavaScript видно всё — подписи и так говорят, к чему они.
+{% endcomment %}
+<div class="grid grid--2">
+  {% field form.title %}
+  {% field form.short_title %}
+  {% field form.block %}
+</div>
+
+<fieldset class="units {% if form.unit.errors %}field--error{% endif %}" data-unit-picker>
+  <legend>Как считается</legend>
+  <div class="units__grid">
+    {% for card in form.unit_cards %}
+      <label class="unit-card">
+        {{ card.radio.tag }}
+        <span class="unit-card__name">{{ card.radio.choice_label|capfirst }}</span>
+        <span class="unit-card__hint">{{ card.hint }}</span>
+        <span hidden data-price-hint="{{ card.radio.data.value }}">{{ card.price_hint }}</span>
+      </label>
+    {% endfor %}
+  </div>
+  {% for error in form.unit.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+</fieldset>
+
+<div class="grid grid--2">
+  <div class="field {% if form.price.errors %}field--error{% endif %}">
+    <label for="{{ form.price.id_for_label }}">{{ form.price.label }}</label>
+    {{ form.price }}
+    <p class="field__hint" data-price-label>{{ form.price.help_text }}</p>
+    {% for error in form.price.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+  </div>
+  {% field form.duration_days %}
+  <div data-only-unit="hours">{% field form.included_units %}</div>
+  <div data-only-unit="hours">{% field form.extra_unit_price %}</div>
+</div>
+
+<p class="unit-preview" data-unit-preview hidden></p>
+
+{% field form.description %}

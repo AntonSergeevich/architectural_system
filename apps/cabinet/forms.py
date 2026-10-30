@@ -103,8 +103,18 @@ class ServiceForm(forms.ModelForm):
 
     class Meta:
         model = ServiceModule
-        fields = ["title", "short_title", "block", "unit", "price", "duration_days", "description"]
-        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+        fields = [
+            "title", "short_title", "block", "unit", "price",
+            "included_units", "extra_unit_price", "duration_days", "description",
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "unit": forms.RadioSelect,
+            # Шаг 1, а не 0.01: копейки в прайсе дизайнера не бывают,
+            # а «20000.00» в поле читалось как ошибка.
+            "price": forms.NumberInput(attrs={"step": "1", "min": "0", "inputmode": "numeric"}),
+            "extra_unit_price": forms.NumberInput(attrs={"step": "1", "min": "0", "inputmode": "numeric"}),
+        }
         help_texts = {
             "short_title": "Как подписать блок в конструкторе. Пусто — возьмётся название",
             "duration_days": "Сколько рабочих дней занимает. Ноль — если не про сроки",
@@ -115,6 +125,32 @@ class ServiceForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["description"].required = False
         self.fields["short_title"].required = False
+        self.fields["included_units"].required = False
+        self.fields["extra_unit_price"].required = False
+        self.fields["included_units"].label = "Часов в пакете"
+        self.fields["extra_unit_price"].label = "Час сверх пакета, ₽"
+        self.fields["price"].label = "Цена, ₽"
+        # Целые рубли без «.00».
+        for name in ("price", "extra_unit_price"):
+            value = self.initial.get(name)
+            if value is not None and value == int(value):
+                self.initial[name] = int(value)
+
+    def unit_cards(self):
+        """Варианты «как считается» с объяснением — для карточек в шаблоне."""
+        from apps.catalog.models import UNIT_HINTS
+
+        return [
+            {"radio": radio, "hint": UNIT_HINTS[radio.data["value"]][0],
+             "price_hint": UNIT_HINTS[radio.data["value"]][1]}
+            for radio in self["unit"]
+        ]
+
+    def clean_included_units(self):
+        return self.cleaned_data.get("included_units") or 0
+
+    def clean_extra_unit_price(self):
+        return self.cleaned_data.get("extra_unit_price") or 0
 
     def save(self, commit=True):
         module = super().save(commit=False)
@@ -122,10 +158,12 @@ class ServiceForm(forms.ModelForm):
             module.code = self.next_code()
         if not module.short_title:
             module.short_title = module.title[:60]
-        # В конец списка своего блока: новая услуга не должна вклиниваться
-        # между уже привычными строками.
-        last = ServiceModule.objects.filter(block=module.block).order_by("-order").first()
-        module.order = (last.order + 10) if last else 100
+        if module._state.adding:
+            # Новая — в конец списка своего блока, чтобы не вклиниться
+            # между привычными строками. Правка порядок не трогает:
+            # раньше каждое сохранение уводило услугу в конец прайса.
+            last = ServiceModule.objects.filter(block=module.block).order_by("-order").first()
+            module.order = (last.order + 10) if last else 100
         if commit:
             module.save()
         return module

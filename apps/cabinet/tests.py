@@ -1497,15 +1497,17 @@ class TodayDeskTests(CabinetTestCase):
         self.lead.next_action_at = timezone.now() - timezone.timedelta(days=3)
         self.lead.save()
         self.login_owner()
-        with mock.patch("apps.cabinet.owner.timezone.localtime", return_value=friday):
-            response = self.client.post(
-                reverse("cabinet:lead_snooze", args=[self.lead.pk]),
-                {"next": "https://evil.example.com/"},
-            )
+        # Перенос — от настоящего «сейчас»: подменённая дата в прошлом
+        # сделала бы тест зависимым от календаря (так он и упал 30 октября).
+        response = self.client.post(
+            reverse("cabinet:lead_snooze", args=[self.lead.pk]),
+            {"next": "https://evil.example.com/"},
+        )
         # Чужой адрес в next не принимается — возвращаемся на стол.
         self.assertRedirects(response, reverse("cabinet:dashboard"), fetch_redirect_response=False)
         self.lead.refresh_from_db()
         self.assertFalse(self.lead.is_overdue)
+        self.assertEqual(timezone.localtime(self.lead.next_action_at).hour, 10)
 
     def test_client_cannot_snooze(self):
         self.login_client()
@@ -1528,3 +1530,38 @@ class TodayDeskTests(CabinetTestCase):
         self.client.logout()
         self.login_client()
         self.assertNotContains(self.client.get(reverse("cabinet:my_project")), 'class="tabbar"')
+
+
+class UnitPickerTests(CabinetTestCase):
+    """«Как считается» — карточки с объяснением; правка не двигает услугу."""
+
+    def test_edit_page_explains_each_unit(self):
+        from apps.catalog.models import ServiceModule
+
+        module = ServiceModule.objects.get(code="B3")
+        self.login_owner()
+        response = self.client.get(reverse("cabinet:service_edit", args=[module.pk]))
+        self.assertContains(response, "Как считается")
+        self.assertContains(response, "месяцы стройки")
+        self.assertContains(response, 'data-price-hint="stage"')
+        # Целые рубли без копеек в поле цены.
+        self.assertContains(response, f'value="{int(module.price)}"')
+
+    def test_switch_to_per_stage_keeps_place_in_list(self):
+        from apps.catalog.models import ServiceModule
+
+        module = ServiceModule.objects.get(code="B3")
+        order_before = module.order
+        self.login_owner()
+        response = self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]),
+            {
+                "title": module.title, "short_title": module.short_title,
+                "block": module.block, "unit": "stage", "price": "60000",
+                "included_units": "", "extra_unit_price": "",
+                "duration_days": "0", "description": module.description,
+            },
+        )
+        self.assertRedirects(response, reverse("cabinet:prices"), fetch_redirect_response=False)
+        module.refresh_from_db()
+        self.assertEqual((module.unit, module.price, module.order), ("stage", 60000, order_before))

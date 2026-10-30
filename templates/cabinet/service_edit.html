@@ -14,20 +14,12 @@
   <h1>{{ module.title }}</h1>
   <p class="lead">
     Название и описание видит заказчик — в конструкторе и в коммерческом
-    предложении. Единица и цена определяют, как услуга считается.
+    предложении. «Как считается» и цена определяют сумму — пример виден сразу под ценой.
   </p>
 
   <form method="post">
     {% csrf_token %}
-    <div class="grid grid--2">
-      {% field form.title %}
-      {% field form.short_title %}
-      {% field form.block %}
-      {% field form.unit %}
-      {% field form.price %}
-      {% field form.duration_days %}
-    </div>
-    {% field form.description %}
+    {% include "cabinet/_service_fields.html" %}
     <button class="btn" type="submit">Сохранить</button>
     <a class="btn btn--ghost" href="{% url 'cabinet:prices' %}">Вернуться к ценам</a>
   </form>

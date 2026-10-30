@@ -120,15 +120,7 @@
       <summary>Добавить свою услугу</summary>
       <form class="adder__form" method="post" action="{% url 'cabinet:price_add' %}">
         {% csrf_token %}
-        <div class="grid grid--3">
-          {% field service_form.title %}
-          {% field service_form.short_title %}
-          {% field service_form.block %}
-          {% field service_form.unit %}
-          {% field service_form.price %}
-          {% field service_form.duration_days %}
-        </div>
-        {% field service_form.description %}
+        {% include "cabinet/_service_fields.html" with form=service_form %}
         <button class="btn" type="submit">Завести услугу</button>
         <p class="muted">
           Появится в прайсе и в конструкторе. Код система выдаст сама —
