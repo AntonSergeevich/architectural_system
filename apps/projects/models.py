@@ -155,6 +155,38 @@ class Stage(models.Model):
     def __str__(self):
         return f"{self.number}. {self.title}"
 
+    @property
+    def expected_end(self):
+        """Ориентир окончания идущего этапа — по рабочим дням.
+
+        Главный вопрос заказчика в кабинете — «когда?». Дату заезда
+        Дарья не называет, но длительность каждого этапа публикует:
+        значит, честно посчитать и показать, к какому числу этап
+        должен закончиться. Дни, когда ждали заказчика, срок сдвигают —
+        иначе его ожидание выглядело бы опозданием Дарьи.
+        """
+        if not self.started_at or self.finished_at or self.status in {
+            self.Status.WAITING, self.Status.DONE
+        }:
+            return None
+        day = self.started_at
+        while day.weekday() >= 5:
+            day += timedelta(days=1)
+        left = max(self.planned_days + self.client_wait_days, 1) - 1
+        while left:
+            day += timedelta(days=1)
+            if day.weekday() < 5:
+                left -= 1
+        return day
+
+    @property
+    def days_late(self):
+        """Сколько календарных дней этап идёт сверх ориентира; 0 — в срок."""
+        end = self.expected_end
+        if not end:
+            return 0
+        return max((timezone.localdate() - end).days, 0)
+
 
 class StageTask(models.Model):
     """Что конкретно должно быть сделано на этапе прямо сейчас.

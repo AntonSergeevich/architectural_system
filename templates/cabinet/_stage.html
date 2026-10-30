@@ -16,6 +16,18 @@
         {% if stage.waiting_on == 'client' %}<span class="pill pill--wait">ждём заказчика</span>{% endif %}
         {% if stage.waiting_contract %}<span class="pill pill--wait">договор ждёт подписи</span>{% endif %}
         {% if stage.started_at %}<span class="stage__date">начат {{ stage.started_at|date:"d.m.Y" }}</span>{% endif %}
+        {% comment %}
+          Ориентир окончания. Заказчику — только пока он впереди: это ответ
+          на «когда?». Дарье — и когда прошёл: это напоминание, а не упрёк,
+          и видит его только она.
+        {% endcomment %}
+        {% with end=stage.expected_end late=stage.days_late %}
+          {% if end and not late %}
+            <span class="stage__date stage__date--plan">ориентир — до {{ end|date:"j E" }}</span>
+          {% elif end and is_owner_view %}
+            <span class="stage__date stage__date--late">план был до {{ end|date:"j E" }}, прошло {{ late|days }}</span>
+          {% endif %}
+        {% endwith %}
         {% if stage.finished_at %}<span class="stage__date">закрыт {{ stage.finished_at|date:"d.m.Y" }}</span>{% endif %}
       </p>
       {% comment %}

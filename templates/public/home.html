@@ -26,6 +26,22 @@
       </p>
 
       {% comment %}
+        Одна строка доверия рядом с ценой: публикация в журнале — оценка
+        со стороны, её нельзя купить, и она весит больше любых слов о себе.
+        Нет публикаций — нет и строки.
+      {% endcomment %}
+      {% with mention=press|first %}
+        {% if mention %}
+          <p class="hero__press">
+            <a href="{% url 'public:publications' %}">
+              <span class="hero__press-mark" aria-hidden="true">✦</span>
+              Публикация в журнале «{{ mention.outlet }}»{% if mention.issue %}, {{ mention.issue }}{% endif %}
+            </a>
+          </p>
+        {% endif %}
+      {% endwith %}
+
+      {% comment %}
         Мини-расчёт стоит прямо под заголовком, а не сбоку и ниже: это
         продолжение мысли «дом, который про вас» — вот ваш дом, вот его
         цена. Считает он по тем же числам, что и конструктор: разойтись

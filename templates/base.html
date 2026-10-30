@@ -40,6 +40,15 @@
 </main>
 
 {% block footer %}{% include "components/footer.html" %}{% endblock %}
+{% if show_fab %}
+  {% comment %}
+    Кнопка расчёта на телефоне: появляется, когда расчёт на первом
+    экране ушёл из виду, и прячется у подвала. На длинной странице
+    «Работы» или «Как я работаю» человек, который решился, не должен
+    листать наверх, чтобы найти, где посчитать.
+  {% endcomment %}
+  <a class="fab" href="{% url 'public:constructor' %}" data-fab hidden>Рассчитать стоимость</a>
+{% endif %}
 {% include "components/cookies.html" %}
 
 {% comment %}

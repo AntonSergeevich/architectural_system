@@ -331,4 +331,27 @@
       });
     });
   }
+
+  // --- Кнопка расчёта на телефоне -------------------------------------------
+  // Видна, пока на экране нет ни расчёта первого экрана, ни подвала,
+  // и только после того, как человек начал листать.
+  var fab = document.querySelector('[data-fab]');
+  if (fab && 'IntersectionObserver' in window) {
+    var blockers = Array.prototype.slice.call(document.querySelectorAll('[data-quick], .footer, .cookies'));
+    var inView = new Set();
+    // Баннер cookie после ответа удаляется со страницы, а наблюдатель
+    // об удалении не сообщает: считаем только тех, кто ещё на месте.
+    function refreshFab() {
+      var covered = Array.prototype.some.call(Array.from(inView), function (el) { return el.isConnected; });
+      fab.hidden = covered || window.scrollY < 300;
+    }
+    var fabObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) inView.add(en.target); else inView.delete(en.target);
+      });
+      refreshFab();
+    });
+    blockers.forEach(function (el) { fabObserver.observe(el); });
+    window.addEventListener('scroll', refreshFab, { passive: true });
+  }
 })();

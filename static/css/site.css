@@ -235,7 +235,44 @@
    сайт», а находится в нём. */
 
 .hero__art { color: var(--ink-2); }
-@media (max-width: 979px) { .hero__art { display: none; } }
+/* На телефоне рисунок не прячется, а встаёт под расчётом, компактно:
+   иначе большинство посетителей не видели ни его, ни времён года, ни
+   торшера с котом. */
+@media (max-width: 979px) {
+  .hero__art { width: min(100%, 360px); margin: 0 auto; }
+  /* Пятно света для широкого экрана рассчитано на рисунок справа от
+     текста; на узком оно уезжало к краю экрана. Здесь центр — у торшера. */
+  .hero__art .art__stage::before {
+    inset: -45% -35%;
+    background: radial-gradient(circle 52vw at 33% 54%, var(--glow), transparent 70%);
+  }
+}
+
+.hero__press { margin-top: var(--gap-4); font-size: var(--step--1); }
+.hero__press a {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  color: var(--ink-2); text-decoration: none;
+  border-bottom: 1px solid var(--line); padding-bottom: 2px;
+}
+.hero__press a:hover { color: var(--brand-500); border-color: var(--brand-300); }
+.hero__press-mark { color: var(--brand-500); }
+
+/* --- Кнопка расчёта на телефоне ----------------------------------------- */
+.fab { display: none; }
+@media (max-width: 699px) {
+  .fab {
+    position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 80;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 50px; padding: 0 var(--gap-6); white-space: nowrap;
+    border-radius: var(--radius-pill);
+    background: var(--brand-500); color: #fff; font-weight: 700; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(35, 32, 29, .28);
+    transform: translate(-50%, 0); transition: transform .3s var(--ease), opacity .3s var(--ease);
+    view-transition-name: fab;
+  }
+  .fab[hidden] { display: inline-flex; opacity: 0; pointer-events: none; transform: translate(-50%, 140%); }
+}
+@media (prefers-reduced-motion: reduce) { .fab { transition: opacity .2s linear; } }
 
 /* Вся картинка — кнопка: так свет включается откуда угодно, и то же
    действие достаётся клавиатуре. Кнопке возвращён вид обычной картинки. */

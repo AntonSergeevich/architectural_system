@@ -958,3 +958,13 @@ class SeasonTests(TestCase):
             response = self.client.get(reverse("public:home"))
         self.assertNotContains(response, "data-season")
         self.assertNotContains(response, "art__fall")
+
+
+class FloatingButtonTests(TestCase):
+    """Кнопка расчёта на телефоне — только на страницах, которые убеждают."""
+
+    def test_on_story_pages_not_in_constructor(self):
+        self.assertContains(self.client.get(reverse("public:home")), "data-fab")
+        self.assertContains(self.client.get(reverse("public:how")), "data-fab")
+        self.assertNotContains(self.client.get(reverse("public:constructor")), "data-fab")
+        self.assertNotContains(self.client.get(reverse("public:contacts")), "data-fab")

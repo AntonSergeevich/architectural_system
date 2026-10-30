@@ -1287,3 +1287,7 @@ html.is-moving-lead, html.is-moving-lead body {
   border-radius: var(--radius-2); background: var(--paper-alt); color: var(--ink-2); font-size: var(--step--1);
 }
 [data-only-unit][hidden] { display: none; }
+
+/* Ориентир окончания этапа — заметнее даты начала: на него и смотрят. */
+.stage__date--plan { color: var(--ink-2); font-weight: 600; }
+.stage__date--late { color: var(--err); font-weight: 600; }

@@ -15,6 +15,15 @@ SEASONS = {
 }
 PREVIEWS = {"winter", "spring", "summer", "autumn", "newyear"}
 
+# Страницы, где на телефоне плавает кнопка «Рассчитать стоимость».
+# Только те, что рассказывают и убеждают. В конструкторе она и так
+# на экране, в контактах есть форма, а на КП и договоре человек уже
+# по делу — кнопка «посчитать» там сбивала бы с толку.
+FAB_PAGES = {
+    "home", "services", "portfolio", "portfolio_detail", "about", "how",
+    "objections", "publications", "articles", "article",
+}
+
 
 def season_of(day):
     """Время года для оформления: winter, spring, summer или autumn."""
@@ -65,4 +74,9 @@ def site(request):
         # первое сентября разница в семь часов — это разница в сезоне.
         "season": season,
         "new_year": new_year,
+        "show_fab": bool(
+            request.resolver_match
+            and request.resolver_match.namespace == "public"
+            and request.resolver_match.url_name in FAB_PAGES
+        ),
     }

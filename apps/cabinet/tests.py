@@ -1565,3 +1565,41 @@ class UnitPickerTests(CabinetTestCase):
         self.assertRedirects(response, reverse("cabinet:prices"), fetch_redirect_response=False)
         module.refresh_from_db()
         self.assertEqual((module.unit, module.price, module.order), ("stage", 60000, order_before))
+
+
+class StageEstimateTests(CabinetTestCase):
+    """Ориентир окончания этапа: по рабочим дням, заказчику — только впереди."""
+
+    def test_counts_working_days_and_client_waiting(self):
+        from datetime import date
+
+        stage = self.stage
+        stage.status = stage.Status.IN_PROGRESS
+        stage.started_at = date(2026, 10, 16)  # пятница
+        stage.planned_days = 3
+        stage.client_wait_days = 0
+        self.assertEqual(stage.expected_end, date(2026, 10, 20))  # пт, пн, вт
+        stage.client_wait_days = 2
+        self.assertEqual(stage.expected_end, date(2026, 10, 22))
+        stage.status = stage.Status.DONE
+        self.assertIsNone(stage.expected_end)
+
+    def test_client_sees_estimate_only_while_ahead(self):
+        stage = self.stage
+        stage.status = stage.Status.IN_PROGRESS
+        stage.started_at = timezone.localdate()
+        stage.planned_days = 10
+        stage.save()
+        self.login_client()
+        self.assertContains(self.client.get(reverse("cabinet:my_project")), "ориентир — до")
+
+        stage.started_at = timezone.localdate() - timezone.timedelta(days=60)
+        stage.save()
+        response = self.client.get(reverse("cabinet:my_project"))
+        self.assertNotContains(response, "ориентир — до")
+        self.assertNotContains(response, "план был до")
+        self.client.logout()
+        self.login_owner()
+        self.assertContains(
+            self.client.get(reverse("cabinet:project_detail", args=[self.project.pk])), "план был до"
+        )
