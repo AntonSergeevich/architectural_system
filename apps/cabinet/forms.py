@@ -61,6 +61,25 @@ class ClientForm(forms.ModelForm):
         return data
 
 
+class QuickClientForm(ClientForm):
+    """Новый клиент прямо над доской: карточка сразу встаёт в «Новые».
+
+    Раньше заказчик заводился в одном разделе, а его заявка жила в другом,
+    и человек, позвонивший по рекомендации, на доске не появлялся вовсе.
+    """
+
+    message = forms.CharField(
+        label="Что хочет", required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Квартира, площадь, когда ключи — что успели узнать",
+    )
+
+    class Meta(ClientForm.Meta):
+        fields = ["name", "phone", "email", "source"]
+        labels = {"source": "Откуда"}
+        help_texts = {"source": "Сарафан, сайт, Instagram — чтобы считать, что работает"}
+
+
 class ClientNotesForm(forms.ModelForm):
     """Заметки о заказчике — то, что Дарья держит в голове или в блокноте.
 

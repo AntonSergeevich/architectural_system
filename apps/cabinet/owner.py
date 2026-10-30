@@ -19,7 +19,6 @@ from apps.core import notify
 from apps.core.models import SiteSettings
 from apps.crm.models import Client, Lead
 from apps.projects.models import (
-    BudgetChange,
     Message,
     Room,
     Project,
@@ -32,6 +31,7 @@ from apps.projects.models import (
 
 from . import services
 from .forms import (
+    QuickClientForm,
     AccessForm,
     BudgetChangeForm,
     ClientForm,
@@ -49,41 +49,83 @@ owner_only = user_passes_test(lambda u: u.is_authenticated and u.is_owner)
 
 @login_required
 @owner_only
-def leads(request):
-    """Воронка.
+def people(request):
+    """Клиенты: дела на сегодня, воронка и все заказчики — на одной странице.
 
-    Просроченные касания идут первыми: заявка без сделанного следующего
-    шага — это и есть «потерянная заявка».
+    Раньше это были три раздела — «Сегодня», «Заявки», «Заказчики», — и
+    один и тот же человек жил в трёх местах: в просрочках на столе, домиком
+    на доске и строкой в списке. Дарья искала его по разделам. Теперь всё
+    про людей до начала проекта — здесь, сверху вниз: что сделать сегодня,
+    где кто в воронке, все карточки. Проекты — отдельно: это уже работа.
     """
-    qs = list(
-        Lead.objects.real().select_related("client", "estate").order_by("next_action_at")
-    )
-    # Колонки готовим здесь, а не в шаблоне: словарь по ключу-переменной
-    # шаблонный язык не умеет, и обход этого превращается в самодельные фильтры.
+    form = QuickClientForm(request.POST or None, prefix="new")
+    if request.method == "POST":
+        if form.is_valid():
+            client = form.save()
+            Lead.objects.create(
+                client=client, source=client.source or "вручную",
+                message=form.cleaned_data.get("message", ""),
+            )
+            messages.success(request, f"«{client.name}» — на доске, в столбце «Новая».")
+            return redirect("cabinet:people")
+        messages.error(request, "Проверьте карточку нового клиента.")
+
+    leads_qs = list(Lead.objects.real().select_related("client", "estate").order_by("next_action_at"))
     columns = [
-        {
-            "status": status,
-            "label": label,
-            "items": [lead for lead in qs if lead.status == status],
-        }
+        {"status": status, "label": label, "items": [l for l in leads_qs if l.status == status]}
         for status, label in Lead.Status.choices
     ]
+
+    clients = list(
+        Client.objects.select_related("user")
+        .prefetch_related("projects", "leads")
+        .order_by("-created_at")
+    )
+    rows = []
+    for client in clients:
+        if client.is_archived:
+            continue
+        live = [p for p in client.projects.all() if p.status != Project.Status.DONE]
+        lead = max(client.leads.all(), key=lambda l: l.created_at, default=None)
+        if live:
+            stage = f"Проект «{live[0]}»"
+        elif lead:
+            stage = lead.get_status_display()
+        else:
+            stage = "Без заявки"
+        rows.append({"client": client, "stage": stage})
+
+    site = SiteSettings.get()
+    active = Project.objects.filter(status=Project.Status.ACTIVE).count()
+    overdue = [lead for lead in leads_qs if lead.is_overdue]
     return render(
         request,
-        "cabinet/leads.html",
+        "cabinet/people.html",
         {
-            "section": "leads",
-            "overdue": [lead for lead in qs if lead.is_overdue],
+            "section": "people",
+            "form": form,
+            "open_form": request.method == "POST",
+            "overdue": overdue,
             "columns": columns,
-            "leads": qs,
-            # Спам стоит внизу отдельным списком, а не исчезает молча:
-            # молчаливое удаление однажды съест живую заявку, и узнать
-            # об этом будет неоткуда.
-            "spam": list(
-                Lead.objects.spam().select_related("client").order_by("-created_at")[:50]
-            ),
+            "rows": rows,
+            "archived": [c for c in clients if c.is_archived],
+            "spam": list(Lead.objects.spam().select_related("client").order_by("-created_at")[:50]),
+            "unsigned": Contract.objects.filter(
+                status__in=[Contract.Status.SENT, Contract.Status.REVIEWED], signed_file=""
+            ).select_related("client", "template")[:10],
+            "wip_used": active,
+            "wip_limit": site.wip_limit,
+            "wip_exceeded": active > site.wip_limit,
+            **services.telegram_context(request.user),
         },
     )
+
+
+@login_required
+@owner_only
+def leads(request):
+    """Старый адрес воронки — теперь она в «Клиентах»."""
+    return redirect("cabinet:people")
 
 
 @login_required
@@ -112,7 +154,7 @@ def lead_move(request, pk):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse({"ok": True, "status": status, "title": lead.get_status_display()})
     messages.success(request, f"«{lead.client.name}» — {lead.get_status_display().lower()}.")
-    return redirect("cabinet:leads")
+    return redirect("cabinet:people")
 
 
 @login_required
@@ -142,7 +184,7 @@ def lead_delete(request, pk):
         messages.success(request, "Заявка и карточка удалены.")
     else:
         messages.success(request, "Заявка удалена.")
-    return redirect("cabinet:leads")
+    return redirect("cabinet:people")
 
 
 @login_required
@@ -161,7 +203,7 @@ def lead_spam(request, pk):
     lead.save(update_fields=["is_spam", "spam_reason"])
     if lead.is_spam:
         messages.success(request, "Заявка убрана в спам.")
-        return redirect("cabinet:leads")
+        return redirect("cabinet:people")
     messages.success(request, "Заявка вернулась в воронку.")
     return redirect("cabinet:lead_detail", pk=lead.pk)
 
@@ -186,7 +228,7 @@ def lead_detail(request, pk):
     return render(
         request,
         "cabinet/lead_detail.html",
-        {"lead": lead, "statuses": Lead.Status.choices, "section": "leads"},
+        {"lead": lead, "statuses": Lead.Status.choices, "section": "people"},
     )
 
 
@@ -226,93 +268,22 @@ def lead_snooze(request, pk):
     )
     back = request.POST.get("next", "")
     if not url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
-        back = reverse("cabinet:dashboard")
+        back = reverse("cabinet:people")
     return redirect(back)
 
 
 @login_required
 @owner_only
 def dashboard(request):
-    """Первый экран кабинета: что требует Дарью сегодня.
-
-    Не список всего подряд, а короткий ответ на вопрос «за что взяться».
-    Список всего подряд человек всё равно не читает — он его пролистывает
-    и закрывает.
-    """
-    leads_qs = list(Lead.objects.real().select_related("client").order_by("next_action_at"))
-    projects_qs = list(
-        Project.objects.select_related("client", "estate")
-        .exclude(status=Project.Status.DONE)
-        .prefetch_related("stages__tasks", "messages", "budget_changes")
-    )
-
-    waiting = []
-    for project in projects_qs:
-        unread = services.unread_count(project, request.user)
-        stage = project.current_stage
-        my_tasks = [
-            task
-            for st in project.stages.all()
-            for task in st.tasks.all()
-            if not task.is_done and task.who in {StageTask.Owner.OWNER, StageTask.Owner.BOTH}
-        ]
-        waiting.append(
-            {
-                "project": project,
-                "stage": stage,
-                "unread": unread,
-                "tasks": my_tasks[:3],
-                "tasks_total": len(my_tasks),
-            }
-        )
-
-    site = SiteSettings.get()
-    active = sum(1 for p in projects_qs if p.status == Project.Status.ACTIVE)
-    return render(
-        request,
-        "cabinet/dashboard.html",
-        {
-            "section": "dashboard",
-            "overdue": [lead for lead in leads_qs if lead.is_overdue],
-            "new_leads": [lead for lead in leads_qs if lead.status == Lead.Status.NEW],
-            "rows": waiting,
-            "unsigned": Contract.objects.filter(
-                status__in=[Contract.Status.SENT, Contract.Status.REVIEWED], signed_file=""
-            ).select_related("client", "template")[:10],
-            "wip_used": active,
-            "wip_limit": site.wip_limit,
-            "wip_exceeded": active > site.wip_limit,
-            "is_owner_view": True,
-            **services.telegram_context(request.user),
-        },
-    )
+    """Старый адрес «Сегодня» — дела на сегодня теперь вверху «Клиентов»."""
+    return redirect("cabinet:people")
 
 
 @login_required
 @owner_only
 def clients(request):
-    """Заказчики. Отсюда заводится карточка и выдаётся доступ."""
-    form = ClientForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        client = form.save()
-        messages.success(request, f"Заказчик «{client.name}» заведён.")
-        return redirect("cabinet:client_detail", pk=client.pk)
-
-    qs = (
-        Client.objects.select_related("user")
-        .prefetch_related("projects", "properties")
-        .order_by("-created_at")
-    )
-    return render(
-        request,
-        "cabinet/clients.html",
-        {
-            "clients": [c for c in qs if not c.is_archived],
-            "archived": [c for c in qs if c.is_archived],
-            "form": form,
-            "section": "clients",
-        },
-    )
+    """Старый адрес заказчиков — список теперь внизу «Клиентов»."""
+    return redirect(reverse("cabinet:people") + "#clients")
 
 
 @login_required
@@ -325,7 +296,7 @@ def client_detail(request, pk):
         request,
         "cabinet/client_detail.html",
         {
-            "section": "clients",
+            "section": "people",
             "client": client,
             "form": ClientForm(instance=client),
             "notes_form": ClientNotesForm(instance=client),
@@ -478,17 +449,36 @@ def projects(request):
     """Канбан проектов по этапам."""
     site = SiteSettings.get()
     active = Project.objects.filter(status=Project.Status.ACTIVE).count()
-    qs = (
+    qs = list(
         Project.objects.select_related("client", "estate")
-        .prefetch_related("stages")
+        .prefetch_related("stages__tasks", "messages", "budget_changes")
         .annotate(open_revisions=Count("stages__revisions", filter=Q(stages__revisions__status="new")))
     )
+    # То, что раньше было на столе «Сегодня», — теперь на карточке проекта:
+    # мои задачи, непрочитанное, смета на согласовании. Идущие — первыми.
+    cards = []
+    for project in qs:
+        mine = [
+            task
+            for stage in project.stages.all()
+            for task in stage.tasks.all()
+            if not task.is_done and task.who in {StageTask.Owner.OWNER, StageTask.Owner.BOTH}
+        ]
+        cards.append({
+            "project": project,
+            "stage": project.current_stage,
+            "unread": services.unread_count(project, request.user),
+            "tasks": mine[:3],
+            "tasks_more": max(len(mine) - 3, 0),
+        })
+    order = {Project.Status.ACTIVE: 0, Project.Status.QUEUED: 1, Project.Status.PAUSED: 2, Project.Status.DONE: 3}
+    cards.sort(key=lambda c: order.get(c["project"].status, 9))
     return render(
         request,
         "cabinet/projects.html",
         {
             "section": "projects",
-            "projects": qs,
+            "cards": cards,
             "wip_limit": site.wip_limit,
             "wip_used": active,
             "wip_exceeded": active > site.wip_limit,
@@ -1073,7 +1063,7 @@ def telegram_prefs(request):
         messages.success(request, "Настройки уведомлений сохранены.")
 
     back = request.POST.get("back") or (
-        reverse("cabinet:dashboard") if request.user.is_owner else reverse("cabinet:my_project")
+        reverse("cabinet:people") if request.user.is_owner else reverse("cabinet:my_project")
     )
     return redirect(f"{back}#telegram")
 
@@ -1183,7 +1173,7 @@ def prices(request):
         request,
         "cabinet/prices.html",
         {
-            "section": "prices",
+            "section": "site",
             "modules": modules,
             "complexities": ComplexityFactor.objects.all(),
             "pricing": pricing,
@@ -1244,7 +1234,7 @@ def service_edit(request, pk):
     return render(
         request,
         "cabinet/service_edit.html",
-        {"section": "prices", "module": module, "form": form},
+        {"section": "site", "module": module, "form": form},
     )
 
 
@@ -1279,7 +1269,7 @@ def contracts(request):
         request,
         "cabinet/contracts.html",
         {
-            "section": "contracts",
+            "section": "docs",
             "templates": ContractTemplate.objects.prefetch_related("clauses"),
             "issued": Contract.objects.select_related("client", "template")[:50],
         },
@@ -1336,7 +1326,7 @@ def contract_edit(request, pk):
         messages.success(request, note)
         return redirect("cabinet:contract_edit", pk=pk)
 
-    return render(request, "cabinet/contract_edit.html", {"template": template, "section": "contracts"})
+    return render(request, "cabinet/contract_edit.html", {"template": template, "section": "docs"})
 
 
 @login_required
@@ -1387,6 +1377,6 @@ def invoices(request):
         "cabinet/invoices.html",
         {
             "invoices": Invoice.objects.select_related("client", "project").prefetch_related("payments"),
-            "section": "invoices",
+            "section": "docs",
         },
     )

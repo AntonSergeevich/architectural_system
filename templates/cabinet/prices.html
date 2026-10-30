@@ -2,7 +2,8 @@
 {% load richtext forms %}
 {% block title %}Цены{% endblock %}
 {% block cabinet %}
-    <h1>Цены</h1>
+    <p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / Цены и услуги</p>
+    <h1>Цены и услуги</h1>
     <p class="lead">
       Меняются здесь и сразу применяются на сайте. Уже выставленные
       предложения не меняются — они хранят свои цифры.

@@ -10,6 +10,7 @@ app_name = "cabinet"
 urlpatterns = [
     path("", views.home, name="home"),
     # --- Дарья ---------------------------------------------------------------
+    path("klienty/", owner_views.people, name="people"),
     path("segodnya/", owner_views.dashboard, name="dashboard"),
     path("sayt/", site_views.hub, name="site"),
     path("sayt/vremya-goda/", site_views.season, name="site_season"),

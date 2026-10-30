@@ -1,0 +1,147 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load static forms richtext %}
+{% block title %}Клиенты — кабинет{% endblock %}
+
+{% comment %}
+  Клиенты: всё про людей до начала проекта — на одной странице, сверху вниз.
+  1. Что сделать сегодня — просрочки с кнопками и договоры на подписи.
+  2. Воронка — домики, которые переносят из столбца в столбец; над ней —
+     «+ Новый клиент», карточка сразу встаёт в «Новые».
+  3. Все заказчики — с поиском; оттуда карточка, доступ, проект, архив.
+  Раньше это были три раздела, и один человек жил в трёх местах.
+{% endcomment %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <p class="eyebrow">{% now "l, j E" %}</p>
+    <h1>Клиенты</h1>
+    <p class="muted" data-summary>
+      {% if overdue %}Просрочено касаний: {{ overdue|length }}.{% else %}Срочного нет: у всех заявок назначен следующий шаг.{% endif %}
+    </p>
+  </div>
+  <div class="cabhead__side">
+    <span class="wip {% if wip_exceeded %}is-over{% endif %}">Проектов в работе: {{ wip_used }} из {{ wip_limit }}</span>
+  </div>
+</header>
+
+{% if wip_exceeded %}
+  <section class="callout callout--warn">
+    <h2>Проектов больше, чем предел</h2>
+    <p class="muted">Предел — защита от выгорания. Новые проекты лучше поставить в очередь.</p>
+  </section>
+{% endif %}
+
+<div data-overdue>
+{% if overdue or unsigned %}
+  <section class="panel">
+    <header class="panel__head"><h2>На сегодня</h2></header>
+    {% if overdue %}
+      {% include "cabinet/_overdue.html" with refresh="[data-overdue],[data-summary]" %}
+    {% endif %}
+    {% if unsigned %}
+      <p class="today__sub">Ждут подписи</p>
+      <ul class="files">
+        {% for contract in unsigned %}
+          <li>{{ contract }} <span class="muted">— {{ contract.client.name }}</span></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+{% endif %}
+</div>
+
+<section class="people-board">
+  <header class="people-board__head">
+    <h2>Воронка</h2>
+    <details class="quick-add" data-keep="quick-add"{% if open_form %} open{% endif %}>
+      <summary class="btn">+ Новый клиент</summary>
+      <form class="quick-add__form" method="post">
+        {% csrf_token %}
+        <div class="grid grid--2">
+          {% field form.name %}
+          {% field form.phone %}
+          {% field form.email %}
+          {% field form.source %}
+        </div>
+        {% field form.message %}
+        {% for error in form.non_field_errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+        <button class="btn" type="submit">Поставить в «Новые»</button>
+      </form>
+    </details>
+  </header>
+  {% include "cabinet/_board.html" %}
+</section>
+
+<section class="panel" id="clients">
+  <header class="panel__head">
+    <h2>Все заказчики</h2>
+    <input class="people-search" type="search" placeholder="Поиск: имя или телефон" data-people-search aria-label="Поиск заказчика">
+  </header>
+  {% for row in rows %}
+    <a class="edit-row" href="{% url 'cabinet:client_detail' row.client.pk %}"
+       data-people-row="{{ row.client.name|lower }} {{ row.client.phone }} {{ row.client.email|lower }}">
+      <span class="edit-row__title">{{ row.client.name }}</span>
+      <span class="edit-row__note">
+        {{ row.stage }}{% if row.client.phone %} · {{ row.client.phone }}{% endif %}
+        · {% if row.client.user %}есть доступ в кабинет{% else %}без доступа{% endif %}
+      </span>
+      <span class="edit-row__go" aria-hidden="true">›</span>
+    </a>
+  {% empty %}
+    <p class="muted">Пока никого. Нажмите «+ Новый клиент» над воронкой.</p>
+  {% endfor %}
+  <p class="muted" data-people-empty hidden>Никого не нашлось.</p>
+</section>
+
+{% if archived %}
+  <details class="panel" id="archived">
+    <summary class="panel__head"><h2>Архив: {{ archived|length }}</h2></summary>
+    <p class="muted">Карточки исчезают сами через месяц. До этого возвращаются одной кнопкой.</p>
+    {% for client in archived %}
+      <article class="row">
+        <div class="row__main">
+          <a class="row__title" href="{% url 'cabinet:client_detail' client.pk %}">{{ client.name }}</a>
+          <p class="muted">в архиве с {{ client.archived_at|date:"d.m.Y" }} · осталось {{ client.days_left|days }}</p>
+        </div>
+        <div class="row__side">
+          <form method="post" action="{% url 'cabinet:client_archive' client.pk %}">
+            {% csrf_token %}<input type="hidden" name="restore" value="1">
+            <button class="btn btn--ghost" type="submit">Вернуть</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  </details>
+{% endif %}
+
+{% if spam %}
+  <details class="panel">
+    <summary class="panel__head"><h2>Спам: {{ spam|length }}</h2></summary>
+    <p class="muted">Похоже на рассылку: ссылки, слова про продвижение, десяток заявок с одного адреса. Уведомления по ним не приходят.</p>
+    {% for lead in spam %}
+      <article class="row">
+        <div class="row__main">
+          <a class="row__title" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+          <p class="muted">{{ lead.message|truncatechars:120|default:"—" }} · {{ lead.spam_reason|default:"" }}</p>
+        </div>
+        <div class="row__side">
+          <form method="post" action="{% url 'cabinet:lead_spam' lead.pk %}">
+            {% csrf_token %}<input type="hidden" name="restore" value="1">
+            <button class="btn btn--ghost btn--small" type="submit">Не спам</button>
+          </form>
+          <form method="post" action="{% url 'cabinet:lead_delete' lead.pk %}" data-confirm="Удалить заявку насовсем?">
+            {% csrf_token %}<button class="btn btn--ghost btn--small btn--danger" type="submit">Удалить</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  </details>
+{% endif %}
+
+{% if not telegram.is_linked %}{% include "cabinet/_telegram.html" %}{% endif %}
+{% endblock %}
+
+{% block cabinet_scripts %}
+<script src="{% static 'js/leads.js' %}" defer></script>
+{% endblock %}

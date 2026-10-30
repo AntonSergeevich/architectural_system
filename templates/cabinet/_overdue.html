@@ -4,8 +4,12 @@
   перенести на завтра. Одна разметка на стол «Сегодня» и на «Заявки».
   refresh — что перерисовать после переноса.
 {% endcomment %}
+{% comment %}
+  Первые четыре — сразу, остальные — под «Ещё»: шесть просрочек подряд
+  отодвигали воронку на два экрана вниз.
+{% endcomment %}
 <ul class="todo">
-  {% for lead in overdue %}
+  {% for lead in overdue|slice:":4" %}
     <li class="todo__row">
       <div class="todo__main">
         <a class="todo__name" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
@@ -24,3 +28,28 @@
     </li>
   {% endfor %}
 </ul>
+{% if overdue|length > 4 %}
+  <details class="todo__more">
+    <summary>Ещё {{ overdue|length|add:"-4" }}</summary>
+    <ul class="todo">
+      {% for lead in overdue|slice:"4:" %}
+    <li class="todo__row">
+      <div class="todo__main">
+        <a class="todo__name" href="{% url 'cabinet:lead_detail' lead.pk %}">{{ lead.client.name }}</a>
+        <span class="muted">{{ lead.next_action }} · <span class="todo__late">просрочено {{ lead.overdue_days|overdue }}</span></span>
+      </div>
+      <div class="todo__actions">
+        {% if lead.client.phone %}
+          <a class="chip-btn" href="tel:{{ lead.client.phone }}" aria-label="Позвонить: {{ lead.client.name }}">Позвонить</a>
+        {% endif %}
+        <form method="post" action="{% url 'cabinet:lead_snooze' lead.pk %}" data-async data-refresh="{{ refresh }}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button class="chip-btn" type="submit">На завтра</button>
+        </form>
+      </div>
+    </li>
+      {% endfor %}
+    </ul>
+  </details>
+{% endif %}

@@ -1,7 +1,8 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% block title %}Договоры{% endblock %}
 {% block cabinet %}
-    <h1>Договоры</h1>
+    <h1>Документы</h1>
+    {% include "cabinet/_docs_tabs.html" with docs_tab="contracts" %}
 
     <h2>Шаблоны</h2>
     <div class="grid grid--3">

@@ -46,7 +46,7 @@ class LoginTests(TestCase):
     def test_owner_lands_in_the_cabinet(self):
         self.client.login(email="darya@example.com", password="pass-12345")
         response = self.client.get(reverse("cabinet:home"))
-        self.assertRedirects(response, reverse("cabinet:dashboard"))
+        self.assertRedirects(response, reverse("cabinet:people"))
 
     def test_password_reset_pages_open(self):
         """Пароль от кабинета будет забыт — это «когда», а не «если»."""

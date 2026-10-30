@@ -2,7 +2,8 @@
 {% load richtext %}
 {% block title %}Счета{% endblock %}
 {% block cabinet %}
-    <h1>Счета</h1>
+    <h1>Документы</h1>
+    {% include "cabinet/_docs_tabs.html" with docs_tab="invoices" %}
     <div class="table-scroll">
       <table>
         <thead><tr><th>Счёт</th><th>Заказчик</th><th>Сумма</th><th>Оплачено</th><th>Статус</th><th></th></tr></thead>

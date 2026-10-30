@@ -14,13 +14,15 @@
   <div class="wrap">
     <nav class="cabnav{% if user.is_owner %} cabnav--owner{% endif %}" aria-label="Разделы кабинета">
       {% if user.is_owner %}
-        <a class="cabnav__item {% if section == 'dashboard' %}is-active{% endif %}" href="{% url 'cabinet:dashboard' %}">Сегодня</a>
-        <a class="cabnav__item {% if section == 'leads' %}is-active{% endif %}" href="{% url 'cabinet:leads' %}">Заявки</a>
-        <a class="cabnav__item {% if section == 'clients' %}is-active{% endif %}" href="{% url 'cabinet:clients' %}">Заказчики</a>
+        {% comment %}
+          Четыре раздела вместо девяти. «Сегодня», «Заявки» и «Заказчики»
+          показывали одних и тех же людей с трёх сторон — теперь это
+          «Клиенты». Договоры и счета — «Документы». Цены и всё, что видно
+          на сайте, — «Сайт», вместо админки.
+        {% endcomment %}
+        <a class="cabnav__item {% if section == 'people' %}is-active{% endif %}" href="{% url 'cabinet:people' %}">Клиенты</a>
         <a class="cabnav__item {% if section == 'projects' %}is-active{% endif %}" href="{% url 'cabinet:projects' %}">Проекты</a>
-        <a class="cabnav__item {% if section == 'prices' %}is-active{% endif %}" href="{% url 'cabinet:prices' %}">Цены</a>
-        <a class="cabnav__item {% if section == 'contracts' %}is-active{% endif %}" href="{% url 'cabinet:contracts' %}">Договоры</a>
-        <a class="cabnav__item {% if section == 'invoices' %}is-active{% endif %}" href="{% url 'cabinet:invoices' %}">Счета</a>
+        <a class="cabnav__item {% if section == 'docs' %}is-active{% endif %}" href="{% url 'cabinet:contracts' %}">Документы</a>
         <a class="cabnav__item {% if section == 'site' %}is-active{% endif %}" href="{% url 'cabinet:site' %}">Сайт</a>
       {% else %}
         <a class="cabnav__item {% if section == 'my_project' %}is-active{% endif %}" href="{% url 'cabinet:my_project' %}">Мой проект</a>
@@ -43,38 +45,23 @@
     четыре раздела, с которых начинается день, остальное — в «Ещё».
   {% endcomment %}
   <nav class="tabbar" aria-label="Разделы кабинета">
-    <a class="tabbar__item{% if section == 'dashboard' %} is-active{% endif %}" href="{% url 'cabinet:dashboard' %}"{% if section == 'dashboard' %} aria-current="page"{% endif %}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6" fill="currentColor" stroke="none"/></svg>
-      <span>Сегодня</span>
-    </a>
-    <a class="tabbar__item{% if section == 'leads' %} is-active{% endif %}" href="{% url 'cabinet:leads' %}"{% if section == 'leads' %} aria-current="page"{% endif %}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4.5l8 7V20H4z"/><path d="M12 17.5c-2.6-1.9-3.8-3.1-3.8-4.4 0-1 .8-1.7 1.7-1.7.9 0 1.6.6 2.1 1.4.5-.8 1.2-1.4 2.1-1.4.9 0 1.7.7 1.7 1.7 0 1.3-1.2 2.5-3.8 4.4z" fill="currentColor" stroke="none"/></svg>
-      <span>Заявки</span>
+    <a class="tabbar__item{% if section == 'people' %} is-active{% endif %}" href="{% url 'cabinet:people' %}"{% if section == 'people' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6M17.5 14.4c2 .8 3.5 2.9 3.5 5.6"/></svg>
+      <span>Клиенты</span>
       {% if late %}<b class="tabbar__badge" aria-label="просрочено: {{ late }}">{{ late }}</b>{% endif %}
     </a>
     <a class="tabbar__item{% if section == 'projects' %} is-active{% endif %}" href="{% url 'cabinet:projects' %}"{% if section == 'projects' %} aria-current="page"{% endif %}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2.5h6.5a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4.5l8 7V20H4z"/><path d="M12 17.5c-2.6-1.9-3.8-3.1-3.8-4.4 0-1 .8-1.7 1.7-1.7.9 0 1.6.6 2.1 1.4.5-.8 1.2-1.4 2.1-1.4.9 0 1.7.7 1.7 1.7 0 1.3-1.2 2.5-3.8 4.4z" fill="currentColor" stroke="none"/></svg>
       <span>Проекты</span>
     </a>
-    <a class="tabbar__item{% if section == 'clients' %} is-active{% endif %}" href="{% url 'cabinet:clients' %}"{% if section == 'clients' %} aria-current="page"{% endif %}>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6M17.5 14.4c2 .8 3.5 2.9 3.5 5.6"/></svg>
-      <span>Заказчики</span>
+    <a class="tabbar__item{% if section == 'docs' %} is-active{% endif %}" href="{% url 'cabinet:contracts' %}"{% if section == 'docs' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20z"/><path d="M14 3.5V8h4M9 12h6M9 15.5h6"/></svg>
+      <span>Документы</span>
     </a>
-    <details class="tabbar__more{% if section == 'prices' or section == 'contracts' or section == 'invoices' or section == 'site' %} is-active{% endif %}" data-tabbar-more>
-      <summary class="tabbar__item">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
-        <span>Ещё</span>
-      </summary>
-      <div class="tabbar__sheet">
-        <a href="{% url 'cabinet:prices' %}"{% if section == 'prices' %} aria-current="page"{% endif %}>Цены</a>
-        <a href="{% url 'cabinet:contracts' %}"{% if section == 'contracts' %} aria-current="page"{% endif %}>Договоры</a>
-        <a href="{% url 'cabinet:invoices' %}"{% if section == 'invoices' %} aria-current="page"{% endif %}>Счета</a>
-        <a href="{% url 'cabinet:site' %}"{% if section == 'site' %} aria-current="page"{% endif %}>Сайт: цены, время года</a>
-        <form method="post" action="{% url 'accounts:logout' %}">
-          {% csrf_token %}<button type="submit">Выйти</button>
-        </form>
-      </div>
-    </details>
+    <a class="tabbar__item{% if section == 'site' %} is-active{% endif %}" href="{% url 'cabinet:site' %}"{% if section == 'site' %} aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18"/><circle cx="6" cy="6.8" r=".6" fill="currentColor"/><circle cx="8.2" cy="6.8" r=".6" fill="currentColor"/></svg>
+      <span>Сайт</span>
+    </a>
   </nav>
 {% endif %}
 {% endblock %}
@@ -87,6 +74,9 @@
   <footer class="cabfoot">
     <div class="wrap">
       <a href="{% url 'public:home' %}">← На сайт</a>
+      <form class="cabfoot__exit" method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}<button type="submit">Выйти</button>
+      </form>
       {% for doc in legal_menu %}<a href="{{ doc.get_absolute_url }}">{{ doc.title }}</a>{% endfor %}
     </div>
   </footer>

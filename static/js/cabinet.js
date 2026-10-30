@@ -1013,21 +1013,6 @@
   armAll();
   window.addEventListener('resize', paintRail);
 
-  // --- «Ещё» в нижних вкладках ---------------------------------------------
-  // <details> сам по себе не закрывается от касания мимо, а меню, которое
-  // приходится закрывать тем же пунктом, которым открывал, — ловушка.
-  var more = document.querySelector('[data-tabbar-more]');
-  if (more) {
-    document.addEventListener('click', function (e) {
-      if (more.open && !more.contains(e.target)) more.open = false;
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && more.open) {
-        more.open = false;
-        more.querySelector('summary').focus();
-      }
-    });
-  }
 
   // --- Оглавление проекта: какой раздел сейчас на экране -------------------
   var jump = document.querySelector('[data-jump]');
@@ -1229,4 +1214,25 @@
       e.target.closest('[data-photo-tile]').classList.toggle('is-removing', e.target.checked);
     }
   });
+
+  // --- Поиск по заказчикам ---------------------------------------------------
+  // Прямо на странице, по мере набора: заказчиков десятки, а не тысячи,
+  // и ходить за этим на сервер незачем.
+  var search = document.querySelector('[data-people-search]');
+  if (search) {
+    var peopleRows = document.querySelectorAll('[data-people-row]');
+    var nobody = document.querySelector('[data-people-empty]');
+    search.addEventListener('input', function () {
+      var q = search.value.trim().toLowerCase().replace(/[^0-9a-zа-яё@. ]/g, '');
+      var shown = 0;
+      peopleRows.forEach(function (row) {
+        var hay = row.dataset.peopleRow.replace(/[^0-9a-zа-яё@. ]/g, '');
+        // Телефон ищется и с пробелами, и без: «913 111», «9131110».
+        var hit = !q || hay.indexOf(q) >= 0 || hay.replace(/ /g, '').indexOf(q.replace(/ /g, '')) >= 0;
+        row.hidden = !hit;
+        if (hit) shown += 1;
+      });
+      if (nobody) nobody.hidden = shown > 0;
+    });
+  }
 })();

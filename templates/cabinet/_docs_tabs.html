@@ -1,0 +1,9 @@
+{% comment %}
+  «Документы»: договоры и счета под одной вкладкой меню. Обе страницы —
+  про бумаги с заказчиком, и отдельные пункты меню ради каждой только
+  удлиняли его.
+{% endcomment %}
+<nav class="subtabs" aria-label="Документы">
+  <a class="subtabs__item{% if docs_tab == 'contracts' %} is-active{% endif %}" href="{% url 'cabinet:contracts' %}">Договоры</a>
+  <a class="subtabs__item{% if docs_tab == 'invoices' %} is-active{% endif %}" href="{% url 'cabinet:invoices' %}">Счета</a>
+</nav>

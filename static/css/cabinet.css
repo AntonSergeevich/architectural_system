@@ -1178,7 +1178,7 @@ html.is-moving-lead, html.is-moving-lead body {
 
   .tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
     background: color-mix(in srgb, var(--surface) 88%, transparent);
     -webkit-backdrop-filter: saturate(1.4) blur(14px);
@@ -1201,7 +1201,7 @@ html.is-moving-lead, html.is-moving-lead body {
     fill: none; stroke: currentColor; stroke-width: 1.7;
     stroke-linecap: round; stroke-linejoin: round;
   }
-  .tabbar__item.is-active, .tabbar__more.is-active > .tabbar__item, .tabbar__more[open] > .tabbar__item {
+  .tabbar__item.is-active {
     color: var(--brand-500);
   }
   .tabbar__badge {
@@ -1212,29 +1212,6 @@ html.is-moving-lead, html.is-moving-lead body {
     box-shadow: 0 0 0 2px var(--surface);
   }
 
-  .tabbar__more { position: relative; }
-  .tabbar__sheet {
-    position: absolute; right: 4px; bottom: calc(100% + 10px);
-    min-width: 230px; padding: var(--gap-2);
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius-3); box-shadow: var(--shadow-lift);
-    display: grid;
-    animation: sheet-in .18s var(--ease);
-  }
-  .tabbar__sheet a, .tabbar__sheet button {
-    display: block; width: 100%; text-align: left;
-    padding: 12px var(--gap-4); border-radius: var(--radius-2);
-    font: inherit; font-size: var(--step-0); color: var(--ink);
-    background: none; border: 0; text-decoration: none; cursor: pointer;
-  }
-  .tabbar__sheet a[aria-current] { color: var(--brand-500); font-weight: 700; }
-  .tabbar__sheet a:active, .tabbar__sheet button:active { background: var(--paper-alt); }
-  .tabbar__sheet form { margin: 0; border-top: 1px solid var(--line-soft); margin-top: var(--gap-1); padding-top: var(--gap-1); }
-  .tabbar__sheet button { color: var(--muted); }
-  @keyframes sheet-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
-}
-@media (max-width: 699px) and (prefers-reduced-motion: reduce) {
-  .tabbar__sheet { animation: none; }
 }
 
 /* --- Оглавление проекта ----------------------------------------------------
@@ -1418,3 +1395,50 @@ html.is-moving-lead, html.is-moving-lead body {
 .photo-upload__hint, .photo-upload__status { font-size: var(--step--1); color: var(--muted); }
 .photo-upload__status:empty { display: none; }
 .checkbox-list, .site-form ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+
+/* Переключатель внутри раздела: «Договоры | Счета». */
+.subtabs { display: flex; gap: var(--gap-2); margin: var(--gap-3) 0 var(--gap-5); }
+.subtabs__item {
+  padding: 8px var(--gap-4); border-radius: var(--radius-pill); border: 1px solid var(--line);
+  color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: var(--step--1);
+}
+.subtabs__item.is-active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.cabfoot__exit { display: inline; margin: 0; }
+.cabfoot__exit button { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
+.cabfoot__exit button:hover { color: var(--brand-500); }
+
+.people-board { margin: var(--gap-6) 0; }
+.people-board__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--gap-3); margin-bottom: var(--gap-4); }
+.quick-add > summary { list-style: none; cursor: pointer; }
+.quick-add > summary::-webkit-details-marker { display: none; }
+.quick-add[open] { flex-basis: 100%; }
+.quick-add[open] > summary { display: none; }
+.quick-add__form {
+  display: grid; gap: var(--gap-3); padding: var(--gap-5);
+  border: 1px solid var(--line); border-radius: var(--radius-3); background: var(--surface);
+  animation: sheet-in .2s var(--ease);
+}
+.people-search { max-width: 260px; min-height: 40px; }
+.today__sub { margin: var(--gap-4) 0 var(--gap-2); font-weight: 700; font-size: var(--step--1); }
+details.panel > summary { list-style: none; cursor: pointer; }
+details.panel > summary::-webkit-details-marker { display: none; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+.project-card { display: grid; gap: 6px; align-content: start; }
+.project-card--done { opacity: .65; }
+.project-card__badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+.people-search {
+  width: 100%; max-width: 280px; min-height: 42px; padding: 0 var(--gap-4);
+  border: 1px solid var(--line); border-radius: var(--radius-pill);
+  background: var(--paper); font: inherit; font-size: var(--step--1); color: var(--ink);
+}
+.people-search:focus { outline: none; border-color: var(--brand-400); box-shadow: 0 0 0 3px var(--brand-50); }
+@media (max-width: 599px) { .people-search { max-width: none; } }
+.todo__more > summary {
+  cursor: pointer; padding: var(--gap-3) 0 0; color: var(--brand-500); font-weight: 600; font-size: var(--step--1);
+  border-top: 1px solid var(--line-soft); list-style: none;
+}
+.todo__more > summary::-webkit-details-marker { display: none; }
+.todo__more[open] > summary { display: none; }
+.todo__more .todo__row:first-child { border-top: 1px solid var(--line-soft); padding-top: var(--gap-3); }

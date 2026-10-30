@@ -74,7 +74,7 @@ class AccessTests(CabinetTestCase):
 
     def test_client_cannot_open_owner_screens(self):
         self.login_client()
-        for name in ["cabinet:dashboard", "cabinet:clients", "cabinet:projects", "cabinet:prices"]:
+        for name in ["cabinet:people", "cabinet:projects", "cabinet:prices", "cabinet:site"]:
             with self.subTest(page=name):
                 response = self.client.get(reverse(name))
                 self.assertNotEqual(response.status_code, 200)
@@ -95,8 +95,7 @@ class AccessTests(CabinetTestCase):
     def test_owner_pages_open(self):
         self.login_owner()
         pages = [
-            ("cabinet:dashboard", []),
-            ("cabinet:clients", []),
+            ("cabinet:people", []),
             ("cabinet:client_detail", [self.customer.pk]),
             ("cabinet:projects", []),
             ("cabinet:project_detail", [self.project.pk]),
@@ -201,7 +200,7 @@ class ConsentTests(CabinetTestCase):
     def test_owner_is_never_asked(self):
         """У Дарьи нет «первого входа»: это её собственные данные."""
         self.login_owner()
-        self.assertEqual(self.client.get(reverse("cabinet:dashboard")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("cabinet:people")).status_code, 200)
         response = self.client.get(reverse("cabinet:consent"))
         self.assertRedirects(
             response, reverse("cabinet:home"), target_status_code=302
@@ -226,7 +225,7 @@ class TelegramPanelTests(CabinetTestCase):
 
     def test_button_is_shown_wherever_the_panel_is(self):
         pages = [
-            ("cabinet:dashboard", [], "darya@example.com", "owner-pass-123"),
+            ("cabinet:people", [], "darya@example.com", "owner-pass-123"),
             ("cabinet:project_detail", [self.project.pk], "darya@example.com", "owner-pass-123"),
             ("cabinet:my_project", [], "mariya@example.com", "client-pass-123"),
         ]
@@ -244,8 +243,8 @@ class ClientAccessIssueTests(CabinetTestCase):
         """Дарья заводит карточку и выдаёт доступ сама, без разработчика."""
         self.login_owner()
         self.client.post(
-            reverse("cabinet:clients"),
-            {"name": "Новый заказчик", "phone": "8 913 555 44 33", "email": "new@example.com"},
+            reverse("cabinet:people"),
+            {"new-name": "Новый заказчик", "new-phone": "8 913 555 44 33", "new-email": "new@example.com"},
         )
         created = Client.objects.get(name="Новый заказчик")
         self.assertIsNone(created.user)
@@ -836,9 +835,9 @@ class ArchiveTests(CabinetTestCase):
         self.assertFalse(self.client_user.is_active)
         self.assertFalse(self.client.login(email="mariya@example.com", password="client-pass-123"))
 
-        page = self.client.get(reverse("cabinet:clients"))
+        page = self.client.get(reverse("cabinet:people"))
         self.assertIn(self.customer, page.context["archived"])
-        self.assertNotIn(self.customer, page.context["clients"])
+        self.assertNotIn(self.customer, [row["client"] for row in page.context["rows"]])
 
     def test_restore_brings_everything_back(self):
         self.customer.archive()
@@ -1133,8 +1132,9 @@ class SpamTests(CabinetTestCase):
 
     def test_spam_is_out_of_the_funnel(self):
         self.login_owner()
-        response = self.client.get(reverse("cabinet:leads"))
-        self.assertNotIn(self.junk, response.context["leads"])
+        response = self.client.get(reverse("cabinet:people"))
+        board = [lead for column in response.context["columns"] for lead in column["items"]]
+        self.assertNotIn(self.junk, board)
         self.assertIn(self.junk, response.context["spam"])
 
     def test_delete_removes_lead_and_its_client(self):
@@ -1464,7 +1464,7 @@ class LeadBoardTests(CabinetTestCase):
     def test_board_renders_columns_with_codes(self):
         """Столбцу нужен код статуса: по нему скрипт и понимает, куда несут."""
         self.login_owner()
-        response = self.client.get(reverse("cabinet:leads"))
+        response = self.client.get(reverse("cabinet:people"))
         body = response.content.decode()
         self.assertIn('data-column="new"', body)
         self.assertIn('data-lead="', body)
@@ -1504,7 +1504,7 @@ class TodayDeskTests(CabinetTestCase):
             {"next": "https://evil.example.com/"},
         )
         # Чужой адрес в next не принимается — возвращаемся на стол.
-        self.assertRedirects(response, reverse("cabinet:dashboard"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("cabinet:people"), fetch_redirect_response=False)
         self.lead.refresh_from_db()
         self.assertFalse(self.lead.is_overdue)
         self.assertEqual(timezone.localtime(self.lead.next_action_at).hour, 10)
@@ -1519,14 +1519,14 @@ class TodayDeskTests(CabinetTestCase):
         self.lead.next_action_at = timezone.now() - timezone.timedelta(days=2)
         self.lead.save()
         self.login_owner()
-        response = self.client.get(reverse("cabinet:dashboard"))
+        response = self.client.get(reverse("cabinet:people"))
         self.assertContains(response, "tel:+79130000001")
         self.assertContains(response, reverse("cabinet:lead_snooze", args=[self.lead.pk]))
         self.assertContains(response, "просрочено 2 дня")
 
     def test_tabbar_only_for_owner(self):
         self.login_owner()
-        self.assertContains(self.client.get(reverse("cabinet:dashboard")), 'class="tabbar"')
+        self.assertContains(self.client.get(reverse("cabinet:people")), 'class="tabbar"')
         self.client.logout()
         self.login_client()
         self.assertNotContains(self.client.get(reverse("cabinet:my_project")), 'class="tabbar"')
@@ -1732,3 +1732,47 @@ class SiteEditorTests(CabinetTestCase):
         self.login_client()
         for name, args in (("site", []), ("site_about", []), ("site_works", []), ("site_list", ["voprosy"])):
             self.assertNotEqual(self.client.get(reverse(f"cabinet:{name}", args=args)).status_code, 200)
+
+
+
+class PeoplePageTests(CabinetTestCase):
+    """«Клиенты» = «Сегодня» + «Заявки» + «Заказчики» на одной странице."""
+
+    def test_old_addresses_lead_here(self):
+        self.login_owner()
+        for name in ("cabinet:dashboard", "cabinet:leads"):
+            self.assertRedirects(self.client.get(reverse(name)), reverse("cabinet:people"),
+                                 fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse("cabinet:clients")), reverse("cabinet:people") + "#clients",
+                             fetch_redirect_response=False)
+
+    def test_quick_add_puts_card_into_new_column(self):
+        from apps.crm.models import Client, Lead
+
+        self.login_owner()
+        self.client.post(reverse("cabinet:people"), {
+            "new-name": "Ирина Петрова", "new-phone": "+7 913 222-33-44",
+            "new-source": "сарафан", "new-message": "Студия 28 м², ключи в марте",
+        })
+        client = Client.objects.get(name="Ирина Петрова")
+        lead = Lead.objects.get(client=client)
+        self.assertEqual((lead.status, lead.message), ("new", "Студия 28 м², ключи в марте"))
+        page = self.client.get(reverse("cabinet:people"))
+        self.assertContains(page, "Ирина Петрова")
+
+    def test_quick_add_needs_a_contact(self):
+        from apps.crm.models import Client
+
+        self.login_owner()
+        page = self.client.post(reverse("cabinet:people"), {"new-name": "Без контактов"})
+        self.assertFalse(Client.objects.filter(name="Без контактов").exists())
+        self.assertContains(page, "Нужен хотя бы один контакт")
+
+    def test_menu_has_four_sections(self):
+        self.login_owner()
+        body = self.client.get(reverse("cabinet:people")).content.decode()
+        nav = body[body.index('class="cabnav'):body.index("</nav>", body.index('class="cabnav'))]
+        for label in ("Клиенты", "Проекты", "Документы", "Сайт"):
+            self.assertIn(label, nav)
+        for gone in (">Сегодня<", ">Заявки<", ">Заказчики<", ">Цены<", ">Счета<", ">Админка<"):
+            self.assertNotIn(gone, nav)

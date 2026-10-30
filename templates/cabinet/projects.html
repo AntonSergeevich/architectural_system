@@ -15,17 +15,33 @@
     </div>
 
     <div class="grid grid--2" style="margin-top: var(--gap-6)">
-      {% for project in projects %}
-        <a class="card" href="{% url 'cabinet:project_detail' project.pk %}">
+      {% for card in cards %}
+        {% with project=card.project %}
+        <a class="card project-card{% if project.status == 'done' %} project-card--done{% endif %}" href="{% url 'cabinet:project_detail' project.pk %}">
           <p class="card__title">{{ project }}</p>
           <p class="card__muted">
-            {{ project.get_status_display }} · этап {{ project.current_stage.number|default:"—" }}
-            · готово {{ project.progress }}%
-            {% if project.open_revisions %} · правок: {{ project.open_revisions }}{% endif %}
+            {{ project.client.name }} · {{ project.get_status_display|lower }}
+            {% if card.stage %} · этап {{ card.stage.number }}: {{ card.stage.title }}{% endif %}
           </p>
+          <span class="meter" aria-hidden="true"><span class="meter__fill" style="width: {{ project.progress }}%"></span></span>
+          <p class="card__muted">готово {{ project.progress }}% · оплачено {{ project.paid_percent }}%</p>
+          {% if card.tasks %}
+            <ul class="row__tasks">
+              {% for task in card.tasks %}<li>{{ task.title }}</li>{% endfor %}
+              {% if card.tasks_more %}<li class="muted">и ещё {{ card.tasks_more }}</li>{% endif %}
+            </ul>
+          {% endif %}
+          {% if card.unread or project.open_revisions or project.pending_budget_changes %}
+            <p class="project-card__badges">
+              {% if card.unread %}<span class="badge">{{ card.unread }} новых сообщ.</span>{% endif %}
+              {% if project.open_revisions %}<span class="badge badge--warn">правок: {{ project.open_revisions }}</span>{% endif %}
+              {% if project.pending_budget_changes %}<span class="badge badge--warn">смета на согласовании</span>{% endif %}
+            </p>
+          {% endif %}
         </a>
+        {% endwith %}
       {% empty %}
-        <p>Проектов пока нет.</p>
+        <p>Проектов пока нет. Проект заводится в карточке клиента: «Клиенты» → заказчик → «Завести проект».</p>
       {% endfor %}
     </div>
 {% endblock %}
