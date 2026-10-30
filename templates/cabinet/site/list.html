@@ -1,0 +1,29 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% block title %}{{ editor.title }} — сайт{% endblock %}
+
+{% block cabinet %}
+<p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / {{ editor.title }}</p>
+<header class="cabhead">
+  <div>
+    <h1>{{ editor.title }}</h1>
+    <p class="muted">{{ editor.hint }}{% if editor.public %} · <a href="{% url editor.public %}" target="_blank" rel="noopener">посмотреть на сайте</a>{% endif %}</p>
+  </div>
+  {% if editor.can_add %}
+    <div class="cabhead__side">
+      <a class="btn" href="{% url 'cabinet:site_add' kind %}">+ Добавить {{ editor.one }}</a>
+    </div>
+  {% endif %}
+</header>
+
+<section class="panel">
+  {% for obj, title, note in rows %}
+    <a class="edit-row" href="{% url 'cabinet:site_edit' kind obj.pk %}">
+      <span class="edit-row__title">{{ title }}</span>
+      <span class="edit-row__note">{{ note }}</span>
+      <span class="edit-row__go" aria-hidden="true">›</span>
+    </a>
+  {% empty %}
+    <p class="muted">Пока пусто.{% if editor.can_add %} Нажмите «Добавить {{ editor.one }}».{% endif %}</p>
+  {% endfor %}
+</section>
+{% endblock %}

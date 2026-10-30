@@ -1,0 +1,31 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load forms %}
+{% block title %}О себе и контакты — сайт{% endblock %}
+
+{% comment %}
+  Всё, что написано на сайте о Дарье, и как с ней связаться. Поля
+  разложены по тому, где они видны на сайте, а не по тому, как лежат
+  в базе: подпись блока говорит, куда смотреть после сохранения.
+{% endcomment %}
+
+{% block cabinet %}
+<div class="cabnarrow">
+  <p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / О себе и контакты</p>
+  <h1>О себе и контакты</h1>
+
+  <form method="post" enctype="multipart/form-data" class="site-form">
+    {% csrf_token %}
+    {% for title, hint, fields in form.groups %}
+      <fieldset class="site-group">
+        <legend>{{ title }}</legend>
+        <p class="muted">{{ hint }}</p>
+        {% for f in fields %}{% field f %}{% endfor %}
+      </fieldset>
+    {% endfor %}
+    <div class="site-form__actions">
+      <button class="btn" type="submit">Сохранить</button>
+      <a class="btn btn--ghost" href="{% url 'public:about' %}" target="_blank" rel="noopener">Посмотреть на сайте</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

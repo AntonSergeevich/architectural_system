@@ -16,15 +16,38 @@
 </header>
 
 <div class="hub">
+  <a class="hub-card" href="{% url 'cabinet:site_works' %}">
+    <span class="hub-card__title">Работы</span>
+    <span class="hub-card__hint">Объекты в портфолио: фотографии, порядок кадров, текст и отзыв заказчика</span>
+  </a>
   <a class="hub-card" href="{% url 'cabinet:prices' %}">
     <span class="hub-card__title">Цены и услуги</span>
     <span class="hub-card__hint">Цены, как считается, что входит и что нет — всё про каждую услугу</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_about' %}">
+    <span class="hub-card__title">О себе и контакты</span>
+    <span class="hub-card__hint">Фото, тексты о себе, телефон, соцсети, реквизиты, регламент</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_list' 'publikacii' %}">
+    <span class="hub-card__title">Публикации</span>
+    <span class="hub-card__hint">Журналы и статьи о вас — обложка, разворот, файл номера</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_list' 'voprosy' %}">
+    <span class="hub-card__title">Вопросы</span>
+    <span class="hub-card__hint">«А почему так дорого» и другие — с вашими ответами</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_list' 'etapy' %}">
+    <span class="hub-card__title">Этапы работы</span>
+    <span class="hub-card__hint">«Как я работаю»: восемь этапов, сроки, что делает заказчик</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_list' 'stati' %}">
+    <span class="hub-card__title">Статьи</span>
+    <span class="hub-card__hint">Раздел «Полезное»</span>
   </a>
   <a class="hub-card" href="{% url 'cabinet:site_season' %}">
     <span class="hub-card__title">Время года</span>
     <span class="hub-card__hint">Сейчас: {{ season_label|lower }}</span>
   </a>
-  {% block more_cards %}{% endblock %}
 </div>
 
 <p class="muted hub__admin">

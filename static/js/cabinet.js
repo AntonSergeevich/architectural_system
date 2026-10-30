@@ -1110,4 +1110,123 @@
   document.querySelectorAll('form[data-autosubmit]').forEach(function (form) {
     form.addEventListener('change', function () { form.submit(); });
   });
+
+  // --- Работы: загрузка фотографий ------------------------------------------
+  // По одному файлу за запрос: тридцать кадров одним запросом не пропустит
+  // ни сервер, ни мобильная сеть. Перед отправкой браузер уменьшает кадр
+  // до 2400 px по длинной стороне — для сайта этого хватает с запасом,
+  // а загрузка с телефона идёт в разы быстрее.
+  var MAX_SIDE = 2400;
+
+  function shrink(file) {
+    if (!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) || !window.createImageBitmap) {
+      return Promise.resolve(file);
+    }
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
+      var scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+      if (scale === 1 && file.size < 2.5 * 1024 * 1024) return file;
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      return new Promise(function (resolve) {
+        canvas.toBlob(function (blob) {
+          resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file);
+        }, 'image/jpeg', 0.86);
+      });
+    }).catch(function () { return file; });
+  }
+
+  document.querySelectorAll('[data-photo-upload]').forEach(function (zone) {
+    var input = zone.querySelector('input[type="file"]');
+    var status = zone.querySelector('[data-photo-status]');
+    var grid = document.querySelector('[data-photo-grid]');
+
+    function upload(files) {
+      files = Array.prototype.filter.call(files, function (f) { return /^image\//.test(f.type); });
+      if (!files.length) return;
+      var done = 0, failed = 0;
+      status.textContent = 'Загружаю: 0 из ' + files.length;
+      // Строго по очереди: параллельно телефон захлебнётся.
+      files.reduce(function (chain, file) {
+        return chain.then(function () {
+          return shrink(file).then(function (ready) {
+            var body = new FormData();
+            body.append('image', ready);
+            return fetch(zone.dataset.url, {
+              method: 'POST', body: body,
+              headers: { 'X-CSRFToken': csrf(), 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function (r) { return r.json(); }).then(function (answer) {
+              if (!answer.ok) throw new Error(answer.error);
+              grid.insertAdjacentHTML('beforeend', answer.html);
+              done += 1;
+            }).catch(function () { failed += 1; });
+          }).then(function () {
+            status.textContent = 'Загружено ' + done + ' из ' + files.length + (failed ? ', не получилось: ' + failed : '');
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        status.textContent = done + ' из ' + files.length + ' загружено' + (failed ? ', ' + failed + ' не получилось' : '') +
+          '. Расставьте порядок и нажмите «Сохранить».';
+        toast(failed ? 'Часть фотографий не загрузилась' : 'Фотографии загружены', failed ? 'error' : '');
+        input.value = '';
+      });
+    }
+
+    input.addEventListener('change', function () { upload(input.files); });
+    ['dragover', 'dragenter'].forEach(function (t) {
+      zone.addEventListener(t, function (e) { e.preventDefault(); zone.classList.add('is-over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (t) {
+      zone.addEventListener(t, function () { zone.classList.remove('is-over'); });
+    });
+    zone.addEventListener('drop', function (e) { e.preventDefault(); upload(e.dataTransfer.files); });
+  });
+
+  // --- Работы: порядок кадров перетаскиванием -----------------------------
+  // Тянут за ручку ⠿ — пальцем и мышью одинаково. Кадр едет за указателем
+  // прямо в сетке, соседи расступаются; у края экрана страница подъезжает.
+  document.addEventListener('pointerdown', function (e) {
+    var grip = e.target.closest('[data-photo-grip]');
+    if (!grip) return;
+    var tile = grip.closest('[data-photo-tile]');
+    var grid = tile.parentElement;
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    tile.classList.add('is-dragging');
+    var scrollTimer = null;
+
+    function move(ev) {
+      var y = ev.clientY;
+      clearInterval(scrollTimer);
+      if (y < 80 || y > window.innerHeight - 120) {
+        var step = y < 80 ? -14 : 14;
+        scrollTimer = setInterval(function () { window.scrollBy(0, step); }, 16);
+      }
+      tile.style.visibility = 'hidden';
+      var under = document.elementFromPoint(ev.clientX, ev.clientY);
+      tile.style.visibility = '';
+      var target = under && under.closest('[data-photo-tile]');
+      if (!target || target === tile || target.parentElement !== grid) return;
+      var tiles = Array.prototype.slice.call(grid.children);
+      if (tiles.indexOf(target) > tiles.indexOf(tile)) target.after(tile); else target.before(tile);
+    }
+    function stop() {
+      clearInterval(scrollTimer);
+      tile.classList.remove('is-dragging');
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', stop);
+      grip.removeEventListener('pointercancel', stop);
+    }
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', stop);
+    grip.addEventListener('pointercancel', stop);
+  });
+
+  // Отмеченный к удалению кадр бледнеет: видно, что исчезнет при сохранении.
+  document.addEventListener('change', function (e) {
+    if (e.target.matches('[data-photo-delete]')) {
+      e.target.closest('[data-photo-tile]').classList.toggle('is-removing', e.target.checked);
+    }
+  });
 })();

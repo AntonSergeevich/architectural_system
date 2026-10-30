@@ -1,0 +1,65 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% load forms %}
+{% block title %}{% if project %}{{ project.title }}{% else %}Новая работа{% endif %} — сайт{% endblock %}
+
+{% comment %}
+  Работа целиком: фотографии и текст на одной странице. Фото — первыми:
+  ради них объект и открывают. Порядок кадров — перетаскиванием за ручку,
+  он же порядок на сайте. Загрузка — пачкой: файлы уходят по одному,
+  браузер заранее уменьшает их до 2400 px по длинной стороне.
+{% endcomment %}
+
+{% block cabinet %}
+<div class="cabnarrow cabnarrow--wide">
+  <p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / <a href="{% url 'cabinet:site_works' %}">Работы</a></p>
+  <h1>{% if project %}{{ project.title }}{% else %}Новая работа{% endif %}</h1>
+  {% if project %}<p class="muted"><a href="{{ project.get_absolute_url }}" target="_blank" rel="noopener">Посмотреть на сайте</a></p>{% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="site-form" id="work-form">
+    {% csrf_token %}
+
+    {% if project %}
+      <fieldset class="site-group">
+        <legend>Фотографии</legend>
+        <p class="muted">Порядок здесь — порядок на сайте: тяните за ⠿. Обложка — первый кадр в списке работ.</p>
+        <div class="photo-grid" data-photo-grid>
+          {% for photo in photos %}{% include "cabinet/site/_photo_tile.html" %}{% endfor %}
+        </div>
+        <label class="photo-upload" data-photo-upload data-url="{% url 'cabinet:site_work_photo' project.pk %}">
+          <input type="file" accept="image/*" multiple>
+          <span class="photo-upload__title">+ Добавить фотографии</span>
+          <span class="photo-upload__hint">Можно выбрать сразу много. Загружаются по одному, большие уменьшаются сами.</span>
+          <span class="photo-upload__status" data-photo-status aria-live="polite"></span>
+        </label>
+      </fieldset>
+    {% endif %}
+
+    {% for title, hint, fields in form.groups %}
+      <fieldset class="site-group">
+        <legend>{{ title }}</legend>
+        {% if hint %}<p class="muted">{{ hint }}</p>{% endif %}
+        {% for f in fields %}
+          {% if f.widget_type == "checkbox" %}
+            <label class="check-row">{{ f }} <span>{{ f.label }}</span>{% if f.help_text %}<small class="muted">{{ f.help_text }}</small>{% endif %}</label>
+          {% else %}
+            {% field f %}
+          {% endif %}
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+
+    <div class="site-form__actions">
+      <button class="btn" type="submit">{% if project %}Сохранить{% else %}Создать и перейти к фото{% endif %}</button>
+      <a class="btn btn--ghost" href="{% url 'cabinet:site_works' %}">Отмена</a>
+    </div>
+  </form>
+
+  {% if project %}
+    <form method="post" class="site-form__remove" data-confirm="Удалить работу «{{ project.title }}» вместе со всеми фотографиями?">
+      {% csrf_token %}
+      <input type="hidden" name="remove" value="1">
+      <button class="btn btn--ghost btn--danger" type="submit">Удалить работу</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

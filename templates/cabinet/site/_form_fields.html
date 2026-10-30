@@ -1,0 +1,16 @@
+{% load forms %}
+{% comment %}
+  Поля формы раздела «Сайт». Галочки — строкой «квадратик + подпись»,
+  остальное — общим компонентом поля. Файлы — с подсказкой, что уже
+  загружено: заменить можно, не открывая админку.
+{% endcomment %}
+{% for f in form %}
+  {% if f.widget_type == "checkbox" %}
+    <label class="check-row">
+      {{ f }} <span>{{ f.label }}</span>
+      {% if f.help_text %}<small class="muted">{{ f.help_text }}</small>{% endif %}
+    </label>
+  {% else %}
+    {% field f %}
+  {% endif %}
+{% endfor %}

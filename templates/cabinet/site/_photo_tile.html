@@ -1,0 +1,20 @@
+{% comment %}
+  Кадр в редакторе работы. Всё про кадр — на нём самом: подпись,
+  обложка, широкий, «до», удалить. Ручка ⠿ — перетащить: за неё тянут
+  и пальцем, и мышью, а всё остальное на плитке нажимается как обычно.
+{% endcomment %}
+<div class="photo-tile" data-photo-tile>
+  <input type="hidden" name="photo" value="{{ photo.pk }}">
+  <div class="photo-tile__img">
+    <img src="{{ photo.image.url }}" alt="" loading="lazy">
+    <button class="photo-tile__grip" type="button" data-photo-grip aria-label="Перетащить кадр">⠿</button>
+  </div>
+  <input class="photo-tile__caption" type="text" name="caption_{{ photo.pk }}" value="{{ photo.caption }}"
+         placeholder="Подпись (видна при открытии фото)" maxlength="200">
+  <div class="photo-tile__flags">
+    <label><input type="radio" name="cover" value="{{ photo.pk }}"{% if photo.is_cover %} checked{% endif %}> Обложка</label>
+    <label><input type="checkbox" name="wide_{{ photo.pk }}"{% if photo.is_wide %} checked{% endif %}> Широкий</label>
+    <label><input type="checkbox" name="before_{{ photo.pk }}"{% if photo.is_before %} checked{% endif %}> «До»</label>
+    <label class="photo-tile__del"><input type="checkbox" name="delete_{{ photo.pk }}" data-photo-delete> Удалить</label>
+  </div>
+</div>

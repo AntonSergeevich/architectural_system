@@ -1635,3 +1635,100 @@ class SiteSeasonTests(CabinetTestCase):
     def test_client_has_no_access(self):
         self.login_client()
         self.assertNotEqual(self.client.get(reverse("cabinet:site_season")).status_code, 200)
+
+
+class SiteEditorTests(CabinetTestCase):
+    """Вся правка сайта — в кабинете: тексты, вопросы, статьи, работы и фото."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        from django.test import override_settings
+
+        # Загруженные в тесте кадры — во временную папку, а не в media/.
+        media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, media, True)
+        patcher = override_settings(MEDIA_ROOT=media)
+        patcher.enable()
+        self.addCleanup(patcher.disable)
+        self.login_owner()
+
+    def _png(self, name="kadr.png"):
+        import io
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buf = io.BytesIO()
+        Image.new("RGB", (40, 30), (200, 120, 90)).save(buf, "PNG")
+        return SimpleUploadedFile(name, buf.getvalue(), content_type="image/png")
+
+    def test_about_texts_replace_what_is_on_site(self):
+        from apps.core.models import SiteSettings
+        from apps.cabinet.site import AboutForm
+
+        data = {k: v for k, v in AboutForm(instance=SiteSettings.get()).initial.items()
+                if v is not None and k != "owner_photo"}
+        data.update(owner_about="Новый текст о себе", phone="+7 900 000-00-00")
+        response = self.client.post(reverse("cabinet:site_about"), data)
+        self.assertRedirects(response, reverse("cabinet:site_about"), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse("public:about")), "Новый текст о себе")
+
+    def test_question_add_edit_delete(self):
+        from apps.core.models import Objection
+
+        self.client.post(reverse("cabinet:site_add", args=["voprosy"]),
+                         {"question": "А можно дешевле?", "answer": "Можно убрать блоки.",
+                          "is_published": "on", "order": "1"})
+        item = Objection.objects.get(question="А можно дешевле?")
+        self.assertContains(self.client.get(reverse("public:objections")), "А можно дешевле?")
+        self.client.post(reverse("cabinet:site_edit", args=["voprosy", item.pk]), {"remove": "1"})
+        self.assertFalse(Objection.objects.filter(pk=item.pk).exists())
+
+    def test_article_gets_address_from_title(self):
+        from apps.core.models import Article
+
+        self.client.post(reverse("cabinet:site_add", args=["stati"]),
+                         {"title": "Как выбрать плитку", "lead": "", "body": "Текст",
+                          "published_at": "2026-10-30", "is_published": "on"})
+        self.assertEqual(Article.objects.get().slug, "kak-vybrat-plitku")
+
+    def test_stages_cannot_be_added_or_deleted(self):
+        self.assertEqual(self.client.get(reverse("cabinet:site_add", args=["etapy"])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("cabinet:site_list", args=["nichego"])).status_code, 404)
+
+    def test_work_with_photos_order_cover_and_delete(self):
+        from apps.core.models import PortfolioProject
+
+        response = self.client.post(reverse("cabinet:site_work_add"),
+                                    {"title": "Дом у реки", "city": "Красноярск", "order": "100",
+                                     "is_published": "on"})
+        work = PortfolioProject.objects.get(title="Дом у реки")
+        self.assertRedirects(response, reverse("cabinet:site_work", args=[work.pk]), fetch_redirect_response=False)
+
+        url = reverse("cabinet:site_work_photo", args=[work.pk])
+        for n in range(3):
+            answer = self.client.post(url, {"image": self._png(f"k{n}.png")}).json()
+            self.assertTrue(answer["ok"])
+        bad = self.client.post(url, {"image": self._png("x.txt").__class__("x.txt", b"not image", "text/plain")})
+        self.assertEqual(bad.status_code, 400)
+        first, second, third = work.photos.all()
+        self.assertTrue(first.is_cover)  # первый кадр — обложка сам
+
+        # Новый порядок: третий, первый, второй; обложка — третий; второй удалить.
+        self.client.post(reverse("cabinet:site_work", args=[work.pk]), {
+            "title": "Дом у реки", "city": "Красноярск", "order": "100", "is_published": "on",
+            "photo": [third.pk, first.pk, second.pk], "cover": str(third.pk),
+            f"caption_{third.pk}": "Гостиная", f"wide_{third.pk}": "on", f"delete_{second.pk}": "on",
+        })
+        photos = list(work.photos.all())
+        self.assertEqual([p.pk for p in photos], [third.pk, first.pk])
+        self.assertTrue(photos[0].is_cover and photos[0].is_wide and photos[0].caption == "Гостиная")
+        self.assertFalse(photos[1].is_cover)
+
+    def test_client_cannot_edit_site(self):
+        self.client.logout()
+        self.login_client()
+        for name, args in (("site", []), ("site_about", []), ("site_works", []), ("site_list", ["voprosy"])):
+            self.assertNotEqual(self.client.get(reverse(f"cabinet:{name}", args=args)).status_code, 200)

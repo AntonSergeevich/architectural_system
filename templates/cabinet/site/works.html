@@ -1,0 +1,30 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% block title %}Работы — сайт{% endblock %}
+
+{% block cabinet %}
+<p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / Работы</p>
+<header class="cabhead">
+  <div>
+    <h1>Работы</h1>
+    <p class="muted">Объекты в портфолио · <a href="{% url 'public:portfolio' %}" target="_blank" rel="noopener">посмотреть на сайте</a></p>
+  </div>
+  <div class="cabhead__side"><a class="btn" href="{% url 'cabinet:site_work_add' %}">+ Добавить работу</a></div>
+</header>
+
+<div class="works-admin">
+  {% for project in projects %}
+    {% with cover=project.cover %}
+      <a class="work-card" href="{% url 'cabinet:site_work' project.pk %}">
+        <span class="work-card__img">{% if cover %}<img src="{{ cover.image.url }}" alt="" loading="lazy">{% endif %}</span>
+        <span class="work-card__title">{{ project.title }}</span>
+        <span class="work-card__note">
+          {{ project.photos.all|length }} фото ·
+          {% if project.is_published %}на сайте{% else %}скрыта{% endif %}{% if project.is_featured %} · на главной первой{% endif %}
+        </span>
+      </a>
+    {% endwith %}
+  {% empty %}
+    <p class="muted">Работ пока нет. Нажмите «Добавить работу».</p>
+  {% endfor %}
+</div>
+{% endblock %}
