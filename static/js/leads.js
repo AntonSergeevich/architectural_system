@@ -252,4 +252,55 @@
     card.dataset.status = status;
     recount();
   }
+
+  // --- Доску можно листать мышью --------------------------------------------
+  // Схватить пустое место и потянуть — как пальцем на телефоне. Раньше
+  // на компьютере доска двигалась только за тонкую полосу прокрутки.
+  board.addEventListener('pointerdown', function (e) {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.target.closest('[data-lead], a, button, summary, form, input')) return;
+    var startX = e.clientX, startLeft = board.scrollLeft, moved = false;
+    board.classList.add('is-panning');
+    function pan(ev) {
+      var dx = ev.clientX - startX;
+      if (Math.abs(dx) > 3) moved = true;
+      board.scrollLeft = startLeft - dx;
+    }
+    function stop() {
+      board.classList.remove('is-panning');
+      window.removeEventListener('pointermove', pan);
+      window.removeEventListener('pointerup', stop);
+      if (moved) {
+        // Отпустили после протяжки — это не клик.
+        window.addEventListener('click', function swallow(ev) {
+          ev.stopPropagation(); ev.preventDefault();
+        }, { capture: true, once: true });
+      }
+    }
+    window.addEventListener('pointermove', pan);
+    window.addEventListener('pointerup', stop);
+  });
+
+  // Стрелки над доской: на один столбец влево-вправо.
+  var nav = document.querySelector('[data-board-nav]');
+  if (nav) {
+    var prev = nav.querySelector('[data-board-step="-1"]');
+    var next = nav.querySelector('[data-board-step="1"]');
+    function step() {
+      var col = board.querySelector('[data-column]');
+      return col ? col.getBoundingClientRect().width + 16 : 240;
+    }
+    function refreshNav() {
+      prev.disabled = board.scrollLeft <= 2;
+      next.disabled = board.scrollLeft + board.clientWidth >= board.scrollWidth - 2;
+    }
+    nav.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-board-step]');
+      if (!btn) return;
+      board.scrollBy({ left: step() * Number(btn.dataset.boardStep), behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+    board.addEventListener('scroll', refreshNav, { passive: true });
+    window.addEventListener('resize', refreshNav);
+    refreshNav();
+  }
 })();

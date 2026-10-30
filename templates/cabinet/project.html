@@ -2,6 +2,8 @@
 {% load richtext forms %}
 {% block title %}{{ project }} — кабинет{% endblock %}
 
+{% block back %}<a class="back" href="{% url 'cabinet:projects' %}">← Проекты</a>{% endblock %}
+
 {% block cabinet %}
 <header class="cabhead">
   <div>

@@ -1,47 +1,69 @@
 {% extends "cabinet/base_cabinet.html" %}
-{% block title %}Проекты{% endblock %}
+{% block title %}Проекты — кабинет{% endblock %}
+
+{% comment %}
+  Проекты — плитками в той же манере, что раздел «Сайт»: спокойный текст,
+  без подчёркиваний, главное крупно. Раньше вся карточка была ссылкой,
+  и каждое слово в ней подчёркивалось и красилось, как ссылка, — читать
+  было трудно. Идущие проекты — первыми, завершённые — бледнее и в конце.
+{% endcomment %}
+
 {% block cabinet %}
+<header class="cabhead">
+  <div>
     <h1>Проекты</h1>
+    <p class="muted">Новый проект получает дату старта, а не дату сдачи.</p>
+  </div>
+  <div class="cabhead__side">
+    {% comment %} Загрузка — точками: занятые места против предела. {% endcomment %}
+    <span class="load{% if wip_exceeded %} is-over{% endif %}" title="Проектов в работе: {{ wip_used }} из {{ wip_limit }}">
+      <span class="load__dots" aria-hidden="true">{% for i in load_slots %}<i class="{% if i <= wip_used %}is-on{% endif %}"></i>{% endfor %}</span>
+      В работе {{ wip_used }} из {{ wip_limit }}
+    </span>
+  </div>
+</header>
 
-    <div class="{% if wip_exceeded %}note note--warn{% else %}note{% endif %}">
-      <p><strong>Загрузка: {{ wip_used }} из {{ wip_limit }}</strong></p>
-      {% if wip_exceeded %}
-        <p>Проектов в работе больше предела. Именно отсюда берётся выгорание:
-          когда параллельно висят пять проектов и каждый звонит «мне надо было
-          вчера», творчества не остаётся ни у кого. Новые лучше ставить в очередь.</p>
-      {% else %}
-        <p>Новый проект получает дату старта, а не дату сдачи.</p>
+{% if wip_exceeded %}
+  <section class="callout callout--warn">
+    <h2>Проектов больше, чем предел</h2>
+    <p class="muted">Предел — защита от выгорания: когда параллельно висят пять проектов, творчества не остаётся ни у кого. Новые лучше ставить в очередь.</p>
+  </section>
+{% endif %}
+
+<div class="ptiles">
+  {% for card in cards %}
+    {% with project=card.project %}
+    <a class="ptile ptile--{{ project.status }}" href="{% url 'cabinet:project_detail' project.pk %}">
+      <span class="ptile__top">
+        <span class="ptile__status">{{ project.get_status_display }}</span>
+        {% if card.unread %}<span class="ptile__dot" title="Новые сообщения">{{ card.unread }}</span>{% endif %}
+      </span>
+      <span class="ptile__title">{{ project }}</span>
+      <span class="ptile__client">{{ project.client.name }}</span>
+
+      {% if card.stage %}
+        <span class="ptile__stage">Этап {{ card.stage.number }} из {{ card.stages_total }} · {{ card.stage.title }}</span>
       {% endif %}
-    </div>
+      <span class="ptile__meter" aria-hidden="true"><span style="width: {{ project.progress }}%"></span></span>
+      <span class="ptile__nums"><span>готово {{ project.progress }}%</span><span>оплачено {{ project.paid_percent }}%</span></span>
 
-    <div class="grid grid--2" style="margin-top: var(--gap-6)">
-      {% for card in cards %}
-        {% with project=card.project %}
-        <a class="card project-card{% if project.status == 'done' %} project-card--done{% endif %}" href="{% url 'cabinet:project_detail' project.pk %}">
-          <p class="card__title">{{ project }}</p>
-          <p class="card__muted">
-            {{ project.client.name }} · {{ project.get_status_display|lower }}
-            {% if card.stage %} · этап {{ card.stage.number }}: {{ card.stage.title }}{% endif %}
-          </p>
-          <span class="meter" aria-hidden="true"><span class="meter__fill" style="width: {{ project.progress }}%"></span></span>
-          <p class="card__muted">готово {{ project.progress }}% · оплачено {{ project.paid_percent }}%</p>
-          {% if card.tasks %}
-            <ul class="row__tasks">
-              {% for task in card.tasks %}<li>{{ task.title }}</li>{% endfor %}
-              {% if card.tasks_more %}<li class="muted">и ещё {{ card.tasks_more }}</li>{% endif %}
-            </ul>
-          {% endif %}
-          {% if card.unread or project.open_revisions or project.pending_budget_changes %}
-            <p class="project-card__badges">
-              {% if card.unread %}<span class="badge">{{ card.unread }} новых сообщ.</span>{% endif %}
-              {% if project.open_revisions %}<span class="badge badge--warn">правок: {{ project.open_revisions }}</span>{% endif %}
-              {% if project.pending_budget_changes %}<span class="badge badge--warn">смета на согласовании</span>{% endif %}
-            </p>
-          {% endif %}
-        </a>
-        {% endwith %}
-      {% empty %}
-        <p>Проектов пока нет. Проект заводится в карточке клиента: «Клиенты» → заказчик → «Завести проект».</p>
-      {% endfor %}
-    </div>
+      {% if card.tasks %}
+        <span class="ptile__tasks">
+          {% for task in card.tasks %}<span class="ptile__task">{{ task.title }}</span>{% endfor %}
+          {% if card.tasks_more %}<span class="ptile__task ptile__task--more">и ещё {{ card.tasks_more }}</span>{% endif %}
+        </span>
+      {% endif %}
+
+      {% if project.open_revisions or project.pending_budget_changes %}
+        <span class="ptile__flags">
+          {% if project.open_revisions %}<span class="ptile__flag">правок: {{ project.open_revisions }}</span>{% endif %}
+          {% if project.pending_budget_changes %}<span class="ptile__flag">смета на согласовании</span>{% endif %}
+        </span>
+      {% endif %}
+    </a>
+    {% endwith %}
+  {% empty %}
+    <p class="muted">Проектов пока нет. Проект заводится в карточке заказчика: «Клиенты» → заказчик → «Завести проект».</p>
+  {% endfor %}
+</div>
 {% endblock %}

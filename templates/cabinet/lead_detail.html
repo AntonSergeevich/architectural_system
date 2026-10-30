@@ -1,6 +1,8 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% load richtext %}
 {% block title %}{{ lead.client.name }}{% endblock %}
+{% block back %}<a class="back" href="{% url 'cabinet:people' %}">← Клиенты</a>{% endblock %}
+
 {% block cabinet %}
 <div class="cabnarrow">
     <h1>{{ lead.client.name }}</h1>

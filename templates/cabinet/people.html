@@ -51,9 +51,20 @@
 {% endif %}
 </div>
 
-<section class="people-board">
+<section class="people-board" id="board">
   <header class="people-board__head">
-    <h2>Воронка</h2>
+    <div class="people-board__title">
+      <h2>Воронка</h2>
+      {% comment %}
+        Стрелки — для мыши: доска шире экрана, и тянуть её за полосу
+        прокрутки неудобно. Её можно и просто схватить за пустое место
+        и потянуть, а на телефоне — листать пальцем.
+      {% endcomment %}
+      <span class="board-nav" data-board-nav>
+        <button type="button" class="board-nav__btn" data-board-step="-1" aria-label="Предыдущие этапы">‹</button>
+        <button type="button" class="board-nav__btn" data-board-step="1" aria-label="Следующие этапы">›</button>
+      </span>
+    </div>
     <details class="quick-add" data-keep="quick-add"{% if open_form %} open{% endif %}>
       <summary class="btn">+ Новый клиент</summary>
       <form class="quick-add__form" method="post">
@@ -78,16 +89,41 @@
     <h2>Все заказчики</h2>
     <input class="people-search" type="search" placeholder="Поиск: имя или телефон" data-people-search aria-label="Поиск заказчика">
   </header>
+  {% comment %}
+    У каждого заказчика — действия прямо в строке: поставить в воронку,
+    убрать в спам, удалить. Раньше за этим надо было заходить в карточку.
+    Удаление — только для карточек, за которыми ничего нет; у кого есть
+    проект или доступ, для того архив в карточке.
+  {% endcomment %}
   {% for row in rows %}
-    <a class="edit-row" href="{% url 'cabinet:client_detail' row.client.pk %}"
-       data-people-row="{{ row.client.name|lower }} {{ row.client.phone }} {{ row.client.email|lower }}">
-      <span class="edit-row__title">{{ row.client.name }}</span>
-      <span class="edit-row__note">
-        {{ row.stage }}{% if row.client.phone %} · {{ row.client.phone }}{% endif %}
-        · {% if row.client.user %}есть доступ в кабинет{% else %}без доступа{% endif %}
-      </span>
-      <span class="edit-row__go" aria-hidden="true">›</span>
-    </a>
+    <div class="client-row" data-people-row="{{ row.client.name|lower }} {{ row.client.phone }} {{ row.client.email|lower }}">
+      <a class="client-row__main" href="{% url 'cabinet:client_detail' row.client.pk %}">
+        <span class="client-row__name">{{ row.client.name }}</span>
+        <span class="client-row__note">
+          {{ row.stage }}{% if row.client.phone %} · {{ row.client.phone }}{% endif %}
+          · {% if row.client.user %}есть доступ в кабинет{% else %}без доступа{% endif %}
+        </span>
+      </a>
+      <div class="client-row__actions">
+        {% if not row.open_lead and not row.in_work %}
+          <form method="post" action="{% url 'cabinet:client_to_funnel' row.client.pk %}">
+            {% csrf_token %}<button class="chip-btn" type="submit">В воронку</button>
+          </form>
+        {% endif %}
+        {% if row.open_lead %}
+          <form method="post" action="{% url 'cabinet:lead_spam' row.open_lead.pk %}"
+                data-confirm="Убрать заявку «{{ row.client.name }}» в спам?">
+            {% csrf_token %}<button class="chip-btn" type="submit">В спам</button>
+          </form>
+        {% endif %}
+        {% if row.removable %}
+          <form method="post" action="{% url 'cabinet:client_remove' row.client.pk %}"
+                data-confirm="Удалить «{{ row.client.name }}» насовсем?">
+            {% csrf_token %}<button class="chip-btn chip-btn--danger" type="submit">Удалить</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
   {% empty %}
     <p class="muted">Пока никого. Нажмите «+ Новый клиент» над воронкой.</p>
   {% endfor %}

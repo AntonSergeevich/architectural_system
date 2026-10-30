@@ -3,10 +3,7 @@
 
 {% block cabinet %}
 <div class="cabnarrow">
-  <p class="crumbs">
-    <a href="{% url 'cabinet:site' %}">Сайт</a> /
-    <a href="{% url 'cabinet:site_list' kind %}">{{ editor.title }}</a>
-  </p>
+  <a class="back" href="{% url 'cabinet:site_list' kind %}">← {{ editor.title }}</a>
   <h1>{% if obj %}{{ obj }}{% else %}Добавить {{ editor.one }}{% endif %}</h1>
 
   <form method="post" enctype="multipart/form-data" class="site-form">

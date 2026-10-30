@@ -10,7 +10,7 @@
 
 {% block cabinet %}
 <div class="cabnarrow">
-  <p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / О себе и контакты</p>
+  <a class="back" href="{% url 'cabinet:site' %}">← Сайт</a>
   <h1>О себе и контакты</h1>
 
   <form method="post" enctype="multipart/form-data" class="site-form">

@@ -39,6 +39,21 @@
               <span class="house-card__step">{{ lead.next_action }}</span>
             </div>
             <span class="house-card__when">{{ lead.next_action_at|date:"d.m" }}</span>
+            {% comment %}
+              «⋯» раскрывает действия прямо в карточке, а не всплывающим меню:
+              доска прокручивается вбок, и всплывающее обрезалось бы её краем.
+            {% endcomment %}
+            <details class="house-card__more">
+              <summary aria-label="Действия с заявкой">⋯</summary>
+              <div class="house-card__actions">
+                <form method="post" action="{% url 'cabinet:lead_spam' lead.pk %}">
+                  {% csrf_token %}<button type="submit">В спам</button>
+                </form>
+                <form method="post" action="{% url 'cabinet:lead_delete' lead.pk %}" data-confirm="Удалить заявку «{{ lead.client.name }}» насовсем?">
+                  {% csrf_token %}<button class="is-danger" type="submit">Удалить</button>
+                </form>
+              </div>
+            </details>
           </article>
         {% empty %}
           <p class="board__empty">Пусто</p>

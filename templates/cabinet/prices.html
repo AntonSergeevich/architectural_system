@@ -1,8 +1,9 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% load richtext forms %}
 {% block title %}Цены{% endblock %}
+{% block back %}<a class="back" href="{% url 'cabinet:site' %}">← Сайт</a>{% endblock %}
+
 {% block cabinet %}
-    <p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / Цены и услуги</p>
     <h1>Цены и услуги</h1>
     <p class="lead">
       Меняются здесь и сразу применяются на сайте. Уже выставленные

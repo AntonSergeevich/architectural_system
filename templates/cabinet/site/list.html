@@ -2,7 +2,7 @@
 {% block title %}{{ editor.title }} — сайт{% endblock %}
 
 {% block cabinet %}
-<p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / {{ editor.title }}</p>
+<a class="back" href="{% url 'cabinet:site' %}">← Сайт</a>
 <header class="cabhead">
   <div>
     <h1>{{ editor.title }}</h1>

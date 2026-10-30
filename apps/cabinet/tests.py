@@ -1776,3 +1776,59 @@ class PeoplePageTests(CabinetTestCase):
             self.assertIn(label, nav)
         for gone in (">Сегодня<", ">Заявки<", ">Заказчики<", ">Цены<", ">Счета<", ">Админка<"):
             self.assertNotIn(gone, nav)
+
+
+class QuickClientActionsTests(CabinetTestCase):
+    """Действия прямо из списка: в воронку, в спам, удалить; стрелка назад."""
+
+    def setUp(self):
+        self.login_owner()
+
+    def test_client_without_lead_goes_to_funnel_once(self):
+        from apps.crm.models import Client, Lead
+
+        loner = Client.objects.create(name="Позвонил сам", phone="+79990001122")
+        url = reverse("cabinet:client_to_funnel", args=[loner.pk])
+        self.client.post(url)
+        self.client.post(url)  # второй раз — не дубль
+        self.assertEqual(Lead.objects.filter(client=loner).count(), 1)
+        self.assertEqual(Lead.objects.get(client=loner).status, "new")
+
+    def test_empty_card_is_deleted_but_card_with_project_is_not(self):
+        from apps.crm.models import Client
+
+        loner = Client.objects.create(name="Ошибка", phone="+79990003344")
+        self.client.post(reverse("cabinet:client_remove", args=[loner.pk]))
+        self.assertFalse(Client.objects.filter(pk=loner.pk).exists())
+
+        self.client.post(reverse("cabinet:client_remove", args=[self.customer.pk]))
+        self.assertTrue(Client.objects.filter(pk=self.customer.pk).exists())
+
+    def test_list_offers_actions_where_they_make_sense(self):
+        page = self.client.get(reverse("cabinet:people")).content.decode()
+        # У заказчика с проектом нет ни «Удалить», ни «В воронку».
+        row = page[page.index("Мария"):]
+        row = row[:row.index("client-row__actions") + 400]
+        self.assertNotIn("В воронку", row)
+        self.assertNotIn(reverse("cabinet:client_remove", args=[self.customer.pk]), page)
+
+    def test_inner_pages_have_back_arrow(self):
+        pages = [
+            (reverse("cabinet:client_detail", args=[self.customer.pk]), "← Клиенты"),
+            (reverse("cabinet:lead_detail", args=[self.lead.pk]), "← Клиенты"),
+            (reverse("cabinet:project_detail", args=[self.project.pk]), "← Проекты"),
+            (reverse("cabinet:contract_edit", args=[self.contract.pk]), "← Документы"),
+            (reverse("cabinet:site_works"), "← Сайт"),
+        ]
+        for url, label in pages:
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), label)
+
+    def test_client_cannot_use_quick_actions(self):
+        from apps.crm.models import Client
+
+        loner = Client.objects.create(name="Чужой", phone="+79990005566")
+        self.client.logout()
+        self.login_client()
+        self.client.post(reverse("cabinet:client_remove", args=[loner.pk]))
+        self.assertTrue(Client.objects.filter(pk=loner.pk).exists())

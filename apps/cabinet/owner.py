@@ -78,7 +78,7 @@ def people(request):
 
     clients = list(
         Client.objects.select_related("user")
-        .prefetch_related("projects", "leads")
+        .prefetch_related("projects", "leads", "quotes")
         .order_by("-created_at")
     )
     rows = []
@@ -93,7 +93,18 @@ def people(request):
             stage = lead.get_status_display()
         else:
             stage = "Без заявки"
-        rows.append({"client": client, "stage": stage})
+        open_lead = next(
+            (l for l in sorted(client.leads.all(), key=lambda l: l.created_at, reverse=True)
+             if not l.is_spam and l.status not in {Lead.Status.WON, Lead.Status.LOST}),
+            None,
+        )
+        rows.append({
+            "client": client,
+            "stage": stage,
+            "open_lead": open_lead,
+            "in_work": bool(live),
+            "removable": not client.projects.all() and not client.quotes.all() and client.user_id is None,
+        })
 
     site = SiteSettings.get()
     active = Project.objects.filter(status=Project.Status.ACTIVE).count()
@@ -185,6 +196,53 @@ def lead_delete(request, pk):
     else:
         messages.success(request, "Заявка удалена.")
     return redirect("cabinet:people")
+
+
+@login_required
+@owner_only
+@require_POST
+def client_to_funnel(request, pk):
+    """Поставить заказчика в воронку — одной кнопкой из списка.
+
+    Заказчик, заведённый карточкой (позвонил по рекомендации, пришёл
+    из Instagram), заявки не имел и на доске не появлялся: переносить
+    было нечего. Теперь его карточка встаёт в «Новые» и дальше
+    переносится по доске, как любая заявка.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    open_lead = client.leads.filter(is_spam=False).exclude(
+        status__in=[Lead.Status.WON, Lead.Status.LOST]
+    ).first()
+    if open_lead:
+        messages.info(request, f"«{client.name}» уже в воронке.")
+    else:
+        Lead.objects.create(client=client, source=client.source or "вручную")
+        messages.success(request, f"«{client.name}» — в воронке, в столбце «Новая».")
+    return redirect(reverse("cabinet:people") + "#board")
+
+
+@login_required
+@owner_only
+@require_POST
+def client_remove(request, pk):
+    """Удалить карточку, за которой ничего нет, — прямо из списка.
+
+    Случайный звонок, ошибка при заведении, дубль. Если же за карточкой
+    есть проект, КП или доступ в кабинет — удаления нет: это переписка,
+    договоры и деньги, и для них есть архив в карточке заказчика.
+    """
+    client = get_object_or_404(Client, pk=pk)
+    if client.projects.exists() or client.quotes.exists() or client.user_id:
+        messages.error(
+            request,
+            f"У «{client.name}» есть проект, КП или доступ в кабинет — удалить нельзя. "
+            "Убрать из списка можно в карточке: «В архив».",
+        )
+        return redirect("cabinet:client_detail", pk=pk)
+    name = client.name
+    client.delete()
+    messages.success(request, f"«{name}» удалён(а).")
+    return redirect(reverse("cabinet:people") + "#clients")
 
 
 @login_required
@@ -470,6 +528,7 @@ def projects(request):
             "unread": services.unread_count(project, request.user),
             "tasks": mine[:3],
             "tasks_more": max(len(mine) - 3, 0),
+            "stages_total": len(project.stages.all()),
         })
     order = {Project.Status.ACTIVE: 0, Project.Status.QUEUED: 1, Project.Status.PAUSED: 2, Project.Status.DONE: 3}
     cards.sort(key=lambda c: order.get(c["project"].status, 9))
@@ -479,6 +538,7 @@ def projects(request):
         {
             "section": "projects",
             "cards": cards,
+            "load_slots": range(1, max(site.wip_limit, active) + 1),
             "wip_limit": site.wip_limit,
             "wip_used": active,
             "wip_exceeded": active > site.wip_limit,

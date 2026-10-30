@@ -1,5 +1,7 @@
 {% extends "cabinet/base_cabinet.html" %}
 {% block title %}{{ template.title }}{% endblock %}
+{% block back %}<a class="back" href="{% url 'cabinet:contracts' %}">← Документы</a>{% endblock %}
+
 {% block cabinet %}
 <div class="cabnarrow">
     <h1>{{ template.title }}</h1>

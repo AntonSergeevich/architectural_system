@@ -8,6 +8,8 @@
   разметка, которую браузер молча ломает.
 {% endcomment %}
 
+{% block back %}<a class="back" href="{% url 'cabinet:prices' %}">← Цены и услуги</a>{% endblock %}
+
 {% block cabinet %}
 <div class="cabnarrow">
   <p class="eyebrow">Услуга {{ module.code }}</p>

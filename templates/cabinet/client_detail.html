@@ -2,6 +2,8 @@
 {% load richtext forms %}
 {% block title %}{{ client.name }} — заказчик{% endblock %}
 
+{% block back %}<a class="back" href="{% url 'cabinet:people' %}#clients">← Клиенты</a>{% endblock %}
+
 {% block cabinet %}
 <header class="cabhead">
   <div>
@@ -13,7 +15,6 @@
     </p>
   </div>
   <div class="cabhead__side">
-    <a class="btn btn--ghost" href="{% url 'cabinet:people' %}#clients">Все заказчики</a>
   </div>
 </header>
 
