@@ -1,0 +1,43 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% block title %}Время года — сайт{% endblock %}
+
+{% comment %}
+  Время года на сайте. Большие карточки, а не выпадающий список: выбор
+  делают одним нажатием и видят его сразу — справа живой рисунок в том
+  виде, в каком он сейчас на главной. С JavaScript выбор сохраняется
+  сам, без кнопки; без него — кнопкой «Сохранить».
+{% endcomment %}
+
+{% block cabinet %}
+<p class="crumbs"><a href="{% url 'cabinet:site' %}">Сайт</a> / Время года</p>
+<header class="cabhead">
+  <div>
+    <h1>Время года на сайте</h1>
+    <p class="muted">Детали на рисунке главной и ветка в знаке. По календарю сейчас — {{ calendar_now }}.</p>
+  </div>
+</header>
+
+<div class="season-layout">
+  <form method="post" class="season-cards" data-autosubmit>
+    {% csrf_token %}
+    {% for code, title, hint in cards %}
+      <label class="season-card{% if code == mode %} is-picked{% endif %}">
+        <input type="radio" name="season_mode" value="{{ code }}"{% if code == mode %} checked{% endif %}>
+        {% include "cabinet/site/_season_icon.html" %}
+        <span class="season-card__title">{{ title }}</span>
+        <span class="season-card__hint">{{ hint }}</span>
+      </label>
+    {% endfor %}
+    <noscript><button class="btn" type="submit">Сохранить</button></noscript>
+  </form>
+
+  <aside class="season-preview">
+    <p class="eyebrow">Так сейчас на главной</p>
+    <div class="season-preview__art">
+      {% include "components/hero_art.html" with season=preview_season new_year=preview_new_year %}
+    </div>
+    <p class="muted season-preview__note">Нажмите на рисунок — загорится торшер, наступит вечер.</p>
+    <a class="btn btn--ghost" href="{% url 'public:home' %}" target="_blank" rel="noopener">Открыть сайт</a>
+  </aside>
+</div>
+{% endblock %}

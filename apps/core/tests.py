@@ -952,7 +952,7 @@ class SeasonTests(TestCase):
         from .models import SiteSettings
 
         settings_row = SiteSettings.get()
-        settings_row.seasonal = False
+        settings_row.season_mode = "off"
         settings_row.save()
         with mock.patch("apps.core.context_processors.timezone.localdate", return_value=date(2026, 10, 15)):
             response = self.client.get(reverse("public:home"))

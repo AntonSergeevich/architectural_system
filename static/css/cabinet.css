@@ -1299,3 +1299,52 @@ html.is-moving-lead, html.is-moving-lead body {
    прокрутки внутри окошка. Где браузер так не умеет, остаётся обычная
    высота и прокрутка. */
 .unit-texts textarea { field-sizing: content; min-height: 4.5em; }
+
+/* --- Раздел «Сайт» ------------------------------------------------------- */
+.crumbs { font-size: var(--step--1); color: var(--muted); margin-bottom: var(--gap-2); }
+.crumbs a { color: var(--muted); }
+
+.hub { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.hub-card {
+  display: grid; gap: var(--gap-2); align-content: start;
+  padding: var(--gap-5); min-height: 120px;
+  border: 1px solid var(--line); border-radius: var(--radius-3);
+  background: var(--surface); color: var(--ink); text-decoration: none;
+  transition: border-color .18s var(--ease), transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+.hub-card:hover { border-color: var(--brand-300); transform: translateY(-2px); box-shadow: var(--shadow-1); }
+.hub-card__title { font-weight: 700; font-size: var(--step-1); }
+.hub-card__hint { color: var(--muted); font-size: var(--step--1); line-height: 1.45; }
+.hub__admin { margin-top: var(--gap-6); font-size: var(--step--1); }
+
+.season-layout { display: grid; gap: var(--gap-6); align-items: start; }
+@media (min-width: 980px) { .season-layout { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+.season-cards { display: grid; gap: var(--gap-3); grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.season-card {
+  position: relative; display: grid; gap: var(--gap-1); justify-items: start; align-content: start; cursor: pointer;
+  padding: var(--gap-4); min-height: 136px;
+  border: 1.5px solid var(--line); border-radius: var(--radius-3); background: var(--surface);
+  transition: border-color .18s var(--ease), background .18s var(--ease), transform .12s var(--ease);
+}
+.season-card:hover { border-color: var(--brand-300); }
+.season-card:active { transform: scale(.98); }
+.season-card input { position: absolute; opacity: 0; pointer-events: none; }
+.season-card:has(input:focus-visible) { outline: 2px solid var(--brand-400); outline-offset: 2px; }
+.season-card.is-picked, .season-card:has(input:checked) { border-color: var(--brand-500); background: var(--brand-50); }
+.season-card__icon {
+  width: 34px; height: 34px; margin-bottom: var(--gap-2);
+  fill: none; stroke: var(--brand-500); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.season-card__title { font-weight: 700; font-size: var(--step-0); }
+.season-card__hint { color: var(--muted); font-size: var(--step--2); line-height: 1.4; }
+
+.season-preview {
+  position: sticky; top: calc(var(--header-h, 72px) + var(--gap-4));
+  padding: var(--gap-5); border: 1px solid var(--line); border-radius: var(--radius-3);
+  background: var(--paper); overflow: hidden;
+}
+.season-preview__art { color: var(--ink-2); margin: var(--gap-3) 0; }
+.season-preview__note { font-size: var(--step--1); margin-bottom: var(--gap-4); }
+/* На телефоне рисунок — над карточками: после выбора страница
+   перезагружается наверх, и результат должен быть первым, что видно. */
+@media (max-width: 979px) { .season-preview { position: static; order: -1; padding: var(--gap-4); } }

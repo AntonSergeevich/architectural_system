@@ -1610,3 +1610,28 @@ class StageEstimateTests(CabinetTestCase):
         self.assertContains(
             self.client.get(reverse("cabinet:project_detail", args=[self.project.pk])), "план был до"
         )
+
+
+class SiteSeasonTests(CabinetTestCase):
+    """Время года выбирается в кабинете, без админки."""
+
+    def test_owner_picks_season_and_site_follows(self):
+        from apps.core.models import SiteSettings
+
+        self.login_owner()
+        page = self.client.get(reverse("cabinet:site_season"))
+        self.assertContains(page, "По календарю")
+        self.assertContains(page, "Без украшений")
+        self.client.post(reverse("cabinet:site_season"), {"season_mode": "newyear"})
+        self.assertEqual(SiteSettings.get().season_mode, "newyear")
+        home = self.client.get(reverse("public:home"))
+        self.assertContains(home, 'data-holiday="newyear"')
+        self.client.post(reverse("cabinet:site_season"), {"season_mode": "off"})
+        self.assertNotContains(self.client.get(reverse("public:home")), "data-season")
+        # Чужое значение не сохраняется.
+        self.client.post(reverse("cabinet:site_season"), {"season_mode": "hack"})
+        self.assertEqual(SiteSettings.get().season_mode, "off")
+
+    def test_client_has_no_access(self):
+        self.login_client()
+        self.assertNotEqual(self.client.get(reverse("cabinet:site_season")).status_code, 200)

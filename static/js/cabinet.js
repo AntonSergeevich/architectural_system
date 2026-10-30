@@ -1103,4 +1103,11 @@
     [price, hours, extra].forEach(function (el) { if (el) el.addEventListener('input', update); });
     update();
   });
+
+  // --- Выбор, который сохраняется сам ---------------------------------------
+  // Время года выбирают одним нажатием на карточку, без кнопки «Сохранить»:
+  // кнопка после выбора — лишнее действие, о котором легко забыть.
+  document.querySelectorAll('form[data-autosubmit]').forEach(function (form) {
+    form.addEventListener('change', function () { form.submit(); });
+  });
 })();

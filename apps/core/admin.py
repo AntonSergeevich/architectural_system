@@ -59,7 +59,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 "Именно этот предел защищает от выгорания",
             },
         ),
-        ("Оформление", {"fields": ("seasonal",)}),
+        ("Оформление", {"fields": ("season_mode",)}),
     )
 
     def has_add_permission(self, request):

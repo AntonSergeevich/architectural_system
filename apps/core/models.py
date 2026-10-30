@@ -107,13 +107,23 @@ class SiteSettings(models.Model):
     )
 
     # --- Оформление --------------------------------------------------------
-    seasonal = models.BooleanField(
-        "Сезонные детали",
-        default=True,
-        help_text="Зимой на рисунке главной идёт снег (в праздники — ёлка и кот "
-        "в шапке), весной цветёт растение и летают птицы, летом — бабочка, "
-        "осенью — листопад. Время года определяется по дате само. Посмотреть "
-        "любое: адрес главной с ?season=winter, spring, summer, autumn или newyear",
+    class SeasonMode(models.TextChoices):
+        AUTO = "auto", "По календарю"
+        AUTUMN = "autumn", "Осень"
+        WINTER = "winter", "Зима"
+        NEWYEAR = "newyear", "Новый год"
+        SPRING = "spring", "Весна"
+        SUMMER = "summer", "Лето"
+        OFF = "off", "Без украшений"
+
+    season_mode = models.CharField(
+        "Время года на сайте",
+        max_length=8,
+        choices=SeasonMode.choices,
+        default=SeasonMode.AUTO,
+        help_text="«По календарю» — сайт сам меняет время года по дате. Можно "
+        "выбрать любое вручную или убрать украшения совсем. Удобнее всего — "
+        "в кабинете: Сайт → Время года",
     )
 
     updated_at = models.DateTimeField(auto_now=True)

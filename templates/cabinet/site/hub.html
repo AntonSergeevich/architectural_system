@@ -1,0 +1,34 @@
+{% extends "cabinet/base_cabinet.html" %}
+{% block title %}Сайт — кабинет{% endblock %}
+
+{% comment %}
+  Раздел «Сайт»: всё, что видят посетители, правится отсюда. Крупные
+  карточки, а не меню: каждая говорит, что в ней лежит, — искать нужное
+  по названиям полей, как в админке, больше не приходится.
+{% endcomment %}
+
+{% block cabinet %}
+<header class="cabhead">
+  <div>
+    <h1>Сайт</h1>
+    <p class="muted">Всё, что видят посетители. Правка сразу появляется на сайте.</p>
+  </div>
+</header>
+
+<div class="hub">
+  <a class="hub-card" href="{% url 'cabinet:prices' %}">
+    <span class="hub-card__title">Цены и услуги</span>
+    <span class="hub-card__hint">Цены, как считается, что входит и что нет — всё про каждую услугу</span>
+  </a>
+  <a class="hub-card" href="{% url 'cabinet:site_season' %}">
+    <span class="hub-card__title">Время года</span>
+    <span class="hub-card__hint">Сейчас: {{ season_label|lower }}</span>
+  </a>
+  {% block more_cards %}{% endblock %}
+</div>
+
+<p class="muted hub__admin">
+  Всё нужное — здесь. Админка осталась на всякий случай:
+  <a href="/admin/">открыть админку</a>.
+</p>
+{% endblock %}

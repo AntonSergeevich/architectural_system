@@ -21,7 +21,7 @@
         <a class="cabnav__item {% if section == 'prices' %}is-active{% endif %}" href="{% url 'cabinet:prices' %}">Цены</a>
         <a class="cabnav__item {% if section == 'contracts' %}is-active{% endif %}" href="{% url 'cabinet:contracts' %}">Договоры</a>
         <a class="cabnav__item {% if section == 'invoices' %}is-active{% endif %}" href="{% url 'cabinet:invoices' %}">Счета</a>
-        <a class="cabnav__item cabnav__item--minor" href="/admin/">Админка</a>
+        <a class="cabnav__item {% if section == 'site' %}is-active{% endif %}" href="{% url 'cabinet:site' %}">Сайт</a>
       {% else %}
         <a class="cabnav__item {% if section == 'my_project' %}is-active{% endif %}" href="{% url 'cabinet:my_project' %}">Мой проект</a>
       {% endif %}
@@ -60,7 +60,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 6M17.5 14.4c2 .8 3.5 2.9 3.5 5.6"/></svg>
       <span>Заказчики</span>
     </a>
-    <details class="tabbar__more{% if section == 'prices' or section == 'contracts' or section == 'invoices' %} is-active{% endif %}" data-tabbar-more>
+    <details class="tabbar__more{% if section == 'prices' or section == 'contracts' or section == 'invoices' or section == 'site' %} is-active{% endif %}" data-tabbar-more>
       <summary class="tabbar__item">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
         <span>Ещё</span>
@@ -69,7 +69,7 @@
         <a href="{% url 'cabinet:prices' %}"{% if section == 'prices' %} aria-current="page"{% endif %}>Цены</a>
         <a href="{% url 'cabinet:contracts' %}"{% if section == 'contracts' %} aria-current="page"{% endif %}>Договоры</a>
         <a href="{% url 'cabinet:invoices' %}"{% if section == 'invoices' %} aria-current="page"{% endif %}>Счета</a>
-        <a href="/admin/">Админка: сайт, портфолио, тексты</a>
+        <a href="{% url 'cabinet:site' %}"{% if section == 'site' %} aria-current="page"{% endif %}>Сайт: цены, время года</a>
         <form method="post" action="{% url 'accounts:logout' %}">
           {% csrf_token %}<button type="submit">Выйти</button>
         </form>

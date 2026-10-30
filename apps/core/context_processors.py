@@ -40,7 +40,7 @@ def is_new_year(day):
     return (day.month == 12 and day.day >= 15) or (day.month == 1 and day.day <= 14)
 
 
-def season_context(request, enabled):
+def season_context(request, mode="auto"):
     """Сезон и праздник для шаблона.
 
     ?season=winter (spring, summer, autumn, newyear) показывает любой
@@ -53,8 +53,14 @@ def season_context(request, enabled):
         if preview == "newyear":
             return "winter", True
         return preview, False
-    if not enabled:
+    if mode == "off":
         return "", False
+    if mode == "newyear":
+        return "winter", True
+    if mode in PREVIEWS:
+        # Дарья выбрала время года вручную — например, весну на неделю
+        # раньше календаря, потому что в Красноярске уже тает.
+        return mode, False
     today = timezone.localdate()
     return season_of(today), is_new_year(today)
 
@@ -63,7 +69,7 @@ def site(request):
     """Настройки и куки-баннер — на каждой странице."""
     consent = request.COOKIES.get("cookie_consent", "")
     settings_row = SiteSettings.get()
-    season, new_year = season_context(request, settings_row.seasonal)
+    season, new_year = season_context(request, settings_row.season_mode)
     return {
         "site": settings_row,
         "cookie_consent": consent,

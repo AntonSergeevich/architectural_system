@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import client as client_views
 from . import owner as owner_views
+from . import site as site_views
 from . import views
 
 app_name = "cabinet"
@@ -10,6 +11,8 @@ urlpatterns = [
     path("", views.home, name="home"),
     # --- Дарья ---------------------------------------------------------------
     path("segodnya/", owner_views.dashboard, name="dashboard"),
+    path("sayt/", site_views.hub, name="site"),
+    path("sayt/vremya-goda/", site_views.season, name="site_season"),
     path("zayavki/", owner_views.leads, name="leads"),
     path("zayavki/<int:pk>/", owner_views.lead_detail, name="lead_detail"),
     path("zayavki/<int:pk>/etap/", owner_views.lead_move, name="lead_move"),
