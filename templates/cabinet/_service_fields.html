@@ -46,4 +46,17 @@
 
 <p class="unit-preview" data-unit-preview hidden></p>
 
-{% field form.description %}
+{% comment %}
+  Всё, что клиент видит, раскрыв услугу на сайте, — здесь же, в том же
+  порядке и с теми же заголовками. Раньше на этой странице было только
+  «Что входит», а остальные три пункта жили в админке: чтобы поправить
+  одну услугу, приходилось ходить по двум разделам.
+{% endcomment %}
+<fieldset class="unit-texts">
+  <legend>Что видит клиент, раскрыв услугу</legend>
+  <p class="muted">Пустой пункт на сайте не показывается.</p>
+  {% field form.description %}
+  {% field form.outcome %}
+  {% field form.not_included %}
+  {% field form.warning %}
+</fieldset>

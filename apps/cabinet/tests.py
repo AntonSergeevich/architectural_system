@@ -1560,11 +1560,18 @@ class UnitPickerTests(CabinetTestCase):
                 "block": module.block, "unit": "stage", "price": "60000",
                 "included_units": "", "extra_unit_price": "",
                 "duration_days": "0", "description": module.description,
+                "outcome": "Материалы вовремя", "not_included": "Подпись договоров",
+                "warning": "Всё на вас",
             },
         )
         self.assertRedirects(response, reverse("cabinet:prices"), fetch_redirect_response=False)
         module.refresh_from_db()
         self.assertEqual((module.unit, module.price, module.order), ("stage", 60000, order_before))
+        # Все четыре пункта раскрывающегося блока правятся на той же странице.
+        self.assertEqual(
+            (module.outcome, module.not_included, module.warning),
+            ("Материалы вовремя", "Подпись договоров", "Всё на вас"),
+        )
 
 
 class StageEstimateTests(CabinetTestCase):

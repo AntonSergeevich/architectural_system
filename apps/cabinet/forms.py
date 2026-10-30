@@ -105,25 +105,42 @@ class ServiceForm(forms.ModelForm):
         model = ServiceModule
         fields = [
             "title", "short_title", "block", "unit", "price",
-            "included_units", "extra_unit_price", "duration_days", "description",
+            "included_units", "extra_unit_price", "duration_days",
+            "description", "outcome", "not_included", "warning",
         ]
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 3}),
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "outcome": forms.Textarea(attrs={"rows": 2, "maxlength": 300}),
+            "not_included": forms.Textarea(attrs={"rows": 3}),
+            "warning": forms.Textarea(attrs={"rows": 3}),
             "unit": forms.RadioSelect,
             # Шаг 1, а не 0.01: копейки в прайсе дизайнера не бывают,
             # а «20000.00» в поле читалось как ошибка.
             "price": forms.NumberInput(attrs={"step": "1", "min": "0", "inputmode": "numeric"}),
             "extra_unit_price": forms.NumberInput(attrs={"step": "1", "min": "0", "inputmode": "numeric"}),
         }
+        # Подписи — ровно те, что видит клиент, раскрыв услугу на сайте:
+        # Дарья узнаёт пункты по тексту, а не по названиям полей в базе.
+        labels = {
+            "description": "Что входит",
+            "outcome": "На выходе",
+            "not_included": "Что не входит",
+            "warning": "Если этого не будет",
+        }
         help_texts = {
             "short_title": "Как подписать блок в конструкторе. Пусто — возьмётся название",
-            "duration_days": "Сколько рабочих дней занимает. Ноль — если не про сроки",
-            "description": "Что входит. Показывается в конструкторе при раскрытии блока",
+            "duration_days": "На сайте — «Занимает: N рабочих дней». Ноль — строки не будет",
+            "description": "Первый абзац, без заголовка",
+            "outcome": "Что клиент получает в руки. До 300 знаков",
+            "not_included": "Чтобы не ждали того, чего в услуге нет",
+            "warning": "Что клиент берёт на себя, если откажется от услуги. "
+            "Показывается и в конструкторе, когда блок убран",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["description"].required = False
+        for name in ("description", "outcome", "not_included", "warning"):
+            self.fields[name].required = False
         self.fields["short_title"].required = False
         self.fields["included_units"].required = False
         self.fields["extra_unit_price"].required = False

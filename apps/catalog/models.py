@@ -251,9 +251,10 @@ class ServiceModule(models.Model):
     duration_days = models.PositiveSmallIntegerField("Рабочих дней", default=0)
     not_included = models.TextField("Что не входит", blank=True)
     warning = models.TextField(
-        "Что вы берёте на себя",
+        "Если этого не будет",
         blank=True,
-        help_text="Показывается, когда модуль снят. Не запугивание, а факт",
+        help_text="Что клиент берёт на себя без этой услуги. Показывается в списке "
+        "услуг и в конструкторе, когда блок снят. Не запугивание, а факт",
     )
 
     order = models.PositiveSmallIntegerField("Порядок", default=100)

@@ -1291,3 +1291,11 @@ html.is-moving-lead, html.is-moving-lead body {
 /* Ориентир окончания этапа — заметнее даты начала: на него и смотрят. */
 .stage__date--plan { color: var(--ink-2); font-weight: 600; }
 .stage__date--late { color: var(--err); font-weight: 600; }
+
+.unit-texts { border: 0; padding: 0; margin: var(--gap-6) 0 var(--gap-5); min-width: 0; }
+.unit-texts legend { font-weight: 700; font-size: var(--step-1); margin-bottom: var(--gap-1); }
+.unit-texts > .muted { margin-bottom: var(--gap-4); font-size: var(--step--1); }
+/* Поле растёт под текст: длинное «Что не входит» видно целиком, без
+   прокрутки внутри окошка. Где браузер так не умеет, остаётся обычная
+   высота и прокрутка. */
+.unit-texts textarea { field-sizing: content; min-height: 4.5em; }
