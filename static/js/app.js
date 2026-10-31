@@ -354,4 +354,74 @@
     blockers.forEach(function (el) { fabObserver.observe(el); });
     window.addEventListener('scroll', refreshFab, { passive: true });
   }
+
+  // --- Этапы услуги: один на экране ---------------------------------------
+  // Лента листается сама (scroll-snap) — пальцем, тачпадом, стрелками.
+  // Здесь только то, чего CSS не умеет: вкладка текущего этапа, переход
+  // по «Дальше» без прыжка страницы и высота ленты по текущему этапу,
+  // чтобы короткий этап не оставлял под собой пустоту длинного.
+  document.querySelectorAll('[data-stages]').forEach(function (box) {
+    var track = box.querySelector('[data-stage-track]');
+    var cards = Array.prototype.slice.call(track.children);
+    var tabs = box.querySelectorAll('.stages__tabs [data-stage-go]');
+    var current = 0;
+
+    function fit() {
+      var card = cards[current];
+      if (card) track.style.height = card.offsetHeight + 'px';
+    }
+    function mark(index) {
+      if (index === current && track.style.height) return;
+      current = index;
+      tabs.forEach(function (tab, i) {
+        tab.classList.toggle('is-active', i === index);
+        if (i === index) tab.setAttribute('aria-current', 'step'); else tab.removeAttribute('aria-current');
+      });
+      fit();
+    }
+    function go(index, smooth, keepPage) {
+      var card = cards[Math.max(0, Math.min(cards.length - 1, index))];
+      if (!card) return;
+      track.scrollTo({ left: card.offsetLeft - track.offsetLeft, behavior: smooth && !reduce ? 'smooth' : 'auto' });
+      mark(cards.indexOf(card));
+      if (keepPage) return;
+      // Нажали «Дальше» внизу длинного этапа — показываем начало следующего
+      var top = box.getBoundingClientRect().top;
+      if (top < 0) window.scrollBy({ top: top - 16 - (header ? header.offsetHeight : 0), behavior: reduce ? 'auto' : 'smooth' });
+    }
+
+    box.addEventListener('click', function (e) {
+      var link = e.target.closest('[data-stage-go]');
+      if (!link) return;
+      e.preventDefault();
+      go(Number(link.dataset.stageGo), true);
+      if (history.replaceState) history.replaceState(null, '', link.getAttribute('href'));
+    });
+
+    var timer;
+    track.addEventListener('scroll', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        var left = track.scrollLeft, best = 0, bestDist = Infinity;
+        cards.forEach(function (card, i) {
+          var dist = Math.abs(card.offsetLeft - track.offsetLeft - left);
+          if (dist < bestDist) { bestDist = dist; best = i; }
+        });
+        mark(best);
+      }, 80);
+    }, { passive: true });
+
+    track.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(current + 1, true, true); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(current - 1, true, true); }
+    });
+
+    // Раскрыли пункт — этап стал выше
+    track.addEventListener('toggle', fit, true);
+    window.addEventListener('resize', function () { go(current, false, true); });
+
+    var start = cards.findIndex(function (c) { return '#' + c.id === location.hash; });
+    mark(start > 0 ? start : 0);
+    if (start > 0) track.scrollLeft = cards[start].offsetLeft - track.offsetLeft;
+  });
 })();

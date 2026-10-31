@@ -601,7 +601,7 @@ html:not(.js) .art__stage { cursor: default; }
   .works--rail {
     grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84%;
     gap: var(--gap-4);
-    overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+    overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
     margin-inline: -1.25rem; padding-inline: 1.25rem; scroll-padding-inline: 1.25rem;
     scrollbar-width: none;
   }
@@ -1731,30 +1731,105 @@ main:has(> .section--alt:last-child) + .footer { margin-top: 0; }
    Левый край списка — названия: глазами ищут «а шторы когда?», а не читают. */
 
 .steps {
-  list-style: none; margin: var(--gap-5) 0 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: var(--gap-4); margin-bottom: var(--gap-6);
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-4); margin: var(--gap-5) 0 var(--gap-4);
 }
-.steps__item a {
-  display: flex; flex-direction: column; gap: 4px; height: 100%;
+.steps__item {
+  display: flex; flex-direction: column; gap: 4px;
   padding: var(--gap-3) var(--gap-4); border: 1px solid var(--line);
   border-radius: var(--radius-2); background: var(--surface);
   color: var(--ink); text-decoration: none; position: relative;
-  transition: border-color .2s, transform .2s;
+  transition: border-color .2s, background-color .2s, box-shadow .2s;
 }
-.steps__item a:hover { border-color: var(--brand-500); transform: translateY(-1px); }
+.steps__item:hover { border-color: var(--brand-500); color: var(--ink); }
+.steps__item.is-active {
+  border-color: var(--brand-500); background: var(--paper-alt);
+  box-shadow: inset 0 -3px 0 var(--brand-500);
+}
 .steps__num {
   font-size: var(--step--2); letter-spacing: .14em; text-transform: uppercase;
   color: var(--brand-500); font-weight: 600;
 }
 .steps__title { font-size: var(--step--1); line-height: 1.35; }
-/* Стрелка между шагами — только когда они стоят в ряд */
 @media (min-width: 720px) {
-  .steps__item:not(:last-child) a::after {
-    content: "→"; position: absolute; right: calc(-1 * var(--gap-4) + 2px); top: 50%;
-    transform: translateY(-50%); color: var(--ink-3, var(--ink-2));
-    font-size: var(--step--1); z-index: 1;
+  .steps__item:not(:last-child)::after {
+    content: "→"; position: absolute; right: calc(-1 * var(--gap-4) + 2px);
+    top: 50%; transform: translateY(-50%); color: var(--ink-2);
+    font-size: var(--step--1);
   }
+}
+/* На телефоне вкладки — номер крупно, название в две строки */
+@media (max-width: 719px) {
+  .steps { gap: var(--gap-2); }
+  .steps__item { padding: var(--gap-2) var(--gap-3); }
+  .steps__title {
+    font-size: var(--step--2);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+}
+
+.stages__intro { color: var(--ink-2); max-width: 62ch; }
+.stages__intro p { margin: var(--gap-3) 0 0; }
+
+/* Лента этапов: один этап — один экран, листается вбок пальцем.
+   Высоту под текущий этап подгоняет скрипт; без него лента просто
+   высотой с самый длинный этап. */
+.stages__track {
+  display: flex; gap: var(--gap-4);
+  overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+  scrollbar-width: none; align-items: flex-start;
+  transition: height .3s ease; position: relative;
+}
+.stages__track::-webkit-scrollbar { display: none; }
+.stages__track:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 4px; border-radius: var(--radius-3); }
+.stage {
+  flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  padding: var(--gap-5); border-radius: var(--radius-3);
+  background: var(--surface); border: 1px solid var(--line);
+}
+.stage__count {
+  font-size: var(--step--2); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--brand-500); font-weight: 600; margin: 0;
+}
+.stage__title { margin: var(--gap-1) 0 0; font-size: var(--step-2); }
+.stage__when { margin: var(--gap-2) 0 0; color: var(--ink-2); font-style: italic; }
+
+.stage__items {
+  list-style: none; padding: 0; margin: var(--gap-4) 0 0;
+  display: flex; flex-wrap: wrap; gap: var(--gap-2);
+}
+.stage__items li:has(details[open]) { flex-basis: 100%; }
+.chip {
+  display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--paper); font-size: var(--step--1); line-height: 1.3;
+}
+.chip summary, .chip--plain { display: block; padding: 8px 14px; }
+.chip summary { cursor: pointer; list-style: none; }
+.chip summary::-webkit-details-marker { display: none; }
+.chip summary::after { content: "+"; margin-left: 8px; color: var(--brand-500); font-weight: 600; }
+.chip[open] {
+  display: block; border-radius: var(--radius-2);
+  border-color: var(--brand-500); background: var(--paper-alt);
+}
+.chip[open] summary { font-weight: 600; }
+.chip[open] summary::after { content: "−"; }
+.chip p { margin: 0; padding: 0 14px 10px; color: var(--ink-2); }
+.chip summary:hover { color: var(--brand-500); }
+
+.stage__hint { margin: var(--gap-3) 0 0; font-size: var(--step--2); color: var(--ink-2); }
+.stage__nav {
+  display: flex; align-items: center; gap: var(--gap-3);
+  margin-top: var(--gap-5);
+}
+.stage__next { margin-left: auto; }
+.stage__prev {
+  width: 44px; height: 44px; display: inline-grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%; text-decoration: none; color: var(--ink);
+}
+.stage__prev:hover { border-color: var(--brand-500); color: var(--brand-500); }
+@media (max-width: 719px) {
+  .stage { padding: var(--gap-4); }
+  .stages__track { gap: var(--gap-3); }
 }
 
 .details { max-width: 72ch; }
@@ -1776,13 +1851,15 @@ main:has(> .section--alt:last-child) + .footer { margin-top: 0; }
 .details li strong { color: var(--ink); font-weight: 600; }
 
 .details__sum {
-  margin-top: var(--gap-7); padding: var(--gap-5);
+  margin-top: var(--gap-6); padding: var(--gap-5);
   border-radius: var(--radius-3); background: var(--paper-alt);
 }
 .details__price { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--gap-3); }
 .details__price strong { font-size: var(--step-2); }
+.details__more { margin: 0 0 var(--gap-3); }
+.details__more summary { cursor: pointer; font-weight: 600; }
+.details__more p { margin: var(--gap-2) 0 0; color: var(--ink-2); }
 
 /* Ссылка «как это устроено» в аккордеоне услуг и в конструкторе */
 .more-link { font-weight: 600; text-decoration: none; }
 .more-link:hover { text-decoration: underline; }
-@media (max-width: 719px) { .steps { gap: var(--gap-2); } }

@@ -92,6 +92,62 @@ def richtext_parts(value):
     return parts
 
 
+@register.filter(name="richtext_stages")
+def richtext_stages(value):
+    """Текст страницы услуги → вступление и этапы по отдельности.
+
+    Длинную страницу на телефоне не читают — её пролистывают. Поэтому
+    этапы показываются по одному, а в этапе видны только названия
+    пунктов; «почему именно тогда» открывается по нажатию. Для этого
+    тексту нужна структура, а не готовый HTML.
+
+    Возвращает None, если подзаголовков меньше двух: тогда это обычный
+    текст, и он рисуется как статья.
+    """
+    intro, parts, current = [], [], None
+    for raw in (value or "").splitlines():
+        line = raw.strip()
+        if line.startswith("## "):
+            title = line[3:].replace("**", "").strip()
+            match = _NUMBERED.match(title)
+            number, name = (match.group(1), match.group(2)) if match else ("", title)
+            current = {
+                "anchor": f"part-{len(parts) + 1}",
+                "number": number,
+                "title": name,
+                "when": "",
+                "items": [],
+                "notes": [],
+            }
+            parts.append(current)
+            continue
+        if not line:
+            continue
+        bullet = next((m for m in BULLETS if line.startswith(m)), None)
+        if current is None:
+            intro.append(line)
+        elif bullet:
+            item = line[len(bullet):].strip().replace("**", "")
+            term, _, why = item.partition(" — ")
+            current["items"].append({"term": term.strip(), "why": why.strip()})
+        elif not current["when"] and not current["items"]:
+            current["when"] = line
+        else:
+            current["notes"].append(line)
+
+    if len(parts) < 2:
+        return None
+    for index, part in enumerate(parts):
+        part["index"] = index
+        part["label"] = part["number"] or f"Шаг {index + 1}"
+        part["next"] = parts[index + 1] if index + 1 < len(parts) else None
+    return {
+        "intro": richtext("\n".join(intro)),
+        "parts": parts,
+        "count": len(parts),
+    }
+
+
 BULLETS = ("- ", "• ", "– ", "•", "* ")
 
 

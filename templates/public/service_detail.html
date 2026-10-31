@@ -3,28 +3,73 @@
 {% block title %}{{ module.title }}: как это устроено — {{ site.owner_name }}{% endblock %}
 {% block description %}{{ module.description|truncatechars:160 }}{% endblock %}
 {% block content %}
-{% with parts=module.details|richtext_parts %}
+{% with page=module.details|richtext_stages %}
 <section class="section section--tight">
   <div class="wrap wrap--narrow">
     <p class="eyebrow"><a href="{% url 'public:services' %}">← Все услуги</a></p>
-    <h1>{{ module.title }}</h1>
+    <h1>{{ module.title }}{% if page %}: {{ page.count|stages }}{% endif %}</h1>
 
-    {% comment %} Полоска этапов наверху: путь целиком, прежде чем
-       подробности. Каждый шаг — ссылка на свой раздел ниже. {% endcomment %}
-    {% if parts|length > 1 %}
-      <ol class="steps" aria-label="Содержание">
-        {% for part in parts %}
-          <li class="steps__item">
-            <a href="#{{ part.anchor }}">
-              <span class="steps__num">{% if part.number %}{{ part.number }}{% else %}{{ forloop.counter }}{% endif %}</span>
+    {% if page %}
+      {% if page.intro %}<div class="stages__intro">{{ page.intro }}</div>{% endif %}
+
+      {% comment %}
+        Один этап на экране. Без JavaScript это обычная лента, которая
+        листается вбок (scroll-snap), а вкладки — якоря. Скрипт добавляет
+        подсветку вкладки и подгоняет высоту под текущий этап.
+        Пункт этапа — только название; «почему именно тогда» открывается
+        нажатием: так этап помещается на экран телефона целиком.
+      {% endcomment %}
+      <div class="stages" data-stages>
+        <nav class="steps stages__tabs" aria-label="Этапы">
+          {% for part in page.parts %}
+            <a class="steps__item{% if forloop.first %} is-active{% endif %}" href="#{{ part.anchor }}" data-stage-go="{{ forloop.counter0 }}">
+              <span class="steps__num">{{ part.label }}</span>
               <span class="steps__title">{{ part.title }}</span>
             </a>
-          </li>
-        {% endfor %}
-      </ol>
-    {% endif %}
+          {% endfor %}
+        </nav>
 
-    <div class="details">{{ module.details|richtext:"page" }}</div>
+        <div class="stages__track" data-stage-track tabindex="0" aria-label="Этапы — листаются вбок">
+          {% for part in page.parts %}
+            <section class="stage" id="{{ part.anchor }}" aria-label="{{ part.label }}">
+              <p class="stage__count">{{ part.label }} из {{ page.count }}</p>
+              <h2 class="stage__title">{{ part.title }}</h2>
+              {% if part.when %}<p class="stage__when">{{ part.when }}</p>{% endif %}
+
+              {% if part.items %}
+                <ul class="stage__items">
+                  {% for item in part.items %}
+                    <li>
+                      {% if item.why %}
+                        <details class="chip">
+                          <summary>{{ item.term }}</summary>
+                          <p>{{ item.why|capfirst }}</p>
+                        </details>
+                      {% else %}
+                        <span class="chip chip--plain">{{ item.term }}</span>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+                {% if forloop.first %}<p class="stage__hint">Нажмите на пункт — откроется, почему именно сейчас.</p>{% endif %}
+              {% endif %}
+              {% for note in part.notes %}<p>{{ note }}</p>{% endfor %}
+
+              <div class="stage__nav">
+                {% if not forloop.first %}
+                  <a class="stage__prev" href="#part-{{ part.index }}" data-stage-go="{{ part.index|add:'-1' }}" aria-label="Предыдущий этап">←</a>
+                {% endif %}
+                {% if part.next %}
+                  <a class="btn btn--ghost stage__next" href="#{{ part.next.anchor }}" data-stage-go="{{ part.next.index }}">Дальше: {{ part.next.label }} →</a>
+                {% endif %}
+              </div>
+            </section>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="details">{{ module.details|richtext:"page" }}</div>
+    {% endif %}
 
     <aside class="details__sum">
       <div class="details__price">
@@ -32,7 +77,12 @@
         <strong>{% include "components/module_price.html" %}</strong>
       </div>
       {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
-      {% if module.not_included %}<p><strong>Что не входит:</strong> {{ module.not_included }}</p>{% endif %}
+      {% if module.not_included %}
+        <details class="details__more">
+          <summary>Что не входит</summary>
+          <p>{{ module.not_included }}</p>
+        </details>
+      {% endif %}
       <div class="hero__actions">
         <a class="btn" href="{% url 'public:constructor' %}">Собрать проект</a>
         <a class="btn btn--ghost" href="{% url 'public:contacts' %}">Задать вопрос</a>

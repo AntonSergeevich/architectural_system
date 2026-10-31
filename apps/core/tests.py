@@ -126,9 +126,12 @@ class ServiceDetailTests(TestCase):
         self.assertTrue(module.has_details)
         response = self.client.get(module.get_absolute_url())
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Комплектация: 3 этапа")
         self.assertContains(response, 'id="part-3"')
-        self.assertContains(response, "<strong>Мягкая мебель</strong>", html=False)
-        self.assertContains(response, "Мебель, текстиль и декор")
+        # Пункт — только название, пояснение раскрывается нажатием
+        self.assertContains(response, "<summary>Мягкая мебель</summary>", html=False)
+        self.assertContains(response, "Под известные габариты комнаты.")
+        self.assertContains(response, "Дальше: Этап 2")
 
     def test_links_lead_to_the_page(self):
         url = ServiceModule.objects.get(code="B3").get_absolute_url()
@@ -169,6 +172,31 @@ class ServiceDetailTests(TestCase):
         self.assertEqual(
             richtext_parts(text), [{"anchor": "part-1", "number": "Этап 1", "title": "Инженерка"}]
         )
+
+    def test_stages_are_parsed(self):
+        from .templatetags.richtext import richtext_stages
+
+        page = richtext_stages(
+            "Вступление\n## Этап 1. Черновые\nСначала\n• Окна — заранее\n• Двери\n"
+            "## Этап 2. Чистовые\n- Обои — после мокрых"
+        )
+        self.assertEqual(page["count"], 2)
+        first = page["parts"][0]
+        self.assertEqual(first["label"], "Этап 1")
+        self.assertEqual(first["when"], "Сначала")
+        self.assertEqual(first["items"], [{"term": "Окна", "why": "заранее"}, {"term": "Двери", "why": ""}])
+        self.assertIs(first["next"], page["parts"][1])
+        self.assertIn("Вступление", page["intro"])
+        # Один заголовок — не этапы, а обычный текст
+        self.assertIsNone(richtext_stages("## Один\n- пункт"))
+
+    def test_plain_text_page_without_stages(self):
+        module = ServiceModule.objects.get(code="A1")
+        module.details = "Просто текст\n- пункт — пояснение"
+        module.save()
+        response = self.client.get(module.get_absolute_url())
+        self.assertContains(response, "<strong>пункт</strong> — пояснение", html=False)
+        self.assertNotContains(response, "data-stages")
 
     def test_seed_keeps_edited_details(self):
         ServiceModule.objects.filter(code="B3").update(details="Мой текст")
