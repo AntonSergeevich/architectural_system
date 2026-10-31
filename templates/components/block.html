@@ -26,7 +26,7 @@
   <button class="clause__toggle" type="button" data-expand="more-{{ module.pk }}">Подробнее</button>
 
   <div class="block__more" id="more-{{ module.pk }}" hidden>
-    {% if module.description %}<p>{{ module.description|linebreaksbr }}</p>{% endif %}
+    {% if module.description %}<p>{{ module.description|service_text:module }}</p>{% endif %}
     {% if module.unit == 'hours' and module.extra_unit_price %}
       <p><strong>Дальше:</strong> +{{ module.extra_unit_price|money }} за каждый следующий час</p>
     {% endif %}
@@ -34,6 +34,6 @@
     {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days|workdays }}</p>{% endif %}
     {% if module.not_included %}<p><strong>Не входит:</strong> {{ module.not_included|linebreaksbr }}</p>{% endif %}
     {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning|linebreaksbr }}</p>{% endif %}
-    {% if module.has_details %}<p><a class="more-link" href="{{ module.get_absolute_url }}" target="_blank" rel="noopener">Как это устроено, по шагам →</a></p>{% endif %}
+    {% if module.has_details and "[" not in module.description %}<p><a class="more-link" href="{{ module.get_absolute_url }}" data-stages-popup>Как это устроено, по шагам →</a></p>{% endif %}
   </div>
 </div>

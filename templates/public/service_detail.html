@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load richtext %}
 {% block title %}{{ module.title }}: как это устроено — {{ site.owner_name }}{% endblock %}
-{% block description %}{{ module.description|truncatechars:160 }}{% endblock %}
+{% block description %}{{ module.description|plain_brackets|truncatechars:160 }}{% endblock %}
 {% block content %}
 {% with page=module.details|richtext_stages %}
 <section class="section section--tight">
@@ -13,21 +13,24 @@
       {% if page.intro %}<div class="stages__intro">{{ page.intro }}</div>{% endif %}
 
       {% comment %}
-        Один этап на экране. Без JavaScript это обычная лента, которая
-        листается вбок (scroll-snap), а вкладки — якоря. Скрипт добавляет
-        подсветку вкладки и подгоняет высоту под текущий этап.
-        Пункт этапа — только название; «почему именно тогда» открывается
-        нажатием: так этап помещается на экран телефона целиком.
+        Этапы читаются по одному, как окна: прочитал — «Понятно, дальше» —
+        следующий. Сверху только кружки «1 — 2 — 3»: видно, сколько
+        осталось, и можно вернуться. Пункт этапа — плашка с названием,
+        «почему именно тогда» раскрывается нажатием.
+        Этот же блок открывается окном поверх страницы услуг, конструктора
+        и КП (app.js забирает его отсюда): там «Всё понятно» закрывает окно.
+        Без JavaScript — лента, которая листается вбок, и якоря.
       {% endcomment %}
-      <div class="stages" data-stages>
-        <nav class="steps stages__tabs" aria-label="Этапы">
+      <div class="stages" data-stages data-title="{{ module.title }}: {{ page.count|stages }}">
+        <ol class="stepper" aria-label="Этапы">
           {% for part in page.parts %}
-            <a class="steps__item{% if forloop.first %} is-active{% endif %}" href="#{{ part.anchor }}" data-stage-go="{{ forloop.counter0 }}">
-              <span class="steps__num">{{ part.label }}</span>
-              <span class="steps__title">{{ part.title }}</span>
-            </a>
+            <li class="stepper__step">
+              <a class="stepper__dot{% if forloop.first %} is-active{% endif %}" href="#{{ part.anchor }}"
+                 data-stage-go="{{ part.index }}" title="{{ part.label }}. {{ part.title }}"
+                 aria-label="{{ part.label }}. {{ part.title }}">{{ forloop.counter }}</a>
+            </li>
           {% endfor %}
-        </nav>
+        </ol>
 
         <div class="stages__track" data-stage-track tabindex="0" aria-label="Этапы — листаются вбок">
           {% for part in page.parts %}
@@ -60,7 +63,9 @@
                   <a class="stage__prev" href="#part-{{ part.index }}" data-stage-go="{{ part.index|add:'-1' }}" aria-label="Предыдущий этап">←</a>
                 {% endif %}
                 {% if part.next %}
-                  <a class="btn btn--ghost stage__next" href="#{{ part.next.anchor }}" data-stage-go="{{ part.next.index }}">Дальше: {{ part.next.label }} →</a>
+                  <a class="btn stage__next" href="#{{ part.next.anchor }}" data-stage-go="{{ part.next.index }}">Понятно, дальше →</a>
+                {% else %}
+                  <a class="btn stage__next" href="#summary" data-stage-done>Всё понятно ✓</a>
                 {% endif %}
               </div>
             </section>
@@ -71,7 +76,7 @@
       <div class="details">{{ module.details|richtext:"page" }}</div>
     {% endif %}
 
-    <aside class="details__sum">
+    <aside class="details__sum" id="summary">
       <div class="details__price">
         <span class="card__muted">Стоимость</span>
         <strong>{% include "components/module_price.html" %}</strong>

@@ -131,7 +131,8 @@ class ServiceDetailTests(TestCase):
         # Пункт — только название, пояснение раскрывается нажатием
         self.assertContains(response, "<summary>Мягкая мебель</summary>", html=False)
         self.assertContains(response, "Под известные габариты комнаты.")
-        self.assertContains(response, "Дальше: Этап 2")
+        self.assertContains(response, "Понятно, дальше")
+        self.assertContains(response, "Всё понятно")
 
     def test_links_lead_to_the_page(self):
         url = ServiceModule.objects.get(code="B3").get_absolute_url()
@@ -172,6 +173,22 @@ class ServiceDetailTests(TestCase):
         self.assertEqual(
             richtext_parts(text), [{"anchor": "part-1", "number": "Этап 1", "title": "Инженерка"}]
         )
+
+    def test_brackets_in_description_link_to_stages(self):
+        from .templatetags.richtext import plain_brackets, service_text
+
+        module = ServiceModule.objects.get(code="B3")
+        self.assertIn("[3 этапа]", module.description)
+        html = service_text(module.description, module)
+        self.assertIn(f'href="{module.get_absolute_url()}" data-stages-popup>3 этапа</a>', html)
+        page = self.client.get(reverse("public:services"))
+        self.assertContains(page, 'class="stages-link"')
+        # Ссылка в тексте есть — нижняя «по шагам» не дублирует её
+        self.assertNotContains(page, "Как это устроено, по шагам")
+        # Без страницы скобки просто исчезают, и в тексте нет разметки
+        other = ServiceModule.objects.get(code="A1")
+        self.assertEqual(service_text("на [два шага]\n<b>", other), "на два шага<br>&lt;b&gt;")
+        self.assertEqual(plain_brackets("на [3 этапа]"), "на 3 этапа")
 
     def test_stages_are_parsed(self):
         from .templatetags.richtext import richtext_stages

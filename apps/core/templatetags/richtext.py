@@ -9,6 +9,7 @@
 import re
 
 from django import template
+from django.template.defaultfilters import linebreaksbr
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
@@ -68,6 +69,36 @@ def richtext(value, mode=""):
     if list_open:
         html.append("</ul>")
     return mark_safe("\n".join(html))
+
+
+_LINK = re.compile(r"\[([^\[\]\n]+)\]")
+
+
+@register.filter(name="service_text")
+def service_text(value, module=None):
+    """Текст услуги: переносы строк и [слова в скобках] — ссылка на этапы.
+
+    Дарья пишет «разбита на [3 этапа]», и «3 этапа» становится ссылкой,
+    которая открывает этапы окном поверх страницы. Если у услуги
+    страницы нет — скобки просто исчезают, текст остаётся.
+    """
+    if not value:
+        return ""
+    html = linebreaksbr(value, autoescape=True)
+    url = module.get_absolute_url() if module is not None and module.has_details else ""
+
+    def link(match):
+        if not url:
+            return match.group(1)
+        return f'<a class="stages-link" href="{url}" data-stages-popup>{match.group(1)}</a>'
+
+    return mark_safe(_LINK.sub(link, html))
+
+
+@register.filter(name="plain_brackets")
+def plain_brackets(value):
+    """Тот же текст без скобок — для мест, где ссылка не нужна."""
+    return _LINK.sub(r"\1", value or "")
 
 
 _NUMBERED = re.compile(r"^(\S+\s+\d+)[.:]\s*(.+)$")

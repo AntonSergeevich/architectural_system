@@ -1730,42 +1730,29 @@ main:has(> .section--alt:last-child) + .footer { margin-top: 0; }
    заголовок, «когда» мелко под ним и список «что — почему именно тогда».
    Левый край списка — названия: глазами ищут «а шторы когда?», а не читают. */
 
-.steps {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--gap-4); margin: var(--gap-5) 0 var(--gap-4);
+/* Кружки «1 — 2 — 3»: сколько этапов и где ты сейчас */
+.stepper {
+  list-style: none; padding: 0; margin: var(--gap-5) 0 var(--gap-4);
+  display: flex; align-items: center; max-width: 320px;
 }
-.steps__item {
-  display: flex; flex-direction: column; gap: 4px;
-  padding: var(--gap-3) var(--gap-4); border: 1px solid var(--line);
-  border-radius: var(--radius-2); background: var(--surface);
-  color: var(--ink); text-decoration: none; position: relative;
-  transition: border-color .2s, background-color .2s, box-shadow .2s;
+.stepper__step { display: flex; align-items: center; flex: 1; }
+.stepper__step:first-child { flex: 0 0 auto; }
+.stepper__step:not(:first-child)::before {
+  content: ""; flex: 1; height: 2px; margin: 0 6px;
+  background: var(--line); transition: background-color .3s;
 }
-.steps__item:hover { border-color: var(--brand-500); color: var(--ink); }
-.steps__item.is-active {
-  border-color: var(--brand-500); background: var(--paper-alt);
-  box-shadow: inset 0 -3px 0 var(--brand-500);
+.stepper__step:has(.is-done, .is-active):not(:first-child)::before { background: var(--brand-500); }
+.stepper__dot {
+  width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+  display: inline-grid; place-items: center; text-decoration: none;
+  font-weight: 600; font-size: var(--step--1);
+  border: 2px solid var(--line); color: var(--ink-2); background: var(--surface);
+  transition: background-color .3s, border-color .3s, color .3s, transform .2s;
 }
-.steps__num {
-  font-size: var(--step--2); letter-spacing: .14em; text-transform: uppercase;
-  color: var(--brand-500); font-weight: 600;
-}
-.steps__title { font-size: var(--step--1); line-height: 1.35; }
-@media (min-width: 720px) {
-  .steps__item:not(:last-child)::after {
-    content: "→"; position: absolute; right: calc(-1 * var(--gap-4) + 2px);
-    top: 50%; transform: translateY(-50%); color: var(--ink-2);
-    font-size: var(--step--1);
-  }
-}
-/* На телефоне вкладки — номер крупно, название в две строки */
-@media (max-width: 719px) {
-  .steps { gap: var(--gap-2); }
-  .steps__item { padding: var(--gap-2) var(--gap-3); }
-  .steps__title {
-    font-size: var(--step--2);
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
+.stepper__dot:hover { border-color: var(--brand-500); color: var(--brand-500); }
+.stepper__dot.is-done { border-color: var(--brand-500); color: var(--brand-500); }
+.stepper__dot.is-active {
+  background: var(--brand-500); border-color: var(--brand-500); color: #fff; transform: scale(1.08);
 }
 
 .stages__intro { color: var(--ink-2); max-width: 62ch; }
@@ -1862,4 +1849,43 @@ main:has(> .section--alt:last-child) + .footer { margin-top: 0; }
 
 /* Ссылка «как это устроено» в аккордеоне услуг и в конструкторе */
 .more-link { font-weight: 600; text-decoration: none; }
+/* «разбита на [3 этапа]» — ссылка прямо в тексте услуги */
+.stages-link {
+  color: var(--brand-500); font-weight: 600;
+  text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+}
+
+/* Этапы окном поверх страницы. На телефоне — шторка снизу во всю
+   ширину, на компьютере — карточка по центру. */
+.sheet {
+  border: 0; padding: 0; color: var(--ink); background: var(--paper);
+  width: min(720px, 100vw - 32px); max-height: min(88vh, 900px);
+  border-radius: var(--radius-3); overflow: auto; overscroll-behavior: contain;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .35);
+}
+.sheet::backdrop { background: rgba(20, 14, 10, .55); backdrop-filter: blur(2px); }
+.sheet[open] { animation: sheet-in .28s ease-out; }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(24px); } }
+.sheet__inner { padding: var(--gap-5); }
+.sheet__head { display: flex; align-items: start; gap: var(--gap-3); }
+.sheet__title { margin: 0; font-size: var(--step-2); flex: 1; }
+.sheet__close {
+  width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.sheet .stepper { margin-top: var(--gap-3); }
+.sheet .stage { border: 0; padding: 0; background: transparent; }
+.sheet .stage__nav { position: sticky; bottom: 0; padding: var(--gap-3) 0 0; background: var(--paper); }
+html:has(.sheet[open]) { overflow: hidden; }
+@media (max-width: 719px) {
+  .sheet {
+    width: 100vw; max-width: 100vw; max-height: 92vh; margin: auto 0 0;
+    border-radius: var(--radius-3) var(--radius-3) 0 0;
+  }
+  .sheet[open] { animation-name: sheet-up; }
+  @keyframes sheet-up { from { transform: translateY(100%); } }
+  .sheet__inner { padding: var(--gap-4) var(--gap-4) calc(var(--gap-4) + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .sheet[open] { animation: none; } }
 .more-link:hover { text-decoration: underline; }

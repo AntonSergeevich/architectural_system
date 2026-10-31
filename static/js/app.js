@@ -355,27 +355,30 @@
     window.addEventListener('scroll', refreshFab, { passive: true });
   }
 
-  // --- Этапы услуги: один на экране ---------------------------------------
+  // --- Этапы услуги: по одному, как окна ----------------------------------
   // Лента листается сама (scroll-snap) — пальцем, тачпадом, стрелками.
-  // Здесь только то, чего CSS не умеет: вкладка текущего этапа, переход
-  // по «Дальше» без прыжка страницы и высота ленты по текущему этапу,
-  // чтобы короткий этап не оставлял под собой пустоту длинного.
-  document.querySelectorAll('[data-stages]').forEach(function (box) {
+  // Здесь то, чего CSS не умеет: кружки «1 — 2 — 3», «Понятно, дальше»
+  // без прыжка страницы и высота ленты по текущему этапу, чтобы короткий
+  // этап не оставлял под собой пустоту длинного. Работает и на странице
+  // услуги, и в окне поверх других страниц.
+  function initStages(box, onDone) {
     var track = box.querySelector('[data-stage-track]');
     var cards = Array.prototype.slice.call(track.children);
-    var tabs = box.querySelectorAll('.stages__tabs [data-stage-go]');
-    var current = 0;
+    var dots = box.querySelectorAll('.stepper [data-stage-go]');
+    var sheet = box.closest('dialog');
+    var current = -1;
 
     function fit() {
       var card = cards[current];
       if (card) track.style.height = card.offsetHeight + 'px';
     }
     function mark(index) {
-      if (index === current && track.style.height) return;
+      if (index === current) return fit();
       current = index;
-      tabs.forEach(function (tab, i) {
-        tab.classList.toggle('is-active', i === index);
-        if (i === index) tab.setAttribute('aria-current', 'step'); else tab.removeAttribute('aria-current');
+      dots.forEach(function (dot, i) {
+        dot.classList.toggle('is-active', i === index);
+        dot.classList.toggle('is-done', i < index);
+        if (i === index) dot.setAttribute('aria-current', 'step'); else dot.removeAttribute('aria-current');
       });
       fit();
     }
@@ -385,17 +388,20 @@
       track.scrollTo({ left: card.offsetLeft - track.offsetLeft, behavior: smooth && !reduce ? 'smooth' : 'auto' });
       mark(cards.indexOf(card));
       if (keepPage) return;
-      // Нажали «Дальше» внизу длинного этапа — показываем начало следующего
-      var top = box.getBoundingClientRect().top;
-      if (top < 0) window.scrollBy({ top: top - 16 - (header ? header.offsetHeight : 0), behavior: reduce ? 'auto' : 'smooth' });
+      // Нажали «дальше» внизу длинного этапа — показываем начало следующего
+      if (sheet) { sheet.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); return; }
+      var top = box.getBoundingClientRect().top - (header ? header.offsetHeight : 0) - 16;
+      if (top < 0) window.scrollBy({ top: top, behavior: reduce ? 'auto' : 'smooth' });
     }
 
     box.addEventListener('click', function (e) {
+      var done = e.target.closest('[data-stage-done]');
+      if (done && onDone) { e.preventDefault(); onDone(); return; }
       var link = e.target.closest('[data-stage-go]');
       if (!link) return;
       e.preventDefault();
       go(Number(link.dataset.stageGo), true);
-      if (history.replaceState) history.replaceState(null, '', link.getAttribute('href'));
+      if (!sheet && history.replaceState) history.replaceState(null, '', link.getAttribute('href'));
     });
 
     var timer;
@@ -420,8 +426,75 @@
     track.addEventListener('toggle', fit, true);
     window.addEventListener('resize', function () { go(current, false, true); });
 
-    var start = cards.findIndex(function (c) { return '#' + c.id === location.hash; });
+    var start = sheet ? 0 : cards.findIndex(function (c) { return '#' + c.id === location.hash; });
     mark(start > 0 ? start : 0);
     if (start > 0) track.scrollLeft = cards[start].offsetLeft - track.offsetLeft;
+    return { fit: fit };
+  }
+
+  document.querySelectorAll('[data-stages]').forEach(function (box) { initStages(box); });
+
+  // Окно с этапами поверх страницы услуг, конструктора и КП.
+  // Ссылка остаётся обычной ссылкой: без <dialog>, с Ctrl/Cmd или при
+  // ошибке сети человек просто попадает на страницу этапов.
+  var sheetCache = {};
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('a[data-stages-popup]');
+    if (!link || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+    if (typeof HTMLDialogElement !== 'function') return;
+    e.preventDefault();
+    e.stopPropagation();
+    var url = link.href;
+    var html = sheetCache[url];
+    (html ? Promise.resolve(html) : fetch(url, { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    })).then(function (text) {
+      sheetCache[url] = text;
+      var doc = new DOMParser().parseFromString(text, 'text/html');
+      var stages = doc.querySelector('[data-stages]');
+      if (!stages) throw new Error('no stages');
+      openSheet(stages, url, link);
+    }).catch(function () { window.location.href = url; });
   });
+
+  function openSheet(stages, url, opener) {
+    var sheet = document.createElement('dialog');
+    sheet.className = 'sheet';
+    sheet.setAttribute('aria-labelledby', 'sheet-title');
+    var inner = document.createElement('div');
+    inner.className = 'sheet__inner';
+    var head = document.createElement('div');
+    head.className = 'sheet__head';
+    var title = document.createElement('h2');
+    title.className = 'sheet__title';
+    title.id = 'sheet-title';
+    title.textContent = stages.dataset.title || '';
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'sheet__close';
+    close.setAttribute('aria-label', 'Закрыть');
+    close.textContent = '×';
+    head.appendChild(title);
+    head.appendChild(close);
+    inner.appendChild(head);
+    // id из страницы этапов здесь не нужны: якоря ведут на её адрес
+    stages.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
+    stages.querySelectorAll('a[href^="#"]').forEach(function (a) { a.setAttribute('href', url + a.getAttribute('href')); });
+    inner.appendChild(document.importNode(stages, true));
+    sheet.appendChild(inner);
+    document.body.appendChild(sheet);
+
+    function done() { sheet.close(); }
+    close.addEventListener('click', done);
+    // Нажатие мимо окна — закрыть
+    sheet.addEventListener('click', function (e) { if (e.target === sheet) done(); });
+    sheet.addEventListener('close', function () {
+      sheet.remove();
+      if (opener && opener.focus) opener.focus({ preventScroll: true });
+    });
+    sheet.showModal();
+    var api = initStages(sheet.querySelector('[data-stages]'), done);
+    requestAnimationFrame(api.fit);
+  }
 })();

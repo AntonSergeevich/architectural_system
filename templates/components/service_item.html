@@ -11,7 +11,7 @@
     <span class="block__price">{% include "components/module_price.html" %}</span>
   </button>
   <div class="accordion__body">
-    {% if module.description %}<p>{{ module.description|linebreaksbr }}</p>{% endif %}
+    {% if module.description %}<p>{{ module.description|service_text:module }}</p>{% endif %}
     {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome|linebreaksbr }}</p>{% endif %}
     {% if module.duration_days %}<p><strong>Занимает:</strong> {{ module.duration_days|workdays }}</p>{% endif %}
     {% if module.unit == 'hours' and module.extra_unit_price %}
@@ -19,6 +19,6 @@
     {% endif %}
     {% if module.not_included %}<p><strong>Что не входит:</strong> {{ module.not_included|linebreaksbr }}</p>{% endif %}
     {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning|linebreaksbr }}</p>{% endif %}
-    {% if module.has_details %}<p><a class="more-link" href="{{ module.get_absolute_url }}">Как это устроено, по шагам →</a></p>{% endif %}
+    {% if module.has_details and "[" not in module.description %}<p><a class="more-link" href="{{ module.get_absolute_url }}" data-stages-popup>Как это устроено, по шагам →</a></p>{% endif %}
   </div>
 </div>

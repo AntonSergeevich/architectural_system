@@ -51,7 +51,7 @@
   <div class="block__more" id="more-group-{{ section.group.pk }}" hidden>
     {% for module in section.modules %}
       <p><strong>{{ module.label }}.</strong>
-        {% if module.description %}{{ module.description }}{% endif %}
+        {% if module.description %}{{ module.description|service_text:module }}{% endif %}
         {% if module.unit == 'hours' and module.extra_unit_price %}
           Дальше +{{ module.extra_unit_price|money }} за каждый следующий час.
         {% endif %}
