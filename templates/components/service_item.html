@@ -19,5 +19,6 @@
     {% endif %}
     {% if module.not_included %}<p><strong>Что не входит:</strong> {{ module.not_included }}</p>{% endif %}
     {% if module.warning %}<p><strong>Если этого не будет:</strong> {{ module.warning }}</p>{% endif %}
+    {% if module.has_details %}<p><a class="more-link" href="{{ module.get_absolute_url }}">Как это устроено, по шагам →</a></p>{% endif %}
   </div>
 </div>

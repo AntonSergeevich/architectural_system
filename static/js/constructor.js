@@ -263,7 +263,7 @@
     if (!el) return;
     // Внутри блока есть свои кнопки: переключатель формата и «подробнее».
     // Enter на них — это они, а не блок.
-    if (e.target.closest('[data-variant]') || e.target.closest('[data-expand]')) return;
+    if (e.target.closest('[data-variant]') || e.target.closest('[data-expand]') || e.target.closest('a')) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       var mod = moduleOf(el);
@@ -338,7 +338,7 @@
     var el = e.target.closest('[data-module]');
     if (!el) return;
     // Переключатель формата и «подробнее» — это нажатия, а не захват.
-    if (e.target.closest('[data-expand]') || e.target.closest('[data-variant]')) return;
+    if (e.target.closest('[data-expand]') || e.target.closest('[data-variant]') || e.target.closest('a')) return;
     var mod = moduleOf(el);
     if (mod.required) return;
 

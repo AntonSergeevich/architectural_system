@@ -22,21 +22,28 @@ def _inline(text):
 
 
 @register.filter(name="richtext")
-def richtext(value):
+def richtext(value, mode=""):
     if not value:
         return ""
 
     html = []
     list_open = False
+    part = 0
     # Экранируем сразу: дальше в строке уже не может появиться чужой тег.
     for raw in escape(value).splitlines():
         line = raw.strip()
 
-        if line.startswith("- "):
+        # «• » и «– » — так выглядят списки, скопированные из Телеграма
+        # и Ворда. Дарья вставляет текст оттуда, а не пишет дефисы.
+        bullet = next((m for m in BULLETS if line.startswith(m)), None)
+        if bullet:
             if not list_open:
                 html.append("<ul>")
                 list_open = True
-            html.append(f"<li>{_inline(line[2:])}</li>")
+            item = line[len(bullet):].strip()
+            if mode == "page":
+                item = _term(item)
+            html.append(f"<li>{_inline(item)}</li>")
             continue
 
         if list_open:
@@ -48,7 +55,11 @@ def richtext(value):
         if line.startswith("### "):
             html.append(f"<h4>{_inline(line[4:])}</h4>")
         elif line.startswith("## "):
-            html.append(f"<h3>{_inline(line[3:])}</h3>")
+            if mode == "page":
+                part += 1
+                html.append(f'<h3 id="part-{part}">{_inline(line[3:])}</h3>')
+            else:
+                html.append(f"<h3>{_inline(line[3:])}</h3>")
         elif line.startswith("# "):
             html.append(f"<h2>{_inline(line[2:])}</h2>")
         else:
@@ -57,6 +68,44 @@ def richtext(value):
     if list_open:
         html.append("</ul>")
     return mark_safe("\n".join(html))
+
+
+_NUMBERED = re.compile(r"^(\S+\s+\d+)[.:]\s*(.+)$")
+
+
+@register.filter(name="richtext_parts")
+def richtext_parts(value):
+    """Оглавление страницы: подзаголовки «## » по порядку.
+
+    «Этап 1. Базовые материалы» делится на номер и название — так полоска
+    наверху страницы показывает путь, а не повторяет заголовки целиком.
+    """
+    parts = []
+    for raw in (value or "").splitlines():
+        line = raw.strip()
+        if not line.startswith("## "):
+            continue
+        title = line[3:].replace("**", "").strip()
+        match = _NUMBERED.match(title)
+        number, name = (match.group(1), match.group(2)) if match else ("", title)
+        parts.append({"anchor": f"part-{len(parts) + 1}", "number": number, "title": name})
+    return parts
+
+
+BULLETS = ("- ", "• ", "– ", "•", "* ")
+
+
+def _term(item):
+    """«Окна — с запасом по срокам» → **Окна** — с запасом по срокам.
+
+    Список «что — когда» читается глазами по левому краю. Жирный при
+    копировании из Телеграма теряется, поэтому возвращаем его сами —
+    но только если человек не расставил его руками.
+    """
+    if "**" in item or " — " not in item:
+        return item
+    term, rest = item.split(" — ", 1)
+    return f"**{term}** — {rest}"
 
 
 def plural(number, one, few, many):
@@ -86,6 +135,16 @@ def workdays(value):
     в мелочах переносят на работу целиком.
     """
     return _count(value, "рабочий день", "рабочих дня", "рабочих дней")
+
+
+@register.filter(name="stages")
+def stages(value):
+    """1 → «1 этап», 3 → «3 этапа». В КП стояло «1 этапа»."""
+    try:
+        value = int(float(value))
+    except (TypeError, ValueError):
+        return value
+    return _count(value, "этап", "этапа", "этапов")
 
 
 @register.filter(name="days")

@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -216,6 +216,18 @@ def publications(request):
 
 def services(request):
     return render(request, "public/services.html", _catalog_context())
+
+
+def service_detail(request, slug):
+    """Страница «Подробнее» у услуги.
+
+    Есть только у тех услуг, где Дарья её написала: пустая страница с одним
+    заголовком хуже, чем отсутствие ссылки.
+    """
+    module = ServiceModule.objects.filter(slug=slug, is_active=True).first()
+    if module is None or not module.has_details:
+        raise Http404
+    return render(request, "public/service_detail.html", {"module": module})
 
 
 def how(request):

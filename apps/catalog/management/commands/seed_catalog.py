@@ -30,6 +30,7 @@ from apps.catalog.models import (
     ServiceModule,
     Unit,
 )
+from apps.catalog.texts import PROCUREMENT_STAGES
 from apps.core.models import Objection, SiteSettings, StageNorm
 
 GROUPS = [
@@ -212,6 +213,7 @@ MODULES = [
         "чего-то не доглядите, но ответственность за подпись остаётся вашей.",
         warning="Поиск, запрос КП, сроки поставки, логистика и рекламации — "
         "на вас. Это несколько десятков часов и знание рынка.",
+        details=PROCUREMENT_STAGES,
     ),
     # --- Разовое -----------------------------------------------------------
     dict(
@@ -433,7 +435,10 @@ class Command(BaseCommand):
                 created += 1
                 continue
             # Цену не трогаем: её правит Дарья, и обновление кода не должно
-            # откатывать её решения.
+            # откатывать её решения. Подробную страницу — тоже, если она
+            # уже написана: это длинный текст, и он её, а не наш.
+            if module.details.strip():
+                data.pop("details", None)
             for field, value in data.items():
                 setattr(module, field, value)
             module.save()

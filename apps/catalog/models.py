@@ -9,6 +9,8 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.urls import reverse
+from django.utils.text import slugify
 
 
 class Unit(models.TextChoices):
@@ -257,6 +259,19 @@ class ServiceModule(models.Model):
         "услуг и в конструкторе, когда блок снят. Не запугивание, а факт",
     )
 
+    # Отдельная страница «Подробнее». Для услуг, которые в три строки
+    # аккордеона не помещаются: комплектация идёт тремя этапами через весь
+    # ремонт, и без этого описания клиент не понимает, за что платит.
+    details = models.TextField(
+        "Подробная страница",
+        blank=True,
+        help_text="Если заполнено — у услуги появляется своя страница и ссылка "
+        "«Подробнее» на сайте, в конструкторе и в КП. Пустая строка — новый "
+        "абзац; «## » в начале строки — подзаголовок; «- » или «• » — пункт "
+        "списка; **так** — жирный",
+    )
+    slug = models.SlugField("Адрес страницы", max_length=80, blank=True)
+
     order = models.PositiveSmallIntegerField("Порядок", default=100)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -268,9 +283,29 @@ class ServiceModule(models.Model):
     def __str__(self):
         return f"{self.code}. {self.title}"
 
+    def save(self, *args, **kwargs):
+        # Адрес страницы — из названия, один раз. Переименование услуги
+        # не должно ломать ссылку, которую уже отправили клиенту.
+        if not self.slug:
+            from apps.core.models import translit
+
+            base = slugify(translit(self.title))[:60] or slugify(self.code)
+            slug, n = base, 2
+            while ServiceModule.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug, n = f"{base}-{n}", n + 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
     @property
     def label(self):
         return self.short_title or self.title
+
+    @property
+    def has_details(self):
+        return bool(self.details.strip()) and bool(self.slug)
+
+    def get_absolute_url(self):
+        return reverse("public:service_detail", args=[self.slug])
 
     @property
     def is_custom(self):

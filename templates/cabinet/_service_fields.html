@@ -60,3 +60,16 @@
   {% field form.not_included %}
   {% field form.warning %}
 </fieldset>
+
+{% comment %}
+  Отдельная страница — для услуг, которые в четыре пункта не помещаются.
+  Первой её получила комплектация: три этапа через весь ремонт.
+{% endcomment %}
+<fieldset class="unit-texts">
+  <legend>Страница «Как это устроено»</legend>
+  <p class="muted">
+    Своя страница у услуги со ссылкой из списка услуг, конструктора и КП.
+    {% if module.has_details %}<a href="{{ module.get_absolute_url }}" target="_blank" rel="noopener">Открыть страницу ↗</a>{% endif %}
+  </p>
+  {% field form.details %}
+</fieldset>

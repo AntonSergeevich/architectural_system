@@ -1724,3 +1724,65 @@ main:has(> .section--alt:last-child) + .footer { margin-top: 0; }
   color: var(--ink-2); font-size: var(--step--1);
 }
 .pub__actions { display: flex; flex-wrap: wrap; gap: var(--gap-3); }
+
+/* --- Страница «Подробнее» у услуги ---------------------------------------
+   Сверху — полоска этапов: путь целиком одной строкой. Ниже каждый этап —
+   заголовок, «когда» мелко под ним и список «что — почему именно тогда».
+   Левый край списка — названия: глазами ищут «а шторы когда?», а не читают. */
+
+.steps {
+  list-style: none; margin: var(--gap-5) 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--gap-4); margin-bottom: var(--gap-6);
+}
+.steps__item a {
+  display: flex; flex-direction: column; gap: 4px; height: 100%;
+  padding: var(--gap-3) var(--gap-4); border: 1px solid var(--line);
+  border-radius: var(--radius-2); background: var(--surface);
+  color: var(--ink); text-decoration: none; position: relative;
+  transition: border-color .2s, transform .2s;
+}
+.steps__item a:hover { border-color: var(--brand-500); transform: translateY(-1px); }
+.steps__num {
+  font-size: var(--step--2); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--brand-500); font-weight: 600;
+}
+.steps__title { font-size: var(--step--1); line-height: 1.35; }
+/* Стрелка между шагами — только когда они стоят в ряд */
+@media (min-width: 720px) {
+  .steps__item:not(:last-child) a::after {
+    content: "→"; position: absolute; right: calc(-1 * var(--gap-4) + 2px); top: 50%;
+    transform: translateY(-50%); color: var(--ink-3, var(--ink-2));
+    font-size: var(--step--1); z-index: 1;
+  }
+}
+
+.details { max-width: 72ch; }
+.details > p:first-child { font-size: var(--step-1); color: var(--ink-2); }
+.details h3 {
+  margin-top: var(--gap-7); padding-top: var(--gap-5);
+  border-top: 1px solid var(--line); scroll-margin-top: calc(var(--header-h, 72px) + 16px);
+}
+.details h3 + p {
+  margin-top: var(--gap-2); color: var(--ink-2); font-size: var(--step--1);
+  font-style: italic;
+}
+.details ul { list-style: none; padding: 0; margin: var(--gap-4) 0 0; }
+.details li {
+  padding: var(--gap-2) 0; border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+}
+.details li:last-child { border-bottom: 0; }
+.details li strong { color: var(--ink); font-weight: 600; }
+
+.details__sum {
+  margin-top: var(--gap-7); padding: var(--gap-5);
+  border-radius: var(--radius-3); background: var(--paper-alt);
+}
+.details__price { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--gap-3); }
+.details__price strong { font-size: var(--step-2); }
+
+/* Ссылка «как это устроено» в аккордеоне услуг и в конструкторе */
+.more-link { font-weight: 600; text-decoration: none; }
+.more-link:hover { text-decoration: underline; }
+@media (max-width: 719px) { .steps { gap: var(--gap-2); } }

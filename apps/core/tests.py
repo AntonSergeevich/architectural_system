@@ -114,6 +114,68 @@ class PublicPagesTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 200)
 
 
+class ServiceDetailTests(TestCase):
+    """Страница «Как это устроено» у услуги: первой её получила комплектация."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_catalog", verbosity=0)
+
+    def test_procurement_has_three_stages(self):
+        module = ServiceModule.objects.get(code="B3")
+        self.assertTrue(module.has_details)
+        response = self.client.get(module.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="part-3"')
+        self.assertContains(response, "<strong>Мягкая мебель</strong>", html=False)
+        self.assertContains(response, "Мебель, текстиль и декор")
+
+    def test_links_lead_to_the_page(self):
+        url = ServiceModule.objects.get(code="B3").get_absolute_url()
+        for name in ("public:services", "public:constructor"):
+            with self.subTest(page=name):
+                self.assertContains(self.client.get(reverse(name)), url)
+
+    def test_service_without_details_has_no_page(self):
+        module = ServiceModule.objects.get(code="A1")
+        self.assertFalse(module.has_details)
+        self.assertEqual(self.client.get(module.get_absolute_url()).status_code, 404)
+        self.assertEqual(self.client.get("/uslugi/net-takoy/").status_code, 404)
+
+    def test_hidden_service_has_no_page(self):
+        module = ServiceModule.objects.get(code="B3")
+        module.is_active = False
+        module.save()
+        self.assertEqual(self.client.get(module.get_absolute_url()).status_code, 404)
+
+    def test_slug_survives_rename_and_is_unique(self):
+        module = ServiceModule.objects.get(code="B3")
+        module.title = "Комплектация объекта"
+        module.save()
+        self.assertEqual(module.slug, "komplektatsiya")
+        twin = ServiceModule.objects.create(code="Z1", title="Комплектация")
+        self.assertEqual(twin.slug, "komplektatsiya-2")
+
+    def test_telegram_paste_becomes_a_list(self):
+        from .templatetags.richtext import richtext, richtext_parts
+
+        text = "## Этап 1. Инженерка\nКогда-то\n• Окна — с запасом\n• **Двери** — потом"
+        html = richtext(text, "page")
+        self.assertIn('<h3 id="part-1">', html)
+        self.assertIn("<li><strong>Окна</strong> — с запасом</li>", html)
+        self.assertIn("<li><strong>Двери</strong> — потом</li>", html)
+        # Без режима страницы жирный сам не появляется
+        self.assertIn("<li>Окна — с запасом</li>", richtext(text))
+        self.assertEqual(
+            richtext_parts(text), [{"anchor": "part-1", "number": "Этап 1", "title": "Инженерка"}]
+        )
+
+    def test_seed_keeps_edited_details(self):
+        ServiceModule.objects.filter(code="B3").update(details="Мой текст")
+        call_command("seed_catalog", verbosity=0)
+        self.assertEqual(ServiceModule.objects.get(code="B3").details, "Мой текст")
+
+
 class TemplateHygieneTests(TestCase):
     """Комментарии не должны утекать на страницу.
 

@@ -1302,6 +1302,27 @@ class OwnServiceTests(CabinetTestCase):
         self.assertEqual(module.description, "Раскладка сценариев по комнатам")
         self.assertEqual(module.price, Decimal("15000"))
 
+    def test_service_details_are_edited_in_cabinet(self):
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        self.client.post(
+            reverse("cabinet:price_add"),
+            {"title": "Подбор света", "block": "extra", "unit": "fixed",
+             "price": "12000", "duration_days": "3"},
+        )
+        module = ServiceModule.objects.get(title="Подбор света")
+        self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]),
+            {"title": "Подбор света", "block": "extra", "unit": "fixed", "price": "12000",
+             "duration_days": "3", "details": "## Шаг 1. Сценарии\n• Спальня — тёплый"},
+        )
+        module.refresh_from_db()
+        self.assertTrue(module.has_details)
+        page = self.client.get(reverse("cabinet:service_edit", args=[module.pk]))
+        self.assertContains(page, module.get_absolute_url())
+        self.assertEqual(self.client.get(module.get_absolute_url()).status_code, 200)
+
     def test_service_can_be_deleted(self):
         from apps.catalog.models import ServiceModule
 

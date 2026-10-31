@@ -22,7 +22,8 @@
         <div class="summary-line">
           <span>{{ item.title }}
             {% if item.unit == 'month' %}<span class="card__muted">· {{ item.quantity|floatformat:0 }} мес</span>
-            {% elif item.unit == 'stage' %}<span class="card__muted">· {{ item.quantity|floatformat:0 }} этапа</span>{% endif %}
+            {% elif item.unit == 'stage' %}<span class="card__muted">· {{ item.quantity|stages }}</span>{% endif %}
+            {% if item.module.has_details %}<br><a class="more-link card__muted" href="{{ item.module.get_absolute_url }}">как это устроено →</a>{% endif %}
           </span>
           <span>{% if item.amount %}{{ item.amount|money }}{% else %}по расчёту{% endif %}</span>
         </div>

@@ -125,9 +125,10 @@ class ServiceForm(forms.ModelForm):
         fields = [
             "title", "short_title", "block", "unit", "price",
             "included_units", "extra_unit_price", "duration_days",
-            "description", "outcome", "not_included", "warning",
+            "description", "outcome", "not_included", "warning", "details",
         ]
         widgets = {
+            "details": forms.Textarea(attrs={"rows": 14, "class": "is-long"}),
             "description": forms.Textarea(attrs={"rows": 4}),
             "outcome": forms.Textarea(attrs={"rows": 2, "maxlength": 300}),
             "not_included": forms.Textarea(attrs={"rows": 3}),
@@ -145,6 +146,7 @@ class ServiceForm(forms.ModelForm):
             "outcome": "На выходе",
             "not_included": "Что не входит",
             "warning": "Если этого не будет",
+            "details": "Текст страницы",
         }
         help_texts = {
             "short_title": "Как подписать блок в конструкторе. Пусто — возьмётся название",
@@ -154,11 +156,15 @@ class ServiceForm(forms.ModelForm):
             "not_included": "Чтобы не ждали того, чего в услуге нет",
             "warning": "Что клиент берёт на себя, если откажется от услуги. "
             "Показывается и в конструкторе, когда блок убран",
+            "details": "Можно вставить прямо из Телеграма. «## Этап 1. …» — новый "
+            "этап, строка под ним — когда; «• » или «- » — пункт списка, "
+            "«Окна — с запасом по срокам» — слово до тире станет жирным. "
+            "Пусто — страницы и ссылки нет",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in ("description", "outcome", "not_included", "warning"):
+        for name in ("description", "outcome", "not_included", "warning", "details"):
             self.fields[name].required = False
         self.fields["short_title"].required = False
         self.fields["included_units"].required = False
