@@ -1323,6 +1323,24 @@ class OwnServiceTests(CabinetTestCase):
         self.assertContains(page, module.get_absolute_url())
         self.assertEqual(self.client.get(module.get_absolute_url()).status_code, 200)
 
+    def test_old_form_without_details_does_not_wipe_them(self):
+        """Страница правки, открытая до выкатки поля, не стирает текст."""
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        module = ServiceModule.objects.create(
+            code="Z9", title="Комплектация", block="realization", unit="stage",
+            price=Decimal("60000"), details="## Этап 1. А\n## Этап 2. Б",
+        )
+        self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]),
+            {"title": "Комплектация", "block": "realization", "unit": "stage",
+             "price": "50000", "duration_days": "0", "description": "Новое"},
+        )
+        module.refresh_from_db()
+        self.assertEqual(module.price, Decimal("50000"))
+        self.assertEqual(module.details, "## Этап 1. А\n## Этап 2. Б")
+
     def test_service_can_be_deleted(self):
         from apps.catalog.models import ServiceModule
 

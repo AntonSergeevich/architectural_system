@@ -76,11 +76,11 @@
         <span class="card__muted">Стоимость</span>
         <strong>{% include "components/module_price.html" %}</strong>
       </div>
-      {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome }}</p>{% endif %}
+      {% if module.outcome %}<p><strong>На выходе:</strong> {{ module.outcome|linebreaksbr }}</p>{% endif %}
       {% if module.not_included %}
         <details class="details__more">
           <summary>Что не входит</summary>
-          <p>{{ module.not_included }}</p>
+          <p>{{ module.not_included|linebreaksbr }}</p>
         </details>
       {% endif %}
       <div class="hero__actions">
