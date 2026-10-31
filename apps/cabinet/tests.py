@@ -1341,6 +1341,33 @@ class OwnServiceTests(CabinetTestCase):
         self.assertEqual(module.price, Decimal("50000"))
         self.assertEqual(module.details, "## Этап 1. А\n## Этап 2. Б")
 
+    def test_stale_tab_does_not_undo_newer_changes(self):
+        """Вкладка, открытая до чужой правки, затирает только то, что
+        в ней поменяли сами."""
+        from apps.catalog.models import ServiceModule
+
+        self.login_owner()
+        module = ServiceModule.objects.create(
+            code="Z8", title="Комплектация", block="realization", unit="stage",
+            price=Decimal("60000"), description="Старое",
+        )
+        page = self.client.get(reverse("cabinet:service_edit", args=[module.pk]))
+        loaded = page.context["form"]["loaded"].value()
+
+        # Пока вкладка открыта, текст этапов появился в базе
+        ServiceModule.objects.filter(pk=module.pk).update(details="## Этап 1. А\n## Этап 2. Б")
+
+        self.client.post(
+            reverse("cabinet:service_edit", args=[module.pk]),
+            {"title": "Комплектация", "block": "realization", "unit": "stage",
+             "price": "50000", "duration_days": "0", "description": "Старое\r\nНовое",
+             "details": "", "loaded": loaded},
+        )
+        module.refresh_from_db()
+        self.assertEqual(module.price, Decimal("50000"))
+        self.assertEqual(module.description, "Старое\r\nНовое")
+        self.assertEqual(module.details, "## Этап 1. А\n## Этап 2. Б")
+
     def test_service_can_be_deleted(self):
         from apps.catalog.models import ServiceModule
 

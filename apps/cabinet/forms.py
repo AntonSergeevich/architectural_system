@@ -5,6 +5,8 @@
 заполнена никогда, а форма на три поля заполняется на ходу с телефона.
 """
 
+import hashlib
+import json
 import secrets
 from decimal import Decimal
 
@@ -108,6 +110,14 @@ class ClientNotesForm(forms.ModelForm):
         help_texts = {"notes": ""}
 
 
+def _print(value):
+    """Отпечаток значения поля: одинаковый для того, что ушло в браузер,
+    и того, что вернулось (браузер шлёт переводы строк как \\r\\n)."""
+    text = "" if value is None else str(value)
+    text = text.replace("\r\n", "\n").strip()
+    return hashlib.sha1(text.encode()).hexdigest()[:12]
+
+
 class ServiceForm(forms.ModelForm):
     """Своя услуга в прайсе.
 
@@ -179,6 +189,29 @@ class ServiceForm(forms.ModelForm):
             if value is not None and value == int(value):
                 self.initial[name] = int(value)
 
+        # Отпечатки того, что было в полях, когда страницу открыли.
+        # При сохранении записываются только поля, которые человек
+        # действительно поменял; остальные остаются такими, какие они
+        # в базе сейчас. Иначе вкладка, открытая полчаса назад, молча
+        # возвращает всё к тогдашнему состоянию: так дважды стёрлись
+        # этапы комплектации, вернувшиеся в базу, пока страница была открыта.
+        self.fields["loaded"] = forms.CharField(widget=forms.HiddenInput, required=False)
+        if self.instance.pk and not self.is_bound:
+            self.initial["loaded"] = json.dumps(
+                {name: _print(self[name].value()) for name in self.Meta.fields}
+            )
+
+    def untouched(self):
+        """Поля, которые человек на открытой странице не трогал."""
+        try:
+            loaded = json.loads(self.data.get("loaded") or "{}")
+        except ValueError:
+            return []
+        return [
+            name for name in self.Meta.fields
+            if name in loaded and loaded[name] == _print(self.data.get(name))
+        ]
+
     def unit_cards(self):
         """Варианты «как считается» с объяснением — для карточек в шаблоне."""
         from apps.catalog.models import UNIT_HINTS
@@ -197,6 +230,11 @@ class ServiceForm(forms.ModelForm):
 
     def save(self, commit=True):
         module = super().save(commit=False)
+        if module.pk:
+            fresh = ServiceModule.objects.filter(pk=module.pk).values(*self.Meta.fields).first() or {}
+            for name in self.untouched():
+                if name in fresh:
+                    setattr(module, name, fresh[name])
         if not module.code:
             module.code = self.next_code()
         if not module.short_title:
