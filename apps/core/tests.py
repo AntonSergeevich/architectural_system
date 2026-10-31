@@ -661,11 +661,11 @@ class PressAndSocialsTests(TestCase):
         from .models import PressMention
 
         body = self.client.get(reverse("public:home")).content.decode()
-        self.assertNotIn("Меня зовут писать", body)
+        self.assertNotIn("Мои публикации", body)
 
         PressMention.objects.create(outlet="Красивые дома", title="Квартира с характером")
         body = self.client.get(reverse("public:home")).content.decode()
-        self.assertIn("Меня зовут писать", body)
+        self.assertIn("Мои публикации", body)
         self.assertIn("Квартира с характером", body)
 
     def test_publications_page_shows_the_issue_and_reading(self):
