@@ -65,7 +65,7 @@ jobs:
       name: production
       url: https://da-des.ru
     env:
-      DEPLOY_HOST: 155.212.209.229
+      DEPLOY_HOST: 45.141.79.105
       DEPLOY_USER: dades
       # Пока секретов нет, выкатка пропускается, а не падает: сначала
       # настраивается сервер, потом GitHub, и красный крестик на каждом
