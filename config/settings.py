@@ -283,6 +283,22 @@ GETPLATINUM_VAT = env("GETPLATINUM_VAT", "none")
 # показывается, счёт отмечается оплаченным вручную.
 PAYMENTS_ENABLED = bool(GETPLATINUM_API_URL and GETPLATINUM_API_KEY)
 
+# --- Копии бэкапов в облаке --------------------------------------------------
+# Ночные копии базы и фото лежат на том же сервере, что и сайт. В ноябре 2026
+# сервер умер вместе с ними, и данные пришлось вытаскивать из архива
+# хостинга. Поэтому каждая копия уходит ещё и в Yandex Object Storage.
+#
+# Ключ — статический ключ сервисного аккаунта с ролью storage.uploader:
+# загружать можно, удалять нельзя. Взломанный сервер не сотрёт облачные
+# копии. Старые копии удаляет правило жизненного цикла самого бакета.
+# Пока BACKUP_S3_BUCKET пустой, копии остаются только на сервере.
+BACKUP_S3_BUCKET = env("BACKUP_S3_BUCKET", "")
+BACKUP_S3_KEY_ID = env("BACKUP_S3_KEY_ID", "")
+BACKUP_S3_SECRET = env("BACKUP_S3_SECRET", "")
+BACKUP_S3_ENDPOINT = env("BACKUP_S3_ENDPOINT", "https://storage.yandexcloud.net")
+BACKUP_S3_REGION = env("BACKUP_S3_REGION", "ru-central1")
+BACKUP_S3_PREFIX = env("BACKUP_S3_PREFIX", "dades/")
+
 # --- Уведомления: Telegram --------------------------------------------------
 # Бот @daarch_bot пишет Дарье о новых заявках: почту она смотрит раз в день,
 # а заявка без быстрого ответа уходит к тому, кто ответил первым.

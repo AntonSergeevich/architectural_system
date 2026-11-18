@@ -1075,3 +1075,89 @@ class FloatingButtonTests(TestCase):
         self.assertContains(self.client.get(reverse("public:how")), "data-fab")
         self.assertNotContains(self.client.get(reverse("public:constructor")), "data-fab")
         self.assertNotContains(self.client.get(reverse("public:contacts")), "data-fab")
+
+
+class BackupUploadTests(TestCase):
+    """Копии бэкапов в облаке: сервер может умереть вместе с локальными."""
+
+    def _file(self, name):
+        import tempfile
+        from pathlib import Path
+
+        folder = Path(tempfile.mkdtemp())
+        path = folder / name
+        path.write_bytes(b"dump")
+        return path
+
+    def test_object_key_groups_by_month(self):
+        from django.test import override_settings
+
+        from .management.commands.backup_upload import object_key
+
+        with override_settings(BACKUP_S3_PREFIX="dades"):
+            self.assertEqual(
+                object_key("/srv/backups/db_2026-11-18_03-30.sql.gz"),
+                "dades/2026-11/db_2026-11-18_03-30.sql.gz",
+            )
+            self.assertEqual(object_key("/tmp/odd.bin"), "dades/other/odd.bin")
+
+    def test_not_configured_is_not_an_error(self):
+        from io import StringIO
+
+        from django.test import override_settings
+
+        out = StringIO()
+        with override_settings(BACKUP_S3_BUCKET=""):
+            call_command("backup_upload", str(self._file("db_2026-11-18_03-30.sql.gz")), stdout=out)
+        self.assertIn("не настроено", out.getvalue())
+
+    def test_uploads_each_file_to_bucket(self):
+        from io import StringIO
+
+        from django.test import override_settings
+
+        db = self._file("db_2026-11-18_03-30.sql.gz")
+        media = self._file("media_2026-11-18_03-30.tar.gz")
+        client = mock.Mock()
+        settings = dict(BACKUP_S3_BUCKET="dades-backup", BACKUP_S3_KEY_ID="id",
+                        BACKUP_S3_SECRET="secret", BACKUP_S3_PREFIX="dades/")
+        with override_settings(**settings), mock.patch(
+            "apps.core.management.commands.backup_upload.make_client", return_value=client
+        ):
+            out = StringIO()
+            call_command("backup_upload", str(db), str(media), stdout=out)
+        client.upload_file.assert_any_call(str(db), "dades-backup", "dades/2026-11/" + db.name)
+        client.upload_file.assert_any_call(str(media), "dades-backup", "dades/2026-11/" + media.name)
+        self.assertEqual(out.getvalue().count("✓ В облаке"), 2)
+
+    def test_failed_upload_is_reported(self):
+        from django.core.management.base import CommandError
+        from django.test import override_settings
+
+        client = mock.Mock()
+        client.upload_file.side_effect = RuntimeError("сеть")
+        settings = dict(BACKUP_S3_BUCKET="b", BACKUP_S3_KEY_ID="id", BACKUP_S3_SECRET="s")
+        with override_settings(**settings), mock.patch(
+            "apps.core.management.commands.backup_upload.make_client", return_value=client
+        ):
+            with self.assertRaises(CommandError) as raised:
+                call_command("backup_upload", str(self._file("db_2026-11-18_03-30.sql.gz")))
+        self.assertIn("Не ушло в облако", str(raised.exception))
+
+    def test_missing_keys_fail_loudly(self):
+        from django.core.management.base import CommandError
+        from django.test import override_settings
+
+        with override_settings(BACKUP_S3_BUCKET="b", BACKUP_S3_KEY_ID="", BACKUP_S3_SECRET=""):
+            with self.assertRaises(CommandError):
+                call_command("backup_upload", str(self._file("db_x.sql.gz")))
+
+    def test_real_client_is_built_for_yandex(self):
+        from django.test import override_settings
+
+        from .management.commands.backup_upload import make_client
+
+        with override_settings(BACKUP_S3_KEY_ID="id", BACKUP_S3_SECRET="s"):
+            client = make_client()
+        self.assertEqual(client.meta.endpoint_url, "https://storage.yandexcloud.net")
+        self.assertEqual(client.meta.region_name, "ru-central1")
